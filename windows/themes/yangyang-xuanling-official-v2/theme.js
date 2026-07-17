@@ -33,7 +33,7 @@
   ];
   const HOME_UTILITY_CLASS = "dream-home-utility";
   const SPINNER_SELECTOR = ".animate-spin, [class~='animate-spin'], [role='progressbar'], [data-loading='true']";
-  const XUAN_ICON_VERSION = "5";
+  const XUAN_ICON_VERSION = "6";
   const xuanSvg = (body) => `<svg class="dream-xuan-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
   const XUAN_ICON_SVGS = {
     bird: xuanSvg(`
@@ -554,7 +554,7 @@
     lastSpinnerAt = now;
     const isNativeSpinner = (source) => source.matches?.(SPINNER_SELECTOR) || (
       source.tagName?.toLowerCase() === "svg" &&
-      source.querySelector?.('path[opacity="0.3"]') &&
+      source.querySelector?.('path[opacity="0.3"], path[opacity=".3"]') &&
       (source.querySelectorAll?.("path")?.length || 0) >= 2
     );
     for (const source of [...document.querySelectorAll(".dream-xuanniao-spinner-source")]) {
@@ -566,6 +566,9 @@
     }
     const spinnerCandidates = new Set([
       ...document.querySelectorAll(SPINNER_SELECTOR),
+      ...[...document.querySelectorAll("aside.app-shell-left-panel svg")].filter((source) =>
+        source.querySelector?.('path[opacity="0.3"], path[opacity=".3"]') &&
+        (source.querySelectorAll?.("path")?.length || 0) >= 2),
     ]);
     for (const source of spinnerCandidates) {
       if (!isNativeSpinner(source)) continue;
@@ -641,6 +644,7 @@
         elements.some((node) => node.matches?.(`${SPINNER_SELECTOR}, [role='progressbar']`));
       if (sidebarChanged) {
         sidebarDirty = true;
+        spinnerDirty = true;
         sidebarReadyAt = Date.now() + 220;
         scheduleSidebarEnsure();
       }
@@ -659,7 +663,7 @@
   });
   const timer = setInterval(() => { spinnerDirty = true; ensure(); }, 30000);
   window[STATE_KEY] = {
-    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.3.4",
+    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.4.0",
   };
   ensure();
   analyzeArt().then((result) => {

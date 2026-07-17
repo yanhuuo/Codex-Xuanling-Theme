@@ -26,6 +26,8 @@ windows/themes/yangyang-xuanling-official-v2/
 └─ background.jpg
 ```
 
+玄翎主题会携带当前在“主题”页选择的 Codex v2 宠物。仓库或本地主题库换机安装后，启用主题会自动安装并选中同一只宠物；当前仓库默认携带 `尤诺（iuno）`。
+
 每个主题是完整、互相隔离的代码包。详细格式见 [`windows/THEME_FORMAT.md`](windows/THEME_FORMAT.md)。
 
 ## 热重载

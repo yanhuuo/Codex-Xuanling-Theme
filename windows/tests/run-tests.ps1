@@ -38,6 +38,17 @@ try {
     throw 'Config writer added an unexpected UTF-8 BOM.'
   }
 
+  $petConfigPath = Join-Path $temporaryRoot 'pet-selection.toml'
+  [System.IO.File]::WriteAllText($petConfigPath, "model = `"gpt-5`"`r`n`r`n[desktop]`r`nappearanceTheme = `"system`"`r`n", $utf8NoBom)
+  Set-DreamSkinSelectedPet -ConfigPath $petConfigPath -PetId 'iuno'
+  Set-DreamSkinSelectedPet -ConfigPath $petConfigPath -PetId 'song-yu'
+  $petConfig = Read-DreamSkinUtf8File -Path $petConfigPath
+  if ($petConfig -notmatch 'selected-avatar-id = "custom:song-yu"' -or
+    ([regex]::Matches($petConfig, '(?m)^selected-avatar-id\s*=')).Count -ne 1 -or
+    $petConfig -notmatch 'appearanceTheme = "system"') {
+    throw 'Theme pet selection did not update exactly one desktop key while preserving unrelated config.'
+  }
+
   $installed += "afterInstall = `"$laterValue`"`r`n"
   $installed = $installed -replace 'appearanceTheme = "system"', 'appearanceTheme = "dark"'
   Write-DreamSkinUtf8FileAtomically -Path $configPath -Content $installed
@@ -505,7 +516,7 @@ try {
     'MAX_ART_BYTES', 'createHash', 'readImageMetadata', '50MP safety limit', 'STRONG_THEME_AUDIT_MS',
     'Page.addScriptToEvaluateOnNewDocument', 'Page.removeScriptToEvaluateOnNewDocument', 'earlyPayloadFor',
     'watchFiles(options.themeDir', 'theme hot reload', 'resolveGitHubRepository', 'listInstalledPets',
-    'associatePet'
+    'selectPet', 'installAndSelectBundledPet', 'selected-avatar-id', 'MAX_PET_SPRITESHEET_BYTES'
   )) {
     if (-not $injectorSource.Contains($requiredInjectorBehavior)) {
       throw "Injector theme safety is missing: $requiredInjectorBehavior"
@@ -544,7 +555,7 @@ try {
   foreach ($requiredManagerBehavior in @(
     'data-settings-panel-slug', 'dream-theme-manager', '还原官方外观',
     'addLibrary', 'addRepository', 'getCatalog', 'installLibraryTheme',
-    '配套宠物', 'associatePet', '热重载已开启'
+    '主题宠物', 'selectPet', '已选择并随主题保存', '热重载已开启'
   )) {
     if (-not $managerSource.Contains($requiredManagerBehavior)) {
       throw "Independent theme manager behavior is missing: $requiredManagerBehavior"
@@ -560,8 +571,14 @@ try {
   }
   if (-not $css.Contains('dream-xuanniao-orbit') -or
     -not $css.Contains('top: -1px') -or
-    -not $rendererSource.Contains('document.querySelectorAll(SPINNER_SELECTOR)')) {
+    -not $rendererSource.Contains('document.querySelectorAll(SPINNER_SELECTOR)') -or
+    -not $rendererSource.Contains('aside.app-shell-left-panel svg')) {
     throw 'The global Xuanniao orbit spinner is missing or still scoped to the sidebar.'
+  }
+  $bundledPet = Join-Path $bundledTheme 'pets\iuno'
+  if (-not (Test-Path -LiteralPath (Join-Path $bundledPet 'pet.json') -PathType Leaf) -or
+    -not (Test-Path -LiteralPath (Join-Path $bundledPet 'spritesheet.webp') -PathType Leaf)) {
+    throw 'The Xuanling theme no longer carries its selected v2 pet package.'
   }
 
   $packageRoot = Split-Path -Parent $Root

@@ -226,7 +226,7 @@ function Assert-DreamSkinDesktopShapeSupported {
   $desktop = Get-DreamSkinDesktopSection -Content $Content
   if ($null -ne $desktop) {
     $bodyProbe = ConvertTo-DreamSkinTomlAsciiEscapeProbe -Value $desktop.Body
-    foreach ($key in @('appearanceTheme', 'appearanceLightCodeThemeId', 'appearanceLightChromeTheme')) {
+    foreach ($key in @('appearanceTheme', 'appearanceLightCodeThemeId', 'appearanceLightChromeTheme', 'selected-avatar-id')) {
       $keyToken = Get-DreamSkinTomlKeyTokenPattern -Key $key
       $settingShape = "(?m)^[\t ]*$keyToken[\t ]*(?:\.|=)"
       if ([regex]::Matches($bodyProbe, $settingShape).Count -gt
@@ -471,6 +471,36 @@ function Restore-DreamSkinBaseTheme {
   # quoted keys and table-header comments round-trippable on PowerShell 5.1.
   if ($currentContent -ceq ($backupContent + $newLine)) { $currentContent = $backupContent }
   Write-DreamSkinUtf8FileAtomically -Path $ConfigPath -Content $currentContent -ExpectedBytes $currentBytes
+}
+
+function Set-DreamSkinSelectedPet {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$ConfigPath,
+    [Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z0-9._-]{1,80}$')][string]$PetId
+  )
+
+  $fullPath = [System.IO.Path]::GetFullPath($ConfigPath)
+  $originalBytes = if ([System.IO.File]::Exists($fullPath)) {
+    [System.IO.File]::ReadAllBytes($fullPath)
+  } else {
+    $null
+  }
+  $content = if ($null -eq $originalBytes) { '' } else {
+    ConvertFrom-DreamSkinUtf8Bytes -Bytes $originalBytes -Path $fullPath
+  }
+  Assert-DreamSkinDesktopShapeSupported -Content $content
+  $newLine = Get-DreamSkinNewLine -Content $content
+  $desktop = Get-DreamSkinDesktopSection -Content $content
+  if ($null -eq $desktop) {
+    $content = Add-DreamSkinDesktopSection -Content $content -NewLine $newLine
+    $desktop = Get-DreamSkinDesktopSection -Content $content
+  }
+  $selectedLine = 'selected-avatar-id = "custom:' + $PetId + '"'
+  $body = Set-DreamSkinSectionSetting -Body $desktop.Body -Key 'selected-avatar-id' -Line $selectedLine -NewLine $newLine
+  $content = $content.Substring(0, $desktop.BodyStart) + $body +
+    $content.Substring($desktop.BodyStart + $desktop.BodyLength)
+  Write-DreamSkinUtf8FileAtomically -Path $fullPath -Content $content -ExpectedBytes $originalBytes
 }
 
 function Restore-DreamSkinConfigBackup {

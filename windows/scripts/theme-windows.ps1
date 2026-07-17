@@ -215,11 +215,50 @@ function Copy-DreamSkinThemeBundleFiles {
     Assert-DreamSkinNoReparseComponents -Path $destination
     Copy-Item -LiteralPath $source -Destination $destination -Force
   }
+  Copy-DreamSkinThemePetBundle -SourceDirectory $SourceDirectory -DestinationDirectory $DestinationDirectory -ManagedRoot $ManagedRoot
   $legacyImage = Join-Path $DestinationDirectory 'dream-reference.jpg'
   if (Test-Path -LiteralPath $legacyImage -PathType Leaf) {
     Assert-DreamSkinNoReparseComponents -Path $legacyImage
     Remove-Item -LiteralPath $legacyImage -Force
   }
+}
+
+function Copy-DreamSkinThemePetBundle {
+  param(
+    [Parameter(Mandatory = $true)][string]$SourceDirectory,
+    [Parameter(Mandatory = $true)][string]$DestinationDirectory,
+    [Parameter(Mandatory = $true)][string]$ManagedRoot
+  )
+  $sourceTheme = (Read-DreamSkinUtf8File -Path (Join-Path $SourceDirectory 'theme.json')) | ConvertFrom-Json -ErrorAction Stop
+  $destinationPets = Join-Path $DestinationDirectory 'pets'
+  if (Test-Path -LiteralPath $destinationPets) {
+    if (-not (Test-DreamSkinThemePathWithin -Path $destinationPets -Root $ManagedRoot)) { throw 'Theme pet destination escaped the managed theme store.' }
+    Remove-Item -LiteralPath $destinationPets -Recurse -Force
+  }
+  if (-not $sourceTheme.pet) { return }
+  $petId = "$($sourceTheme.pet.id)"
+  $relativeDirectory = "$($sourceTheme.pet.directory)"
+  if ($petId -notmatch '^[A-Za-z0-9._-]{1,80}$' -or [System.IO.Path]::IsPathRooted($relativeDirectory)) {
+    throw 'Bundled theme pet metadata is invalid.'
+  }
+  $sourcePet = [System.IO.Path]::GetFullPath((Join-Path $SourceDirectory $relativeDirectory))
+  if (-not (Test-DreamSkinThemePathWithin -Path $sourcePet -Root $SourceDirectory)) { throw 'Bundled theme pet escaped its theme directory.' }
+  $manifestPath = Join-Path $sourcePet 'pet.json'
+  $manifest = (Read-DreamSkinUtf8File -Path $manifestPath) | ConvertFrom-Json -ErrorAction Stop
+  if ("$($manifest.id)" -cne $petId -or [int]$manifest.spriteVersionNumber -ne 2) { throw 'Bundled pet must be a matching Codex v2 package.' }
+  $spritesheetName = "$($manifest.spritesheetPath)"
+  if (-not $spritesheetName -or [System.IO.Path]::IsPathRooted($spritesheetName) -or [System.IO.Path]::GetExtension($spritesheetName) -ine '.webp') {
+    throw 'Bundled pet spritesheetPath must be a relative WebP path.'
+  }
+  $spritesheetPath = [System.IO.Path]::GetFullPath((Join-Path $sourcePet $spritesheetName))
+  if (-not (Test-DreamSkinThemePathWithin -Path $spritesheetPath -Root $sourcePet)) { throw 'Bundled pet spritesheet escaped its package.' }
+  Assert-DreamSkinImageFile -Path $spritesheetPath
+  $destinationPet = Join-Path $destinationPets $petId
+  Ensure-DreamSkinManagedDirectory -Path $destinationPet -Root $ManagedRoot
+  $destinationSheet = Join-Path $destinationPet $spritesheetName
+  New-Item -ItemType Directory -Force -Path ([System.IO.Path]::GetDirectoryName($destinationSheet)) | Out-Null
+  Copy-Item -LiteralPath $spritesheetPath -Destination $destinationSheet -Force
+  Copy-Item -LiteralPath $manifestPath -Destination (Join-Path $destinationPet 'pet.json') -Force
 }
 
 function Upgrade-DreamSkinLegacyThemeBundle {
@@ -257,6 +296,11 @@ function Upgrade-DreamSkinLegacyThemeBundle {
       $theme | Add-Member -NotePropertyName $propertyName -NotePropertyValue $bundledTheme.$propertyName -Force
       $changed = $true
     }
+  }
+  if ($bundledTheme.pet -and -not $theme.pet) {
+    Copy-DreamSkinThemePetBundle -SourceDirectory $BundledThemeDirectory -DestinationDirectory $ThemeDirectory -ManagedRoot ([System.IO.Path]::GetDirectoryName($ThemeDirectory))
+    $theme | Add-Member -NotePropertyName pet -NotePropertyValue $bundledTheme.pet -Force
+    $changed = $true
   }
   if ($changed) { Write-DreamSkinTheme -ThemeDirectory $ThemeDirectory -Theme $theme }
 }
@@ -398,6 +442,9 @@ function Save-DreamSkinCurrentTheme {
   Copy-Item -LiteralPath $active.ImagePath -Destination $destinationImage -Force
   Copy-Item -LiteralPath $active.CssPath -Destination (Join-Path $destination 'theme.css') -Force
   Copy-Item -LiteralPath $active.RendererPath -Destination (Join-Path $destination 'theme.js') -Force
+  if ($active.Theme.pet) {
+    Copy-DreamSkinThemePetBundle -SourceDirectory $paths.Active -DestinationDirectory $destination -ManagedRoot $paths.Root
+  }
   Assert-DreamSkinNoReparseComponents -Path $destinationImage
   Assert-DreamSkinImageFile -Path $destinationImage
   $theme = $active.Theme | ConvertTo-Json -Depth 8 | ConvertFrom-Json
@@ -450,6 +497,7 @@ function Use-DreamSkinSavedTheme {
   $theme = $saved.Theme | ConvertTo-Json -Depth 8 | ConvertFrom-Json
   Copy-Item -LiteralPath $saved.CssPath -Destination (Join-Path $paths.Active 'theme.css') -Force
   Copy-Item -LiteralPath $saved.RendererPath -Destination (Join-Path $paths.Active 'theme.js') -Force
+  Copy-DreamSkinThemePetBundle -SourceDirectory $directory -DestinationDirectory $paths.Active -ManagedRoot $paths.Root
   $theme | Add-Member -NotePropertyName schemaVersion -NotePropertyValue 2 -Force
   $theme | Add-Member -NotePropertyName entrypoints -NotePropertyValue `
     ([pscustomobject]@{ css = 'theme.css'; renderer = 'theme.js' }) -Force

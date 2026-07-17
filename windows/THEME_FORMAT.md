@@ -8,7 +8,11 @@ my-theme/
 ├─ theme.css
 ├─ theme.js
 ├─ background.jpg
-└─ icons/                 # 可选，由本主题自己使用
+├─ icons/                 # 可选，由本主题自己使用
+└─ pets/                  # 可选，只保存当前主题选择的一只宠物
+   └─ my-pet/
+      ├─ pet.json
+      └─ spritesheet.webp
 ```
 
 最小 `theme.json`：
@@ -24,6 +28,10 @@ my-theme/
     "renderer": "theme.js"
   },
   "image": "background.jpg",
+  "pet": {
+    "id": "my-pet",
+    "directory": "pets/my-pet"
+  },
   "appearance": "dark",
   "art": {
     "focusX": 0.5,
@@ -47,9 +55,11 @@ my-theme/
 
 主题脚本会在 Codex 渲染器中执行。只安装你信任的本地或 HTTPS 主题库。
 
-## 宠物关联
+## 主题宠物
 
-Codex 宠物不会嵌入主题代码包。主题页从 `~/.codex/pets` 读取有效的 v2 宠物，并将主题与宠物的关联独立保存在 `pet-associations.json`。切换主题不会覆盖或复制用户的原生宠物包。
+主题页从 `~/.codex/pets` 读取有效的 v2 宠物。选择后，完整的 `pet.json` 与 `spritesheet.webp` 会复制到主题自己的 `pets/<id>/`，并在 `theme.json.pet` 中声明。主题通过本地库或 GitHub 换机时会携带该副本；启用主题后会将宠物安装到新主机的 `~/.codex/pets`，并同步 Codex 的 `desktop.selected-avatar-id`。
+
+只接受 `spriteVersionNumber: 2`、`1536×2288` WebP 图集的标准宠物包。移除主题宠物只删除主题副本，不会删除 `~/.codex/pets` 中原有宠物。
 
 ## GitHub 仓库索引
 

@@ -1,8 +1,10 @@
 import fs from "node:fs/promises";
 import { watch as watchFiles } from "node:fs";
 import { createHash } from "node:crypto";
+import { execFile as execFileCallback } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { readImageMetadata } from "./image-metadata.mjs";
 
@@ -10,16 +12,20 @@ const scriptPath = fileURLToPath(import.meta.url);
 const here = path.dirname(scriptPath);
 const root = path.resolve(here, "..");
 const DEFAULT_THEME_DIR = path.join(root, "themes", "yangyang-xuanling-official-v2");
-const SKIN_VERSION = "1.3.0";
+const SKIN_VERSION = "1.4.0";
 const MAX_ART_BYTES = 16 * 1024 * 1024;
 const MAX_THEME_CSS_BYTES = 512 * 1024;
 const MAX_THEME_SCRIPT_BYTES = 768 * 1024;
 const MAX_LIBRARY_INDEX_BYTES = 1024 * 1024;
+const MAX_PET_MANIFEST_BYTES = 128 * 1024;
+const MAX_PET_SPRITESHEET_BYTES = 20 * 1024 * 1024;
 const STRONG_THEME_AUDIT_MS = 30000;
 const THEME_CONTROL_BINDING = "__codexDreamThemeControl";
 const THEME_CONTROL_RESPONSE = "__codexDreamThemeResponse";
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 const BROWSER_ID_PATTERN = /^[A-Za-z0-9._-]{1,200}$/;
+const PET_ID_PATTERN = /^[A-Za-z0-9._-]{1,80}$/;
+const execFile = promisify(execFileCallback);
 
 class CdpIdentityMismatchError extends Error {}
 
@@ -313,6 +319,70 @@ function normalizedText(value, name, fallback, maxLength = 120) {
   return value;
 }
 
+function normalizePetManifest(raw, expectedId = null) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("宠物 pet.json 必须是对象");
+  const id = String(raw.id || "").trim();
+  if (!PET_ID_PATTERN.test(id) || (expectedId && id !== expectedId)) throw new Error("宠物 id 无效或与主题声明不一致");
+  if (Number(raw.spriteVersionNumber) !== 2) throw new Error("主题只支持 Codex v2 宠物包");
+  const spritesheetPath = normalizedText(raw.spritesheetPath, "pet.spritesheetPath", "", 160);
+  if (!spritesheetPath || path.isAbsolute(spritesheetPath) || path.extname(spritesheetPath).toLowerCase() !== ".webp") {
+    throw new Error("宠物 spritesheetPath 必须是包内的相对 .webp 路径");
+  }
+  return {
+    manifest: raw,
+    id,
+    displayName: normalizedText(raw.displayName, "pet.displayName", id, 80),
+    description: normalizedText(raw.description, "pet.description", "", 240),
+    spriteVersionNumber: 2,
+    spritesheetPath,
+  };
+}
+
+function petBundleFromBytes(manifestBytes, spritesheetBytes, expectedId = null) {
+  if (manifestBytes.length < 1 || manifestBytes.length > MAX_PET_MANIFEST_BYTES) {
+    throw new Error("宠物 pet.json 为空或超过 128 KB");
+  }
+  let raw;
+  try { raw = JSON.parse(manifestBytes.toString("utf8")); }
+  catch { throw new Error("宠物 pet.json 不是有效 JSON"); }
+  const pet = normalizePetManifest(raw, expectedId);
+  if (spritesheetBytes.length < 1 || spritesheetBytes.length > MAX_PET_SPRITESHEET_BYTES) {
+    throw new Error("宠物 spritesheet.webp 为空或超过 20 MB");
+  }
+  const metadata = readImageMetadata(spritesheetBytes, ".webp");
+  if (!metadata || metadata.width !== 1536 || metadata.height !== 2288) {
+    throw new Error("Codex v2 宠物图集必须是 1536×2288 的 WebP");
+  }
+  return {
+    ...pet,
+    manifestBytes,
+    spritesheetBytes,
+    fingerprint: createHash("sha256").update(manifestBytes).update("\0").update(spritesheetBytes).digest("hex"),
+  };
+}
+
+async function loadPetPackage(packageDirectory, expectedId = null) {
+  const realDirectory = await fs.realpath(packageDirectory);
+  const manifestPath = await fs.realpath(path.join(realDirectory, "pet.json"));
+  if (!isPathInside(manifestPath, realDirectory)) throw new Error("宠物清单不能通过链接跳出宠物目录");
+  const manifestBytes = await fs.readFile(manifestPath);
+  let raw;
+  try { raw = JSON.parse(manifestBytes.toString("utf8")); }
+  catch { throw new Error("宠物 pet.json 不是有效 JSON"); }
+  const normalized = normalizePetManifest(raw, expectedId);
+  const declaredSpritesheet = path.resolve(realDirectory, normalized.spritesheetPath);
+  if (!isPathInside(declaredSpritesheet, realDirectory)) throw new Error("宠物图集必须保留在宠物目录内");
+  const spritesheetPath = await fs.realpath(declaredSpritesheet);
+  if (!isPathInside(spritesheetPath, realDirectory)) throw new Error("宠物图集不能通过链接跳出宠物目录");
+  const spritesheetBytes = await fs.readFile(spritesheetPath);
+  return {
+    ...petBundleFromBytes(manifestBytes, spritesheetBytes, expectedId),
+    directory: realDirectory,
+    manifestPath,
+    spritesheetFilePath: spritesheetPath,
+  };
+}
+
 async function loadTheme(themeDir) {
   const realThemeDir = await fs.realpath(themeDir);
   const themePath = path.join(realThemeDir, "theme.json");
@@ -374,6 +444,21 @@ async function loadTheme(themeDir) {
   const art = raw.art && typeof raw.art === "object" && !Array.isArray(raw.art) ? raw.art : {};
   const palette = raw.palette && typeof raw.palette === "object" && !Array.isArray(raw.palette)
     ? raw.palette : {};
+  let petBundle = null;
+  let normalizedPet = null;
+  if (raw.pet !== undefined && raw.pet !== null) {
+    if (typeof raw.pet !== "object" || Array.isArray(raw.pet)) throw new Error("theme.pet 必须是对象");
+    const petId = normalizedText(raw.pet.id, "pet.id", "", 80);
+    if (!PET_ID_PATTERN.test(petId)) throw new Error("theme.pet.id 无效");
+    const petDirectory = normalizedText(raw.pet.directory, "pet.directory", "", 240);
+    if (!petDirectory || path.isAbsolute(petDirectory)) throw new Error("theme.pet.directory 必须是相对路径");
+    const resolvedPetDirectory = path.resolve(realThemeDir, petDirectory);
+    if (!isPathInside(resolvedPetDirectory, realThemeDir)) throw new Error("主题宠物必须保留在主题目录内");
+    const realPetDirectory = await fs.realpath(resolvedPetDirectory);
+    if (!isPathInside(realPetDirectory, realThemeDir)) throw new Error("主题宠物不能通过链接跳出主题目录");
+    petBundle = await loadPetPackage(realPetDirectory, petId);
+    normalizedPet = { id: petId, directory: `pets/${petId}` };
+  }
   const theme = {
     schemaVersion: Number(raw.schemaVersion) === 2 ? 2 : 1,
     id: normalizedText(raw.id, "id", "custom", 80),
@@ -420,15 +505,23 @@ async function loadTheme(themeDir) {
     throw new Error("Theme image metadata is invalid or exceeds the 16384px / 50MP safety limit");
   }
   theme.artMetadata = artMetadata;
-  const fingerprint = createHash("sha256")
+  const fingerprintBuilder = createHash("sha256")
     .update(themeText, "utf8")
     .update("\0")
     .update(imageBytes)
     .update("\0")
     .update(cssBundle.bytes)
     .update("\0")
-    .update(rendererBundle.bytes)
-    .digest("hex");
+    .update(rendererBundle.bytes);
+  if (petBundle) fingerprintBuilder.update("\0pet\0").update(petBundle.manifestBytes).update("\0").update(petBundle.spritesheetBytes);
+  const fingerprint = fingerprintBuilder.digest("hex");
+  let petStamp = "";
+  if (petBundle) {
+    const [manifestStat, spritesheetStat] = await Promise.all([
+      fs.stat(petBundle.manifestPath), fs.stat(petBundle.spritesheetFilePath),
+    ]);
+    petStamp = `:${manifestStat.size}:${manifestStat.mtimeMs}:${spritesheetStat.size}:${spritesheetStat.mtimeMs}`;
+  }
   return {
     theme,
     themePath,
@@ -438,8 +531,9 @@ async function loadTheme(themeDir) {
     cssText: cssBundle.text,
     rendererPath: rendererBundle.path,
     rendererText: rendererBundle.text,
+    petBundle,
     fingerprint,
-    sourceStamp: `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:${cssStat.size}:${cssStat.mtimeMs}:${rendererStat.size}:${rendererStat.mtimeMs}`,
+    sourceStamp: `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:${cssStat.size}:${cssStat.mtimeMs}:${rendererStat.size}:${rendererStat.mtimeMs}${petStamp}`,
   };
 }
 
@@ -500,6 +594,16 @@ async function writeThemeDirectory(destination, loaded) {
     await fs.copyFile(imageTemp, imagePath);
     await fs.writeFile(cssPath, loaded.cssText, "utf8");
     await fs.writeFile(rendererPath, loaded.rendererText, "utf8");
+    const petsRoot = path.join(resolvedDestination, "pets");
+    await fs.rm(petsRoot, { recursive: true, force: true });
+    if (loaded.petBundle) {
+      const petDirectory = path.join(petsRoot, loaded.petBundle.id);
+      const spritesheetPath = path.resolve(petDirectory, loaded.petBundle.spritesheetPath);
+      if (!isPathInside(spritesheetPath, petDirectory)) throw new Error("宠物图集目标路径越界");
+      await fs.mkdir(path.dirname(spritesheetPath), { recursive: true });
+      await fs.writeFile(spritesheetPath, loaded.petBundle.spritesheetBytes);
+      await fs.writeFile(path.join(petDirectory, "pet.json"), loaded.petBundle.manifestBytes);
+    }
     await fs.writeFile(jsonTemp, `${JSON.stringify(themeForDisk(loaded, imageName), null, 2)}\n`, { flag: "wx" });
     await fs.copyFile(jsonTemp, path.join(resolvedDestination, "theme.json"));
   } finally {
@@ -540,35 +644,82 @@ function codexHome() {
   return path.resolve(process.env.CODEX_HOME || path.join(os.homedir(), ".codex"));
 }
 
-async function listInstalledPets() {
+async function readNativeSelectedPetId() {
+  try {
+    const content = await fs.readFile(path.join(codexHome(), "config.toml"), "utf8");
+    const desktop = content.match(/(?:^|\r?\n)[\t ]*\[[\t ]*desktop[\t ]*\][\t ]*(?:#[^\r\n]*)?\r?\n([\s\S]*?)(?=\r?\n[\t ]*\[|\s*$)/)?.[1] ?? "";
+    const selected = desktop.match(/^[\t ]*selected-avatar-id[\t ]*=[\t ]*["']custom:([A-Za-z0-9._-]{1,80})["'][\t ]*(?:#.*)?$/m);
+    return selected?.[1] ?? null;
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function listInstalledPets(themePetId = null) {
   const petsRoot = path.join(codexHome(), "pets");
   await fs.mkdir(petsRoot, { recursive: true });
+  const realPetsRoot = await fs.realpath(petsRoot);
+  const nativeSelectedPetId = await readNativeSelectedPetId();
   const pets = [];
   for (const entry of await fs.readdir(petsRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     try {
-      const directory = await fs.realpath(path.join(petsRoot, entry.name));
-      if (!isPathInside(directory, await fs.realpath(petsRoot))) continue;
-      const manifest = JSON.parse(await fs.readFile(path.join(directory, "pet.json"), "utf8"));
-      const id = safeThemeId(manifest.id, "");
-      const spritesheetName = String(manifest.spritesheetPath || "");
-      if (!id || id !== String(manifest.id) || Number(manifest.spriteVersionNumber) !== 2 ||
-          !spritesheetName || path.isAbsolute(spritesheetName)) continue;
-      const spritesheet = await fs.realpath(path.resolve(directory, spritesheetName));
-      if (!isPathInside(spritesheet, directory) || path.extname(spritesheet).toLowerCase() !== ".webp") continue;
-      const stat = await fs.stat(spritesheet);
-      if (!stat.isFile() || stat.size < 1 || stat.size > 32 * 1024 * 1024) continue;
+      const directory = await fs.realpath(path.join(realPetsRoot, entry.name));
+      if (!isPathInside(directory, realPetsRoot)) continue;
+      const pet = await loadPetPackage(directory);
       pets.push({
-        id,
-        displayName: normalizedText(manifest.displayName, "pet.displayName", id, 80),
-        description: normalizedText(manifest.description, "pet.description", "", 240),
+        id: pet.id,
+        displayName: pet.displayName,
+        description: pet.description,
         spriteVersionNumber: 2,
+        selectedByTheme: pet.id === themePetId,
+        selectedInCodex: pet.id === nativeSelectedPetId,
       });
     } catch {
       // Invalid pet packages stay untouched and are omitted from the manager.
     }
   }
   return pets.sort((left, right) => left.displayName.localeCompare(right.displayName, "zh-CN"));
+}
+
+async function installAndSelectBundledPet(options, loaded) {
+  const pet = loaded?.petBundle;
+  if (!pet) return null;
+  const petsRoot = path.join(codexHome(), "pets");
+  await fs.mkdir(petsRoot, { recursive: true });
+  const realPetsRoot = await fs.realpath(petsRoot);
+  const destination = path.join(realPetsRoot, pet.id);
+  try {
+    const destinationStat = await fs.lstat(destination);
+    if (destinationStat.isSymbolicLink() || !destinationStat.isDirectory()) throw new Error("目标宠物目录不是普通目录");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    await fs.mkdir(destination);
+  }
+  const spritesheetPath = path.resolve(destination, pet.spritesheetPath);
+  if (!isPathInside(spritesheetPath, destination)) throw new Error("宠物安装目标路径越界");
+  let existingFingerprint = null;
+  try { existingFingerprint = (await loadPetPackage(destination, pet.id)).fingerprint; } catch {}
+  if (existingFingerprint !== pet.fingerprint) {
+    if (existingFingerprint) {
+      const backup = path.join(stateRootFor(options), "pet-backups", `${pet.id}-${Date.now()}`);
+      await fs.mkdir(backup, { recursive: true });
+      const existing = await loadPetPackage(destination, pet.id);
+      await fs.writeFile(path.join(backup, "pet.json"), existing.manifestBytes);
+      await fs.writeFile(path.join(backup, "spritesheet.webp"), existing.spritesheetBytes);
+    }
+    await fs.mkdir(path.dirname(spritesheetPath), { recursive: true });
+    await fs.writeFile(spritesheetPath, pet.spritesheetBytes);
+    await fs.writeFile(path.join(destination, "pet.json"), pet.manifestBytes);
+  }
+  if (await readNativeSelectedPetId() !== pet.id) {
+    await execFile("powershell.exe", [
+      "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+      "-File", path.join(here, "select-pet.ps1"), "-PetId", pet.id,
+    ], { windowsHide: true, timeout: 15000, maxBuffer: 1024 * 1024 });
+  }
+  return pet.id;
 }
 
 async function readPetAssociations(options) {
@@ -634,7 +785,7 @@ async function listInstalledThemes(options) {
 
 async function themeControlState(options) {
   const active = await loadTheme(options.themeDir);
-  const associations = await readPetAssociations(options);
+  const selectedPet = active.petBundle?.id ?? null;
   return {
     version: SKIN_VERSION,
     hotReload: true,
@@ -642,8 +793,9 @@ async function themeControlState(options) {
     active: { id: active.theme.id, name: active.theme.name },
     themes: await listInstalledThemes(options),
     libraries: await readLibraries(options),
-    pets: await listInstalledPets(),
-    petAssociation: associations[active.theme.id] || null,
+    pets: await listInstalledPets(selectedPet),
+    selectedPet,
+    petAssociation: selectedPet,
   };
 }
 
@@ -779,6 +931,32 @@ async function fetchRemoteTheme(themeUrl) {
   for (const placeholder of ["__DREAM_CSS_JSON__", "__DREAM_ART_JSON__", "__DREAM_THEME_JSON__"]) {
     if (!rendererText.includes(placeholder)) throw new Error(`远程主题脚本缺少占位符：${placeholder}`);
   }
+  let petBundle = null;
+  let normalizedPet = null;
+  if (rawTheme.pet !== undefined && rawTheme.pet !== null) {
+    if (typeof rawTheme.pet !== "object" || Array.isArray(rawTheme.pet)) throw new Error("远程主题 pet 必须是对象");
+    const petId = normalizedText(rawTheme.pet.id, "pet.id", "", 80);
+    if (!PET_ID_PATTERN.test(petId)) throw new Error("远程主题 pet.id 无效");
+    const petDirectory = normalizedText(rawTheme.pet.directory, "pet.directory", "", 240);
+    if (!petDirectory || path.isAbsolute(petDirectory)) throw new Error("远程主题 pet.directory 必须是相对路径");
+    const manifestUrl = new URL(`${petDirectory.replace(/\/$/, "")}/pet.json`, url);
+    if (manifestUrl.protocol !== "https:") throw new Error("远程宠物只允许 HTTPS 地址");
+    const manifestResponse = await fetch(manifestUrl, { redirect: "error", signal: AbortSignal.timeout(10000) });
+    if (!manifestResponse.ok) throw new Error(`宠物清单请求失败：HTTP ${manifestResponse.status}`);
+    const manifestBytes = Buffer.from(await manifestResponse.arrayBuffer());
+    if (manifestBytes.length < 1 || manifestBytes.length > MAX_PET_MANIFEST_BYTES) throw new Error("远程宠物 pet.json 为空或过大");
+    let petManifest;
+    try { petManifest = JSON.parse(manifestBytes.toString("utf8")); }
+    catch { throw new Error("远程宠物 pet.json 不是有效 JSON"); }
+    const normalizedManifest = normalizePetManifest(petManifest, petId);
+    const spritesheetUrl = new URL(normalizedManifest.spritesheetPath, manifestUrl);
+    if (spritesheetUrl.protocol !== "https:") throw new Error("远程宠物图集只允许 HTTPS 地址");
+    const spritesheetResponse = await fetch(spritesheetUrl, { redirect: "error", signal: AbortSignal.timeout(30000) });
+    if (!spritesheetResponse.ok) throw new Error(`宠物图集请求失败：HTTP ${spritesheetResponse.status}`);
+    const spritesheetBytes = Buffer.from(await spritesheetResponse.arrayBuffer());
+    petBundle = petBundleFromBytes(manifestBytes, spritesheetBytes, petId);
+    normalizedPet = { id: petId, directory: `pets/${petId}` };
+  }
   const theme = {
     schemaVersion: 2,
     id: normalizedText(rawTheme.id, "id", "remote-theme", 80),
@@ -801,6 +979,8 @@ async function fetchRemoteTheme(themeUrl) {
     },
     palette: {},
   };
+  if (normalizedPet) theme.pet = normalizedPet;
+  if (normalizedPet) theme.pet = normalizedPet;
   if (typeof palette.accent === "string" && palette.accent.trim()) {
     const accent = palette.accent.trim();
     if (!/^(?:#[\da-f]{3,8}|(?:rgb|hsl|oklch|oklab)\([^;{}]{1,96}\))$/i.test(accent)) {
@@ -809,7 +989,7 @@ async function fetchRemoteTheme(themeUrl) {
     theme.palette.accent = accent;
   }
   return {
-    theme, imageBytes: bytes, imagePath: `remote${extension}`,
+    theme, imageBytes: bytes, imagePath: `remote${extension}`, petBundle,
     cssPath: "remote.css", cssText, rendererPath: "remote.js", rendererText,
     themePath: "remote", sourceStamp: "remote", fingerprint: "remote",
   };
@@ -834,20 +1014,45 @@ async function handleThemeControl(options, request) {
     if (!isPathInside(directory, path.resolve(savedRoot))) throw new Error("主题路径越界");
     const loaded = await loadTheme(directory);
     await writeThemeDirectory(options.themeDir, loaded);
+    await installAndSelectBundledPet(options, loaded);
     await fs.rm(options.pauseFile, { force: true });
     return themeControlState(options);
   }
-  if (request.command === "associatePet") {
+  if (request.command === "selectPet" || request.command === "associatePet") {
     const active = await loadTheme(options.themeDir);
     const petId = String(payload.petId || "").trim();
-    const associations = await readPetAssociations(options);
-    if (!petId) delete associations[active.theme.id];
-    else {
-      const pets = await listInstalledPets();
-      if (!pets.some((pet) => pet.id === petId)) throw new Error("关联的宠物不是有效的 Codex v2 宠物包");
-      associations[active.theme.id] = petId;
+    let selectedBundle = null;
+    if (petId) {
+      if (!PET_ID_PATTERN.test(petId)) throw new Error("选择的宠物 id 无效");
+      selectedBundle = await loadPetPackage(path.join(codexHome(), "pets", petId), petId);
     }
-    await writePetAssociations(options, associations);
+    const withSelection = {
+      ...active,
+      theme: { ...active.theme },
+      petBundle: selectedBundle,
+    };
+    if (selectedBundle) withSelection.theme.pet = { id: selectedBundle.id, directory: `pets/${selectedBundle.id}` };
+    else delete withSelection.theme.pet;
+    await writeThemeDirectory(options.themeDir, withSelection);
+    for (const entry of await fs.readdir(savedRoot, { withFileTypes: true }).catch(() => [])) {
+      if (!entry.isDirectory()) continue;
+      const directory = path.join(savedRoot, entry.name);
+      try {
+        const saved = await loadTheme(directory);
+        if (saved.theme.id !== active.theme.id) continue;
+        const savedWithSelection = {
+          ...saved,
+          theme: { ...saved.theme },
+          petBundle: selectedBundle,
+        };
+        if (selectedBundle) savedWithSelection.theme.pet = { id: selectedBundle.id, directory: `pets/${selectedBundle.id}` };
+        else delete savedWithSelection.theme.pet;
+        await writeThemeDirectory(directory, savedWithSelection);
+      } catch {
+        // A broken saved theme must not prevent changing the active theme.
+      }
+    }
+    if (selectedBundle) await installAndSelectBundledPet(options, withSelection);
     return themeControlState(options);
   }
   if (request.command === "addRepository") {
@@ -962,7 +1167,14 @@ async function readThemeSourceStamp(loadedTheme) {
     fs.stat(loadedTheme.cssPath),
     fs.stat(loadedTheme.rendererPath),
   ]);
-  return `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:${cssStat.size}:${cssStat.mtimeMs}:${rendererStat.size}:${rendererStat.mtimeMs}`;
+  let petStamp = "";
+  if (loadedTheme.petBundle) {
+    const [manifestStat, spritesheetStat] = await Promise.all([
+      fs.stat(loadedTheme.petBundle.manifestPath), fs.stat(loadedTheme.petBundle.spritesheetFilePath),
+    ]);
+    petStamp = `:${manifestStat.size}:${manifestStat.mtimeMs}:${spritesheetStat.size}:${spritesheetStat.mtimeMs}`;
+  }
+  return `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:${cssStat.size}:${cssStat.mtimeMs}:${rendererStat.size}:${rendererStat.mtimeMs}${petStamp}`;
 }
 
 async function probeSession(session) {
@@ -1212,6 +1424,7 @@ async function runOneShot(options) {
   const loadedPayload = (options.mode === "once" || options.reload)
     ? await loadPayload(options.themeDir) : null;
   const payload = loadedPayload?.payload ?? null;
+  if (loadedPayload && options.mode === "once") await installAndSelectBundledPet(options, loadedPayload);
   const results = [];
   let screenshotCaptured = false;
   try {
@@ -1324,6 +1537,7 @@ async function runWatch(options) {
 
   try {
     loadedPayload = await loadPayload(options.themeDir);
+    await installAndSelectBundledPet(options, loadedPayload);
     managerPayload = await fs.readFile(path.join(root, "engine", "theme-manager.js"), "utf8");
     try {
       const themeWatcher = watchFiles(options.themeDir, { recursive: true }, (_event, fileName) => {
@@ -1425,6 +1639,8 @@ async function runWatch(options) {
       const payloadChanged = !nextPaused && nextPayload !== loadedPayload;
       loadedPayload = nextPayload;
       paused = nextPaused;
+
+      if (payloadChanged) await installAndSelectBundledPet(options, loadedPayload);
 
       if (pauseChanged || payloadChanged) {
         for (const [id, session] of sessions) {
