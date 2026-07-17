@@ -201,7 +201,10 @@ function Get-DreamSkinDesktopSectionPattern {
 }
 
 function Assert-DreamSkinDesktopShapeSupported {
-  param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$Content)
+  param(
+    [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Content,
+    [switch]$AllowNestedTables
+  )
 
   Assert-DreamSkinTomlLineEditingSafe -Content $Content
   $sectionPattern = Get-DreamSkinDesktopSectionPattern
@@ -213,8 +216,14 @@ function Assert-DreamSkinDesktopShapeSupported {
   if ([regex]::IsMatch($Content, "(?m)^[\t ]*\[\[[\t ]*$desktopToken[\t ]*\]\]")) {
     throw 'Refusing to rewrite a config that represents desktop as an array of tables.'
   }
-  if ([regex]::IsMatch($Content, "(?m)^[\t ]*\[\[?[\t ]*$desktopToken[\t ]*\.")) {
+  if (-not $AllowNestedTables -and [regex]::IsMatch($Content, "(?m)^[\t ]*\[\[?[\t ]*$desktopToken[\t ]*\.")) {
     throw 'Refusing to rewrite nested desktop tables; normalize them to a single [desktop] table first.'
+  }
+  if ($AllowNestedTables) {
+    $selectedAvatarToken = Get-DreamSkinTomlKeyTokenPattern -Key 'selected-avatar-id'
+    if ([regex]::IsMatch($Content, "(?m)^[\t ]*\[\[?[\t ]*$desktopToken[\t ]*\.[\t ]*$selectedAvatarToken[\t ]*(?:\.|\])")) {
+      throw 'Refusing to replace selected-avatar-id because it is represented as a nested desktop table.'
+    }
   }
 
   $firstTable = [regex]::Match($Content, '(?m)^[\t ]*\[\[?')
@@ -489,7 +498,7 @@ function Set-DreamSkinSelectedPet {
   $content = if ($null -eq $originalBytes) { '' } else {
     ConvertFrom-DreamSkinUtf8Bytes -Bytes $originalBytes -Path $fullPath
   }
-  Assert-DreamSkinDesktopShapeSupported -Content $content
+  Assert-DreamSkinDesktopShapeSupported -Content $content -AllowNestedTables
   $newLine = Get-DreamSkinNewLine -Content $content
   $desktop = Get-DreamSkinDesktopSection -Content $content
   if ($null -eq $desktop) {

@@ -48,6 +48,16 @@ try {
     $petConfig -notmatch 'appearanceTheme = "system"') {
     throw 'Theme pet selection did not update exactly one desktop key while preserving unrelated config.'
   }
+  $nestedPetConfigPath = Join-Path $temporaryRoot 'nested-pet.toml'
+  $nestedPetOriginal = "[desktop]`r`nselected-avatar-id = `"custom:old`"`r`n`r`n[desktop.appearanceLightChromeTheme]`r`naccent = `"#fff`"`r`n"
+  [System.IO.File]::WriteAllText($nestedPetConfigPath, $nestedPetOriginal, $utf8NoBom)
+  & (Join-Path $Root 'scripts\select-pet.ps1') -PetId 'nested-safe' -ConfigPath $nestedPetConfigPath
+  $nestedPetConfig = Read-DreamSkinUtf8File -Path $nestedPetConfigPath
+  if ($nestedPetConfig -notmatch 'selected-avatar-id = "custom:nested-safe"' -or
+    $nestedPetConfig -notmatch '\[desktop\.appearanceLightChromeTheme\]' -or
+    $nestedPetConfig -notmatch 'accent = "#fff"') {
+    throw 'Theme pet selection did not preserve valid nested desktop appearance tables.'
+  }
   $managerConfigPath = Join-Path $temporaryRoot 'manager-base.toml'
   $managerStateRoot = Join-Path $temporaryRoot 'manager-base-state'
   $managerOriginal = "model = `"gpt-5`"`r`n`r`n[desktop]`r`nappearanceTheme = `"system`"`r`n"
@@ -628,6 +638,12 @@ try {
   foreach ($requiredManagerInstallBehavior in @('$hadThemeState', '$ManagerOnly -and -not $hadThemeState')) {
     if (-not $managerInstaller.Contains($requiredManagerInstallBehavior)) {
       throw "Manager-only install/upgrade behavior is missing: $requiredManagerInstallBehavior"
+    }
+  }
+  foreach ($configScriptName in @('select-pet.ps1', 'set-theme-base.ps1')) {
+    $configScript = Read-DreamSkinUtf8File -Path (Join-Path $Root "scripts\$configScriptName")
+    if ($configScript.Contains('(Join-Path (if ')) {
+      throw "$configScriptName uses an inline if expression that Windows PowerShell 5 cannot evaluate as a command argument."
     }
   }
   $oneClickLauncher = Read-DreamSkinUtf8File -Path $oneClickLauncherPath
