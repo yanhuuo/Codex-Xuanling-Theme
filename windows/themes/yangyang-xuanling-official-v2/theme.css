@@ -120,8 +120,8 @@ html.codex-dream-skin main.main-surface {
 }
 
 html.codex-dream-skin main.main-surface > header.app-header-tint {
-  position: relative;
-  z-index: 20;
+  position: fixed !important;
+  z-index: 30;
   color: var(--dream-text) !important;
   background: color-mix(in oklab, var(--dream-surface) 94%, transparent) !important;
   border-color: var(--dream-line-soft) !important;
@@ -776,6 +776,43 @@ html.codex-dream-skin .composer-surface-chrome .dream-xuan-icon > svg {
   height: 100%;
   overflow: visible;
   shape-rendering: geometricPrecision;
+}
+
+html.codex-dream-skin [role="menu"].dream-permission-menu .dream-native-icon-source {
+  display: none !important;
+}
+
+html.codex-dream-skin [role="menu"].dream-permission-menu .dream-xuan-icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  opacity: .9;
+}
+
+html.codex-dream-skin [role="menu"].dream-permission-menu .dream-xuan-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  shape-rendering: geometricPrecision;
+}
+
+html.codex-dream-skin [role="menu"].dream-permission-menu .dream-permission-item:hover .dream-xuan-icon,
+html.codex-dream-skin [role="menu"].dream-permission-menu .dream-permission-item:focus .dream-xuan-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--dream-accent) 32%, transparent));
+}
+
+html.codex-dream-skin [role="menu"].dream-permission-menu .dream-permission-item .dream-xuan-icon-bird {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+  opacity: 1;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, #d9b85f 38%, transparent));
 }
 
 html.codex-dream-skin .composer-surface-chrome .dream-xuan-icon-bird {

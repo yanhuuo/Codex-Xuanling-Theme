@@ -33,7 +33,7 @@
   ];
   const HOME_UTILITY_CLASS = "dream-home-utility";
   const SPINNER_SELECTOR = ".animate-spin, [class~='animate-spin'], [role='progressbar'], [data-loading='true']";
-  const XUAN_ICON_VERSION = "6";
+  const XUAN_ICON_VERSION = "7";
   const xuanSvg = (body) => `<svg class="dream-xuan-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
   const XUAN_ICON_SVGS = {
     bird: xuanSvg(`
@@ -61,6 +61,9 @@
     archive: xuanSvg(`<path d="M3 4.2h18v5H3v-5Zm1.2 5H20v10.6H4.2V9.2Z" fill="#143552" stroke="#d9b85f" stroke-width=".9" stroke-linejoin="round"/><path d="M9 12h6" stroke="#6ad5ef" stroke-width="1.4" stroke-linecap="round"/><path d="M13.8 18.6c2.1-1 3.6-2.8 4.6-5.2.2 2.3.7 4 1.5 5.2h-6.1Z" fill="#f4fdff" stroke="#4ebfe5" stroke-width=".55"/>`),
     help: xuanSvg(`<circle cx="12" cy="12" r="9" fill="#12324f" stroke="#d9b85f" stroke-width="1"/><path d="M9.2 9a3 3 0 1 1 4.1 2.8c-1 .4-1.3 1.1-1.3 2.2m0 3h.01" fill="none" stroke="#7bdcf2" stroke-width="1.7" stroke-linecap="round"/><path d="M3.2 5.8c2 .2 3.5-.5 4.5-2-.4 2.3-1.6 3.8-3.5 4.5l-1-2.5Z" fill="#f5fdff"/>`),
     shield: xuanSvg(`<path d="M12 2.2 19 5v5.8c0 4.6-2.8 8.1-7 10.8-4.2-2.7-7-6.2-7-10.8V5l7-2.8Z" fill="#153755" stroke="#d9b85f" stroke-width="1"/><path d="M12 5.3v12.3c2.6-2 4.3-4.2 4.3-7V7.1L12 5.3Z" fill="#55c7e9"/><path d="m8.8 11.5 2 2 4.2-4.5" fill="none" stroke="#f6fdff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>`),
+    permissionAsk: xuanSvg(`<path d="M3.1 18.9C5 12.4 9.2 7.4 16.8 3.2c-.7 6.8-4.7 11.6-11.9 14.3" fill="#143653" stroke="#d9b85f" stroke-width=".9" stroke-linejoin="round"/><path d="M5.2 16.8c3.8-1.6 6.9-4.3 9.4-8.1-1.5 1.1-3.2 1.8-5 2.1 2.2-1.7 4-3.8 5.5-6.2" fill="none" stroke="#69d5ef" stroke-width="1.15" stroke-linecap="round"/><path d="M4.4 19.2 2 22" stroke="#f6fdff" stroke-width="1.2" stroke-linecap="round"/><circle cx="17.8" cy="5.2" r="2.1" fill="#f5fdff" stroke="#4ebfe5" stroke-width=".8"/>`),
+    permissionAgent: xuanSvg(`<path d="M12 2.2 19 5v5.8c0 4.6-2.8 8.1-7 10.8-4.2-2.7-7-6.2-7-10.8V5l7-2.8Z" fill="#143653" stroke="#d9b85f" stroke-width="1"/><path d="M7.2 12.7c2.3-2.8 4.7-4.6 7.3-5.4-.3 2.6-1.7 4.7-4.2 6.4 2.1.1 3.9.7 5.4 1.9-3.4.2-6.2-.8-8.5-2.9Z" fill="#62cfee" stroke="#f5fdff" stroke-width=".65" stroke-linejoin="round"/><path d="M14.4 7.6c1-.7 2.1-1.1 3.2-1.1-.8 1.2-1.7 2-2.8 2.5" fill="none" stroke="#d9b85f" stroke-width=".8" stroke-linecap="round"/>`),
+    permissionFull: xuanSvg(`<path d="M12 2 19.4 5v5.9c0 4.8-3 8.4-7.4 11.1-4.4-2.7-7.4-6.3-7.4-11.1V5L12 2Z" fill="#193552" stroke="#d9b85f" stroke-width="1"/><path d="M6.7 13.4c2.2-3.2 4.8-5.3 7.8-6.2-.2 2.3-1.2 4.2-3.1 5.7 2 .1 3.8.8 5.3 2-3.8.4-7.1-.1-10-1.5Z" fill="#f5fdff" stroke="#e9b64e" stroke-width=".7" stroke-linejoin="round"/><path d="M10.8 10.1c1.4-1.8 3.1-3 5-3.6-.4 1.7-1.4 3.1-3 4.1" fill="#56c9eb"/><circle cx="15.2" cy="8.1" r=".55" fill="#143d72"/>`),
     mic: xuanSvg(`<rect x="8.3" y="3" width="7.4" height="11" rx="3.7" fill="#153755" stroke="#d9b85f" stroke-width=".9"/><path d="M5.8 10.5c0 3.4 2.5 5.8 6.2 5.8s6.2-2.4 6.2-5.8M12 16.4V21M8.8 21h6.4" fill="none" stroke="#68d5ef" stroke-width="1.4" stroke-linecap="round"/><path d="M9.8 6.2c1.5-.2 2.9-.8 4-1.9-.2 1.8-1.1 3.1-2.8 3.9l-1.2-2Z" fill="#f6fdff"/>`),
     send: xuanSvg(`<path d="M3 11.8 21 3l-6.2 18-3.1-6.6L3 11.8Z" fill="#56c8ea" stroke="#d9b85f" stroke-width=".9" stroke-linejoin="round"/><path d="m11.7 14.4 4.9-6.7-7.2 5.6" fill="none" stroke="#f7feff" stroke-width="1.15" stroke-linecap="round"/><path d="M4.1 9.2C6 8 7 6.4 7.2 4.3c1 2.2.8 4.2-.6 6l-2.5-1.1Z" fill="#276ba9"/>`),
   };
@@ -72,6 +75,9 @@
   let lastSpinnerAt = 0;
   let sidebarReadyAt = 0;
   let appliedProfileSignature = "";
+  let permissionMenuTimer = null;
+  let permissionMenuListener = null;
+  const permissionButtons = new Set();
   window.__CODEX_DREAM_SKIN_DISABLED__ = false;
 
   const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, Number(value)));
@@ -335,6 +341,8 @@
     document.querySelectorAll(".dream-xuan-brand-mark").forEach((node) => node.remove());
     document.querySelectorAll(".dream-composer-send").forEach((node) => node.classList.remove("dream-composer-send"));
     document.querySelectorAll(".dream-composer-processing").forEach((node) => node.classList.remove("dream-composer-processing"));
+    document.querySelectorAll(".dream-permission-menu").forEach((node) => node.classList.remove("dream-permission-menu"));
+    document.querySelectorAll(".dream-permission-item").forEach((node) => node.classList.remove("dream-permission-item"));
     document.querySelectorAll(".dream-xuanniao-spinner-mark").forEach((node) => node.remove());
     document.querySelectorAll(".dream-native-icon-source").forEach((node) => node.classList.remove("dream-native-icon-source"));
     document.querySelectorAll(".dream-xuanniao-spinner-source").forEach((node) => {
@@ -541,12 +549,43 @@
       const isProcessing = isComposerAction && ["停止", "Stop"].includes(label);
       let iconName = "";
       if (navigation === "add-context" || ["添加文件等内容", "Add files and more"].includes(label)) iconName = "add";
-      else if (navigation === "permissions") iconName = "shield";
+      else if (navigation === "permissions") {
+        if (/^(?:完全访问|Full access)/i.test(label)) iconName = "permissionFull";
+        else if (/^(?:替我审批|Agent approval)/i.test(label)) iconName = "permissionAgent";
+        else iconName = "permissionAsk";
+        if (permissionMenuListener && !permissionButtons.has(button)) {
+          button.addEventListener?.("click", permissionMenuListener);
+          permissionButtons.add(button);
+        }
+      }
       else if (["听写", "Dictate"].includes(label)) iconName = "mic";
       else if (isComposerAction) iconName = "bird";
       button.classList.toggle("dream-composer-send", isComposerAction && !isProcessing);
       button.classList.toggle("dream-composer-processing", isProcessing);
       if (iconName) installXuanIcon(button.querySelector("svg:not(.dream-xuan-svg)"), iconName);
+    }
+
+    const permissionIconFor = (label) => {
+      if (/^(?:请求批准|Ask for approval|Request approval)/i.test(label)) return "permissionAsk";
+      if (/^(?:替我审批|Agent approval)/i.test(label)) return "permissionAgent";
+      if (/^(?:完全访问权限|Full access)/i.test(label)) return "permissionFull";
+      return "";
+    };
+    for (const menu of document.querySelectorAll('[role="menu"][data-state="open"]')) {
+      const items = [...menu.querySelectorAll(':scope > [role="menuitem"]')];
+      const themedItems = items.map((item) => ({
+        item,
+        iconName: permissionIconFor((item.textContent || "").trim()),
+      })).filter((entry) => entry.iconName);
+      if (!themedItems.length) continue;
+      menu.classList.add("dream-permission-menu");
+      for (const { item, iconName } of themedItems) {
+        item.classList.add("dream-permission-item");
+        const row = item.querySelector(":scope > div");
+        const nativeIcons = [...(row?.querySelectorAll?.(":scope > svg:not(.dream-xuan-svg)") || [])];
+        installXuanIcon(nativeIcons[0], iconName);
+        if (nativeIcons.length > 1) installXuanIcon(nativeIcons[nativeIcons.length - 1], "bird");
+      }
     }
 
     if (spinnerDirty || now - lastSpinnerAt > 10000) {
@@ -607,6 +646,10 @@
     if (state?.timer) clearInterval(state.timer);
     if (state?.scheduler?.timeout) clearTimeout(state.scheduler.timeout);
     if (state?.scheduler?.sidebarTimeout) clearTimeout(state.scheduler.sidebarTimeout);
+    if (permissionMenuTimer) clearTimeout(permissionMenuTimer);
+    if (permissionMenuListener) document.removeEventListener?.("click", permissionMenuListener, true);
+    for (const button of permissionButtons) button.removeEventListener?.("click", permissionMenuListener);
+    permissionButtons.clear();
     if (state?.artUrl) URL.revokeObjectURL(state.artUrl);
     delete window[STATE_KEY];
     return true;
@@ -640,6 +683,9 @@
       const sidebarChanged = (inSidebar && elements.length > 0) ||
         elements.some((node) => node.matches?.("aside.app-shell-left-panel"));
       const composerChanged = inComposer && elements.length > 0;
+      const permissionMenuChanged = elements.some((node) =>
+        node.matches?.('[role="menu"], [data-radix-popper-content-wrapper]') ||
+        node.querySelector?.('[role="menu"]'));
       const spinnerChanged = Boolean(target.closest?.(SPINNER_SELECTOR)) ||
         elements.some((node) => node.matches?.(`${SPINNER_SELECTOR}, [role='progressbar']`));
       if (sidebarChanged) {
@@ -649,7 +695,7 @@
         scheduleSidebarEnsure();
       }
       if (spinnerChanged) spinnerDirty = true;
-      return composerChanged || actionStateChanged || mainRootChanged || spinnerChanged ||
+      return composerChanged || permissionMenuChanged || actionStateChanged || mainRootChanged || spinnerChanged ||
         target === document.body || target === document.documentElement ||
         elements.some((node) => node.matches?.("main.main-surface, [role='main'], [class*='_homeUtilityBar_']"));
     });
@@ -661,6 +707,16 @@
     attributes: true,
     attributeFilter: ["aria-label", "disabled"],
   });
+  permissionMenuListener = (event) => {
+    if (!event.target?.closest?.('button[data-composer-navigation-target="permissions"]')) return;
+    if (permissionMenuTimer) clearTimeout(permissionMenuTimer);
+    permissionMenuTimer = setTimeout(() => {
+      permissionMenuTimer = null;
+      const state = window[STATE_KEY];
+      if (state?.installToken === installToken) ensure();
+    }, 120);
+  };
+  document.addEventListener?.("click", permissionMenuListener, true);
   const timer = setInterval(() => { spinnerDirty = true; ensure(); }, 30000);
   window[STATE_KEY] = {
     ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.4.0",
