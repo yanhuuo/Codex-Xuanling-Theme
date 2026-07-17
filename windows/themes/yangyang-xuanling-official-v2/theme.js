@@ -21,6 +21,7 @@
     "dream-route-home",
     "dream-route-task",
     "dream-home-utility-present",
+    "dream-window-dragging",
   ];
   const ROOT_PROPERTIES = [
     "--dream-art",
@@ -78,6 +79,9 @@
   let permissionMenuTimer = null;
   let permissionMenuListener = null;
   const permissionButtons = new Set();
+  let windowDragHeader = null;
+  let windowDragStart = null;
+  let windowDragEnd = null;
   window.__CODEX_DREAM_SKIN_DISABLED__ = false;
 
   const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, Number(value)));
@@ -403,6 +407,13 @@
       clearSkinDom();
       return;
     }
+    const shellHeader = shellMain.querySelector?.(":scope > header.app-header-tint") ||
+      document.querySelector("main.main-surface > header.app-header-tint");
+    if (shellHeader !== windowDragHeader) {
+      windowDragHeader?.removeEventListener?.("mousedown", windowDragStart, true);
+      windowDragHeader = shellHeader;
+      windowDragHeader?.addEventListener?.("mousedown", windowDragStart, true);
+    }
 
     root.classList.add("codex-dream-skin");
     applyProfile(root);
@@ -650,6 +661,10 @@
     if (permissionMenuListener) document.removeEventListener?.("click", permissionMenuListener, true);
     for (const button of permissionButtons) button.removeEventListener?.("click", permissionMenuListener);
     permissionButtons.clear();
+    windowDragHeader?.removeEventListener?.("mousedown", windowDragStart, true);
+    window.removeEventListener?.("mouseup", windowDragEnd, true);
+    window.removeEventListener?.("blur", windowDragEnd, true);
+    windowDragHeader = null;
     if (state?.artUrl) URL.revokeObjectURL(state.artUrl);
     delete window[STATE_KEY];
     return true;
@@ -717,6 +732,13 @@
     }, 120);
   };
   document.addEventListener?.("click", permissionMenuListener, true);
+  windowDragStart = (event) => {
+    if (event.button !== 0 || event.target?.closest?.("button, a, input, textarea, select, [role='button']")) return;
+    document.documentElement?.classList.add("dream-window-dragging");
+  };
+  windowDragEnd = () => document.documentElement?.classList.remove("dream-window-dragging");
+  window.addEventListener?.("mouseup", windowDragEnd, true);
+  window.addEventListener?.("blur", windowDragEnd, true);
   const timer = setInterval(() => { spinnerDirty = true; ensure(); }, 30000);
   window[STATE_KEY] = {
     ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.4.0",
@@ -729,5 +751,5 @@
     state.profile = result;
     ensure();
   });
-  return { installed: true, version: "1.3.4", adaptive: true };
+  return { installed: true, version: "1.4.0", adaptive: true };
 })(__DREAM_CSS_JSON__, __DREAM_ART_JSON__, __DREAM_THEME_JSON__)

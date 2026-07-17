@@ -736,6 +736,24 @@ html.codex-dream-skin .dream-home-utility {
   backdrop-filter: none !important;
 }
 
+/* Keep Windows DWM drag composition stable without reducing the normal theme.
+   The renderer adds this class only while the native title bar is held. */
+html.codex-dream-skin.dream-window-dragging *,
+html.codex-dream-skin.dream-window-dragging *::before,
+html.codex-dream-skin.dream-window-dragging *::after {
+  animation-play-state: paused !important;
+  transition-duration: 0s !important;
+}
+
+html.codex-dream-skin.dream-window-dragging main.main-surface > header.app-header-tint,
+html.codex-dream-skin.dream-window-dragging main.main-surface > header.app-header-tint svg,
+html.codex-dream-skin.dream-window-dragging .composer-surface-chrome,
+html.codex-dream-skin.dream-window-dragging .dream-xuan-icon {
+  filter: none !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
 html.codex-dream-skin .composer-surface-chrome > div {
   border-radius: inherit;
 }

@@ -498,7 +498,9 @@ try {
     '.dream-route-task:is(.dream-task-ambient, .dream-task-banner)',
     '.composer-surface-chrome .dream-xuan-icon',
     'position: fixed !important',
-    '.dream-permission-menu .dream-permission-item .dream-xuan-icon-bird'
+    '.dream-permission-menu .dream-permission-item .dream-xuan-icon-bird',
+    'html.codex-dream-skin.dream-window-dragging *',
+    'animation-play-state: paused !important'
   )) {
     if (-not $css.Contains($requiredCss)) { throw "Windows immersive CSS is missing: $requiredCss" }
   }
@@ -578,6 +580,7 @@ try {
     'dream-composer-processing', 'button.size-token-button-composer', 'attributeFilter: ["aria-label", "disabled"]',
     'scheduleSidebarEnsure', 'appliedProfileSignature', '}, 30000);',
     'permissionIconFor', 'permissionFull', 'permissionMenuChanged', 'permissionMenuListener', 'permissionButtons',
+    'windowDragStart', 'windowDragEnd', 'dream-window-dragging',
     'installXuanIcon(nativeIcons[nativeIcons.length - 1], "bird")'
   )) {
     if (-not $rendererSource.Contains($requiredPerformanceBehavior)) {
