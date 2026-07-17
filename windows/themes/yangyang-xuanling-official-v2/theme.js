@@ -65,8 +65,10 @@
   const installToken = {};
   let samplingNativeShell = false;
   let observer = null;
-  let adornmentsDirty = true;
-  let lastAdornmentsAt = 0;
+  let sidebarDirty = true;
+  let spinnerDirty = true;
+  let lastSidebarAt = 0;
+  let lastSpinnerAt = 0;
   window.__CODEX_DREAM_SKIN_DISABLED__ = false;
 
   const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, Number(value)));
@@ -444,10 +446,30 @@
     setChromeText("dream-theme-status", config.statusText);
     setChromeText("dream-theme-quote", config.quote);
 
+    const installXuanIcon = (source, iconName) => {
+      if (!source || !iconName) return;
+      if (!source.classList.contains("dream-native-icon-source")) {
+        source.classList.add("dream-native-icon-source");
+      }
+      let replacement = source.previousElementSibling;
+      if (!replacement?.classList.contains("dream-xuan-icon")) {
+        replacement = document.createElement("span");
+        replacement.setAttribute("aria-hidden", "true");
+        source.parentElement?.insertBefore(replacement, source);
+      }
+      const expectedClass = `dream-xuan-icon dream-xuan-icon-${iconName}`;
+      const iconSignature = `${XUAN_ICON_VERSION}:${iconName}`;
+      if (replacement.className !== expectedClass) replacement.className = expectedClass;
+      if (replacement.dataset.dreamIcon !== iconSignature) {
+        replacement.innerHTML = XUAN_ICON_SVGS[iconName];
+        replacement.dataset.dreamIcon = iconSignature;
+      }
+    };
+
     const now = Date.now();
-    if (adornmentsDirty || now - lastAdornmentsAt > 5000) {
-      adornmentsDirty = false;
-      lastAdornmentsAt = now;
+    if (sidebarDirty || now - lastSidebarAt > 15000) {
+      sidebarDirty = false;
+      lastSidebarAt = now;
     const sidebarButtons = [...(shellSidebar.querySelectorAll?.("button") || [])];
     const exactText = (node) => (node.innerText || node.getAttribute("aria-label") || "").trim();
     const primaryLabels = new Set([
@@ -473,25 +495,6 @@
       if (["归档任务", "Archive task"].includes(label)) return "archive";
       if (["打开帮助菜单", "Open help menu"].includes(label)) return "help";
       return "";
-    };
-    const installXuanIcon = (source, iconName) => {
-      if (!source || !iconName) return;
-      if (!source.classList.contains("dream-native-icon-source")) {
-        source.classList.add("dream-native-icon-source");
-      }
-      let replacement = source.previousElementSibling;
-      if (!replacement?.classList.contains("dream-xuan-icon")) {
-        replacement = document.createElement("span");
-        replacement.setAttribute("aria-hidden", "true");
-        source.parentElement?.insertBefore(replacement, source);
-      }
-      const expectedClass = `dream-xuan-icon dream-xuan-icon-${iconName}`;
-      const iconSignature = `${XUAN_ICON_VERSION}:${iconName}`;
-      if (replacement.className !== expectedClass) replacement.className = expectedClass;
-      if (replacement.dataset.dreamIcon !== iconSignature) {
-        replacement.innerHTML = XUAN_ICON_SVGS[iconName];
-        replacement.dataset.dreamIcon = iconSignature;
-      }
     };
     for (const button of sidebarButtons) {
       const label = exactText(button);
@@ -522,6 +525,7 @@
         firstPath.startsWith("M4.75488 2.1416") || firstPath.startsWith("M5.36914 2.1416");
       if (knownFolder) installXuanIcon(source, "folder");
     }
+    }
 
     for (const button of document.querySelectorAll(".composer-surface-chrome button")) {
       const label = (button.getAttribute("aria-label") || button.innerText || "").trim();
@@ -535,6 +539,9 @@
       if (iconName) installXuanIcon(button.querySelector("svg:not(.dream-xuan-svg)"), iconName);
     }
 
+    if (spinnerDirty || now - lastSpinnerAt > 10000) {
+    spinnerDirty = false;
+    lastSpinnerAt = now;
     const isNativeSpinner = (source) => source.matches?.(SPINNER_SELECTOR) || (
       source.tagName?.toLowerCase() === "svg" &&
       source.querySelector?.('path[opacity="0.3"]') &&
@@ -602,31 +609,32 @@
   };
   observer = new MutationObserver((records = []) => {
     if (samplingNativeShell) return;
-    const isRelevantNode = (node) => node?.nodeType === 1 && (
-      node.matches?.("aside.app-shell-left-panel, main.main-surface, [role='main'], [class*='_homeUtilityBar_']") ||
-      node.querySelector?.("aside.app-shell-left-panel, main.main-surface, [role='main'], [class*='_homeUtilityBar_']")
-    );
     const relevant = records.some((record) => {
       const target = record.target;
-      if (target === document.documentElement || target === document.body ||
-          target.matches?.("main.main-surface") || target.closest?.("aside.app-shell-left-panel")) return true;
-      if (target.closest?.(".composer-surface-chrome") &&
-          [...record.addedNodes, ...record.removedNodes].some((node) => node?.nodeType === 1)) return true;
-      return [...record.addedNodes, ...record.removedNodes].some(isRelevantNode);
+      const elements = [...record.addedNodes, ...record.removedNodes].filter((node) => node?.nodeType === 1);
+      const inSidebar = Boolean(target.closest?.("aside.app-shell-left-panel"));
+      const inComposer = Boolean(target.closest?.(".composer-surface-chrome"));
+      const mainRootChanged = Boolean(target.matches?.("main.main-surface, [role='main']")) && elements.length > 0;
+      const sidebarChanged = (inSidebar && elements.length > 0) ||
+        elements.some((node) => node.matches?.("aside.app-shell-left-panel"));
+      const composerChanged = inComposer && elements.length > 0;
+      const spinnerChanged = Boolean(target.closest?.(SPINNER_SELECTOR)) ||
+        elements.some((node) => node.matches?.(`${SPINNER_SELECTOR}, [role='progressbar']`));
+      if (sidebarChanged) sidebarDirty = true;
+      if (spinnerChanged) spinnerDirty = true;
+      return sidebarChanged || composerChanged || mainRootChanged || spinnerChanged ||
+        target === document.body || target === document.documentElement ||
+        elements.some((node) => node.matches?.("main.main-surface, [role='main'], [class*='_homeUtilityBar_']"));
     });
-    if (records.some((record) => [...record.addedNodes, ...record.removedNodes].some((node) => node?.nodeType === 1 && (
-      node.matches?.("aside.app-shell-left-panel, .composer-surface-chrome, button, svg, [role='progressbar']") ||
-      node.querySelector?.("aside.app-shell-left-panel, .composer-surface-chrome, button, svg, [role='progressbar']")
-    )))) adornmentsDirty = true;
     if (relevant) scheduleEnsure();
   });
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
   });
-  const timer = setInterval(() => { adornmentsDirty = true; ensure(); }, 10000);
+  const timer = setInterval(() => { spinnerDirty = true; ensure(); }, 10000);
   window[STATE_KEY] = {
-    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.3.0",
+    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.3.1",
   };
   ensure();
   analyzeArt().then((result) => {
@@ -636,5 +644,5 @@
     state.profile = result;
     ensure();
   });
-  return { installed: true, version: "1.3.0", adaptive: true };
+  return { installed: true, version: "1.3.1", adaptive: true };
 })(__DREAM_CSS_JSON__, __DREAM_ART_JSON__, __DREAM_THEME_JSON__)
