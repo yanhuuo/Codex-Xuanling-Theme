@@ -615,10 +615,16 @@ try {
     -not $rendererSource.Contains('aside.app-shell-left-panel svg')) {
     throw 'The global Xuanniao orbit spinner is missing or still scoped to the sidebar.'
   }
-  $bundledPet = Join-Path $bundledTheme 'pets\iuno'
-  if (-not (Test-Path -LiteralPath (Join-Path $bundledPet 'pet.json') -PathType Leaf) -or
-    -not (Test-Path -LiteralPath (Join-Path $bundledPet 'spritesheet.webp') -PathType Leaf)) {
+  $bundledPet = Join-Path $bundledTheme 'pets\yangyang-xuanling-official-drum-r3'
+  $bundledPetManifestPath = Join-Path $bundledPet 'pet.json'
+  if (-not (Test-Path -LiteralPath $bundledPetManifestPath -PathType Leaf)) {
     throw 'The Xuanling theme no longer carries its selected v2 pet package.'
+  }
+  $bundledPetManifest = Get-Content -LiteralPath $bundledPetManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ($bundledPetManifest.id -ne 'yangyang-xuanling-official-drum-r3' -or
+    $bundledPetManifest.spriteVersionNumber -ne 2 -or
+    -not (Test-Path -LiteralPath (Join-Path $bundledPet $bundledPetManifest.spritesheetPath) -PathType Leaf)) {
+    throw 'The Xuanling theme bundled pet is not the approved official-drum continuous R3 v2 package.'
   }
 
   $packageRoot = Split-Path -Parent $Root
