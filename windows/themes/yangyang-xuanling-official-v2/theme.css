@@ -780,7 +780,7 @@ html.codex-dream-skin .composer-surface-chrome .dream-xuan-icon > svg {
   shape-rendering: geometricPrecision;
 }
 
-html.codex-dream-skin .composer-surface-chrome .dream-xuan-icon-send {
+html.codex-dream-skin .composer-surface-chrome .dream-xuan-icon-bird {
   width: 20px;
   height: 20px;
 }
@@ -789,6 +789,39 @@ html.codex-dream-skin .composer-surface-chrome button.dream-composer-send {
   border: 1px solid color-mix(in srgb, #d9b85f 65%, var(--dream-accent)) !important;
   background: color-mix(in srgb, var(--dream-accent) 84%, #17395b) !important;
   box-shadow: 0 0 14px color-mix(in srgb, var(--dream-accent) 25%, transparent) !important;
+}
+
+html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing {
+  border: 1px solid color-mix(in srgb, #d9b85f 52%, var(--dream-accent)) !important;
+  background: color-mix(in srgb, #143653 86%, var(--dream-accent)) !important;
+  box-shadow: 0 0 13px color-mix(in srgb, var(--dream-accent) 20%, transparent) !important;
+}
+
+html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-xuan-icon-bird {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  flex-basis: 24px;
+  animation: dream-xuanniao-orbit 1080ms linear infinite;
+  transform-origin: 50% 50%;
+}
+
+html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-xuan-icon-bird::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid color-mix(in srgb, var(--dream-accent) 45%, transparent);
+  border-radius: 50%;
+}
+
+html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-xuan-icon-bird > svg {
+  position: absolute;
+  left: 50%;
+  top: -1px;
+  width: 11px;
+  height: 11px;
+  transform: translateX(-50%) rotate(18deg);
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--dream-accent) 75%, transparent));
 }
 
 html.codex-dream-skin.dream-home-utility-present .dream-home .composer-surface-chrome {
