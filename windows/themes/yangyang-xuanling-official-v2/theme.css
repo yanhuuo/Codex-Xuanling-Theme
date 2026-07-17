@@ -157,7 +157,7 @@ html.codex-dream-skin .dream-task::before {
   background-repeat: no-repeat;
   background-position: var(--dream-art-position);
   background-size: cover;
-  mask-image: linear-gradient(to bottom, oklch(0 0 0) 0, oklch(0 0 0 / .92) 38%, transparent 88%);
+  contain: strict;
 }
 
 html.codex-dream-skin.dream-art-wide .dream-task::before {
@@ -168,14 +168,12 @@ html.codex-dream-skin.dream-art-wide .dream-task::before {
 html.codex-dream-skin.dream-art-wide:not(.dream-task-banner) .dream-task::before {
   background-position: var(--dream-art-position);
   background-size: cover;
-  mask-image: linear-gradient(to bottom, oklch(0 0 0) 0, oklch(0 0 0 / .92) 44%, oklch(0 0 0 / .72) 100%);
 }
 
 html.codex-dream-skin.dream-task-banner .dream-task::before {
   bottom: auto;
   height: min(46vh, 520px);
   opacity: calc(var(--dream-ambient-opacity) * 1.8);
-  mask-image: linear-gradient(to bottom, oklch(0 0 0) 0, oklch(0 0 0 / .9) 52%, transparent 100%);
 }
 
 html.codex-dream-skin.dream-task-off .dream-task::before {
@@ -613,6 +611,7 @@ html.codex-dream-skin .dream-xuanniao-spinner-mark {
   pointer-events: none;
   animation: dream-xuanniao-orbit 1080ms linear infinite;
   transform-origin: 50% 50%;
+  will-change: transform;
 }
 
 html.codex-dream-skin .dream-xuanniao-spinner-mark::after {
@@ -630,7 +629,6 @@ html.codex-dream-skin .dream-xuanniao-spinner-mark > svg {
   width: 11px;
   height: 11px;
   transform: translateX(-50%) rotate(18deg);
-  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--dream-accent) 72%, transparent));
 }
 
 @keyframes dream-xuanniao-orbit {
@@ -646,7 +644,7 @@ html.codex-dream-skin aside.app-shell-left-panel .bg-token-list-hover-background
 }
 
 #codex-dream-skin-chrome {
-  position: fixed;
+  position: absolute;
   z-index: 24;
   inset: 0;
   color: var(--dream-text);
@@ -804,6 +802,7 @@ html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing 
   flex-basis: 24px;
   animation: dream-xuanniao-orbit 1080ms linear infinite;
   transform-origin: 50% 50%;
+  will-change: transform;
 }
 
 html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-xuan-icon-bird::after {
@@ -821,7 +820,6 @@ html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing 
   width: 11px;
   height: 11px;
   transform: translateX(-50%) rotate(18deg);
-  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--dream-accent) 75%, transparent));
 }
 
 html.codex-dream-skin.dream-home-utility-present .dream-home .composer-surface-chrome {
