@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 2,
+  "id": "yangyang-xuanling-azure-plume",
+  "name": "秧秧·玄翎｜苍羽夜",
+  "description": "鸣潮秧秧·玄翎深色沉浸主题，包含独立玄鸟图标与环绕加载动画。",
+  "author": "yanhuuo",
+  "version": "2.1.0",
+  "entrypoints": {
+    "css": "theme.css",
+    "renderer": "theme.js"
+  },
+  "image": "background.jpg",
+  "brandSubtitle": "WUTHERING WAVES · XUANLING",
+  "tagline": "循风而行，听万声回响。",
+  "projectPrefix": "选择项目 · ",
+  "projectLabel": "◇  选择项目",
+  "statusText": "共鸣终端 · ONLINE",
+  "quote": "VOICES OF AZURE PLUME",
+  "appearance": "dark",
+  "art": {
+    "focusX": 0.76,
+    "focusY": 0.48,
+    "safeArea": "left",
+    "taskMode": "ambient"
+  },
+  "palette": {
+    "accent": "#6edaf2"
+  }
+}

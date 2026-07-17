@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "name": "Codex Xuanling Themes",
+  "themes": [
+    {
+      "id": "yangyang-xuanling-azure-plume",
+      "name": "秧秧·玄翎｜苍羽夜",
+      "themeUrl": "windows/themes/yangyang-xuanling-official-v2/theme.json",
+      "previewUrl": "windows/themes/yangyang-xuanling-official-v2/background.jpg"
+    }
+  ]
+}
