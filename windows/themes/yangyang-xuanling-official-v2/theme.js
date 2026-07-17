@@ -33,7 +33,7 @@
   ];
   const HOME_UTILITY_CLASS = "dream-home-utility";
   const SPINNER_SELECTOR = ".animate-spin, [class~='animate-spin'], [role='progressbar'], [data-loading='true']";
-  const XUAN_ICON_VERSION = "4";
+  const XUAN_ICON_VERSION = "5";
   const xuanSvg = (body) => `<svg class="dream-xuan-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
   const XUAN_ICON_SVGS = {
     bird: xuanSvg(`
@@ -41,8 +41,10 @@
       <path d="M12.1 9.9c1.2-4 3.6-7 7.1-8.7.1 4.3-1.6 7.8-5.2 10.4" fill="#276ba9" stroke="#d9b85f" stroke-width=".9" stroke-linejoin="round"/>
       <path d="M9.2 12.3c2.1-2.4 4.5-3.3 7.1-2.6l2.7-1.2 2.7 1.1-2.9 1.1c-1.2 2.7-3.8 4-7.5 3.7-1.6-.1-2.3-1.1-2.1-2.1Z" fill="#f5fdff" stroke="#2c78ae" stroke-width=".85" stroke-linejoin="round"/>
       <circle cx="18.2" cy="9.7" r=".55" fill="#143d72"/>
-      <path d="M11.8 14.1C9.6 16 7.6 18.8 5.9 22.4M13.1 14.2c1.6 2.8 4 5.2 7.1 7.2" fill="none" stroke="#d9b85f" stroke-width="1.05" stroke-linecap="round"/>
-      <path d="M11.4 14.1C8.9 16.3 7.2 18.8 6 21.5M13.5 14.1c1.6 2.6 3.7 4.8 6.4 6.6" fill="none" stroke="#53c9ee" stroke-width=".62" stroke-linecap="round"/>
+      <path d="M10.7 13.3C8 14 5.2 15.8 2.8 18.8c3.2-.7 6.2-1.9 8.9-3.9l-1-1.6Z" fill="#55c6eb" stroke="#2c78ae" stroke-width=".42" stroke-linejoin="round"/>
+      <path d="M11.7 13.9c-2 1.9-3.5 4.6-4.5 8.1 2.2-1.9 4-4.2 5.4-7l-.9-1.1Z" fill="#f5fdff" stroke="#4ebce3" stroke-width=".46" stroke-linejoin="round"/>
+      <path d="M10 12.8c-2.8-.1-5.4.6-7.8 2.1 2.9.3 5.7 0 8.5-.8l-.7-1.3Z" fill="#276ba9" stroke="#55c6eb" stroke-width=".4" stroke-linejoin="round"/>
+      <path d="M18.6 8.9c.6-1.3 1.6-2.3 3-2.9-.4 1.3-1.1 2.4-2.2 3.2" fill="#6fd6ee" stroke="#d9b85f" stroke-width=".55" stroke-linecap="round"/>
     `),
     chevron: xuanSvg(`<path d="M4 8.2c3.1.4 5.8 1.6 8 3.7 2.4-2.3 5-3.7 8-4.1-1.4 3.5-4 6.4-8 8.7-3.7-2.1-6.4-4.9-8-8.3Z" fill="#73d7f1" stroke="#d9b85f" stroke-width=".9" stroke-linejoin="round"/><path d="m8 11.1 4 2.3 4.3-2.6" fill="none" stroke="#f5fdff" stroke-width=".9" stroke-linecap="round"/>`),
     search: xuanSvg(`<circle cx="10.2" cy="10.1" r="6.1" fill="#102c4e" stroke="#d9b85f" stroke-width="1"/><circle cx="10.2" cy="10.1" r="4.5" fill="none" stroke="#91e5f7" stroke-width="1.15"/><path d="m14.6 14.5 5 5" stroke="#f5fdff" stroke-width="1.8" stroke-linecap="round"/><path d="M3.8 4.6C2.4 7 2.2 9.1 3.2 11 1.3 9.8.6 7.8 1.1 5.1l2.7-.5Z" fill="#56c8eb" stroke="#d9b85f" stroke-width=".7"/>`),
@@ -657,7 +659,7 @@
   });
   const timer = setInterval(() => { spinnerDirty = true; ensure(); }, 30000);
   window[STATE_KEY] = {
-    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.3.3",
+    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.3.4",
   };
   ensure();
   analyzeArt().then((result) => {
@@ -667,5 +669,5 @@
     state.profile = result;
     ensure();
   });
-  return { installed: true, version: "1.3.3", adaptive: true };
+  return { installed: true, version: "1.3.4", adaptive: true };
 })(__DREAM_CSS_JSON__, __DREAM_ART_JSON__, __DREAM_THEME_JSON__)
