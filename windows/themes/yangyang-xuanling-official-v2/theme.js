@@ -33,7 +33,7 @@
   ];
   const HOME_UTILITY_CLASS = "dream-home-utility";
   const SPINNER_SELECTOR = ".animate-spin, [class~='animate-spin'], [role='progressbar'], [data-loading='true']";
-  const XUAN_ICON_VERSION = "3";
+  const XUAN_ICON_VERSION = "4";
   const xuanSvg = (body) => `<svg class="dream-xuan-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
   const XUAN_ICON_SVGS = {
     bird: xuanSvg(`
@@ -530,12 +530,15 @@
     for (const button of document.querySelectorAll(".composer-surface-chrome button")) {
       const label = (button.getAttribute("aria-label") || button.innerText || "").trim();
       const navigation = button.getAttribute("data-composer-navigation-target") || "";
+      const isComposerAction = !navigation && button.matches("button.size-token-button-composer");
+      const isProcessing = isComposerAction && ["停止", "Stop"].includes(label);
       let iconName = "";
       if (navigation === "add-context" || ["添加文件等内容", "Add files and more"].includes(label)) iconName = "add";
       else if (navigation === "permissions") iconName = "shield";
       else if (["听写", "Dictate"].includes(label)) iconName = "mic";
-      else if (!label && !navigation && button.matches(".size-token-button-composer")) iconName = "send";
-      button.classList.toggle("dream-composer-send", iconName === "send");
+      else if (isComposerAction) iconName = "bird";
+      button.classList.toggle("dream-composer-send", isComposerAction && !isProcessing);
+      button.classList.toggle("dream-composer-processing", isProcessing);
       if (iconName) installXuanIcon(button.querySelector("svg:not(.dream-xuan-svg)"), iconName);
     }
 
@@ -614,6 +617,8 @@
       const elements = [...record.addedNodes, ...record.removedNodes].filter((node) => node?.nodeType === 1);
       const inSidebar = Boolean(target.closest?.("aside.app-shell-left-panel"));
       const inComposer = Boolean(target.closest?.(".composer-surface-chrome"));
+      const actionStateChanged = record.type === "attributes" && inComposer &&
+        target.matches?.("button.size-token-button-composer");
       const mainRootChanged = Boolean(target.matches?.("main.main-surface, [role='main']")) && elements.length > 0;
       const sidebarChanged = (inSidebar && elements.length > 0) ||
         elements.some((node) => node.matches?.("aside.app-shell-left-panel"));
@@ -622,7 +627,7 @@
         elements.some((node) => node.matches?.(`${SPINNER_SELECTOR}, [role='progressbar']`));
       if (sidebarChanged) sidebarDirty = true;
       if (spinnerChanged) spinnerDirty = true;
-      return sidebarChanged || composerChanged || mainRootChanged || spinnerChanged ||
+      return sidebarChanged || composerChanged || actionStateChanged || mainRootChanged || spinnerChanged ||
         target === document.body || target === document.documentElement ||
         elements.some((node) => node.matches?.("main.main-surface, [role='main'], [class*='_homeUtilityBar_']"));
     });
@@ -631,10 +636,12 @@
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
+    attributes: true,
+    attributeFilter: ["aria-label", "disabled"],
   });
   const timer = setInterval(() => { spinnerDirty = true; ensure(); }, 10000);
   window[STATE_KEY] = {
-    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.3.1",
+    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.3.2",
   };
   ensure();
   analyzeArt().then((result) => {
@@ -644,5 +651,5 @@
     state.profile = result;
     ensure();
   });
-  return { installed: true, version: "1.3.1", adaptive: true };
+  return { installed: true, version: "1.3.2", adaptive: true };
 })(__DREAM_CSS_JSON__, __DREAM_ART_JSON__, __DREAM_THEME_JSON__)
