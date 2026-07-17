@@ -4,7 +4,7 @@
   "name": "秧秧·玄翎｜苍羽夜",
   "description": "鸣潮秧秧·玄翎深色沉浸主题，包含独立玄鸟图标与环绕加载动画。",
   "author": "yanhuuo",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "entrypoints": {
     "css": "theme.css",
     "renderer": "theme.js"
