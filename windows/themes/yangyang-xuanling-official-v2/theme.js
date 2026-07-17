@@ -67,8 +67,9 @@
   let observer = null;
   let sidebarDirty = true;
   let spinnerDirty = true;
-  let lastSidebarAt = 0;
   let lastSpinnerAt = 0;
+  let sidebarReadyAt = 0;
+  let appliedProfileSignature = "";
   window.__CODEX_DREAM_SKIN_DISABLED__ = false;
 
   const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, Number(value)));
@@ -331,6 +332,7 @@
     document.querySelectorAll(".dream-xuan-icon").forEach((node) => node.remove());
     document.querySelectorAll(".dream-xuan-brand-mark").forEach((node) => node.remove());
     document.querySelectorAll(".dream-composer-send").forEach((node) => node.classList.remove("dream-composer-send"));
+    document.querySelectorAll(".dream-composer-processing").forEach((node) => node.classList.remove("dream-composer-processing"));
     document.querySelectorAll(".dream-xuanniao-spinner-mark").forEach((node) => node.remove());
     document.querySelectorAll(".dream-native-icon-source").forEach((node) => node.classList.remove("dream-native-icon-source"));
     document.querySelectorAll(".dream-xuanniao-spinner-source").forEach((node) => {
@@ -354,6 +356,10 @@
       : config.taskMode;
     const accent = config.accent || `rgb(${profile.accent.join(" ")})`;
     const accentInk = luminance(...profile.accent) > .42 ? "rgb(26 24 28)" : "rgb(250 248 251)";
+    const signature = [appearance, focus, safeArea, taskMode, accent, accentInk, focusX, focusY,
+      profile.aspect, profile.luma].join("|");
+    if (signature === appliedProfileSignature) return;
+    appliedProfileSignature = signature;
     root.classList.toggle("dream-theme-light", appearance === "light");
     root.classList.toggle("dream-theme-dark", appearance === "dark");
     root.classList.toggle("dream-art-wide", profile.aspect >= 1.75);
@@ -467,11 +473,10 @@
     };
 
     const now = Date.now();
-    if (sidebarDirty || now - lastSidebarAt > 15000) {
+    if (sidebarDirty && now >= sidebarReadyAt) {
       sidebarDirty = false;
-      lastSidebarAt = now;
     const sidebarButtons = [...(shellSidebar.querySelectorAll?.("button") || [])];
-    const exactText = (node) => (node.innerText || node.getAttribute("aria-label") || "").trim();
+    const exactText = (node) => (node.getAttribute("aria-label") || node.textContent || "").trim();
     const primaryLabels = new Set([
       "新建任务", "拉取请求", "站点", "已安排", "插件",
       "New task", "Pull requests", "Sites", "Scheduled", "Plugins",
@@ -528,7 +533,7 @@
     }
 
     for (const button of document.querySelectorAll(".composer-surface-chrome button")) {
-      const label = (button.getAttribute("aria-label") || button.innerText || "").trim();
+      const label = (button.getAttribute("aria-label") || button.textContent || "").trim();
       const navigation = button.getAttribute("data-composer-navigation-target") || "";
       const isComposerAction = !navigation && button.matches("button.size-token-button-composer");
       const isProcessing = isComposerAction && ["停止", "Stop"].includes(label);
@@ -559,7 +564,6 @@
     }
     const spinnerCandidates = new Set([
       ...document.querySelectorAll(SPINNER_SELECTOR),
-      ...document.querySelectorAll('svg:has(path[opacity="0.3"])'),
     ]);
     for (const source of spinnerCandidates) {
       if (!isNativeSpinner(source)) continue;
@@ -597,18 +601,26 @@
     state?.observer?.disconnect();
     if (state?.timer) clearInterval(state.timer);
     if (state?.scheduler?.timeout) clearTimeout(state.scheduler.timeout);
+    if (state?.scheduler?.sidebarTimeout) clearTimeout(state.scheduler.sidebarTimeout);
     if (state?.artUrl) URL.revokeObjectURL(state.artUrl);
     delete window[STATE_KEY];
     return true;
   };
 
-  const scheduler = { timeout: null };
+  const scheduler = { timeout: null, sidebarTimeout: null };
   const scheduleEnsure = () => {
     if (scheduler.timeout) return;
     scheduler.timeout = setTimeout(() => {
       scheduler.timeout = null;
       ensure();
     }, 48);
+  };
+  const scheduleSidebarEnsure = () => {
+    if (scheduler.sidebarTimeout) clearTimeout(scheduler.sidebarTimeout);
+    scheduler.sidebarTimeout = setTimeout(() => {
+      scheduler.sidebarTimeout = null;
+      ensure();
+    }, 280);
   };
   observer = new MutationObserver((records = []) => {
     if (samplingNativeShell) return;
@@ -625,9 +637,13 @@
       const composerChanged = inComposer && elements.length > 0;
       const spinnerChanged = Boolean(target.closest?.(SPINNER_SELECTOR)) ||
         elements.some((node) => node.matches?.(`${SPINNER_SELECTOR}, [role='progressbar']`));
-      if (sidebarChanged) sidebarDirty = true;
+      if (sidebarChanged) {
+        sidebarDirty = true;
+        sidebarReadyAt = Date.now() + 220;
+        scheduleSidebarEnsure();
+      }
       if (spinnerChanged) spinnerDirty = true;
-      return sidebarChanged || composerChanged || actionStateChanged || mainRootChanged || spinnerChanged ||
+      return composerChanged || actionStateChanged || mainRootChanged || spinnerChanged ||
         target === document.body || target === document.documentElement ||
         elements.some((node) => node.matches?.("main.main-surface, [role='main'], [class*='_homeUtilityBar_']"));
     });
@@ -639,9 +655,9 @@
     attributes: true,
     attributeFilter: ["aria-label", "disabled"],
   });
-  const timer = setInterval(() => { spinnerDirty = true; ensure(); }, 10000);
+  const timer = setInterval(() => { spinnerDirty = true; ensure(); }, 30000);
   window[STATE_KEY] = {
-    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.3.2",
+    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.3.3",
   };
   ensure();
   analyzeArt().then((result) => {
@@ -651,5 +667,5 @@
     state.profile = result;
     ensure();
   });
-  return { installed: true, version: "1.3.2", adaptive: true };
+  return { installed: true, version: "1.3.3", adaptive: true };
 })(__DREAM_CSS_JSON__, __DREAM_ART_JSON__, __DREAM_THEME_JSON__)
