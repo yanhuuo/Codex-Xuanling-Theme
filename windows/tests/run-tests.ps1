@@ -530,11 +530,15 @@ try {
   }
   foreach ($requiredPerformanceBehavior in @(
     'sidebarDirty', 'spinnerDirty', 'dream-route-home', 'SPINNER_SELECTOR', '}, 48);',
-    'dream-composer-processing', 'button.size-token-button-composer', 'attributeFilter: ["aria-label", "disabled"]'
+    'dream-composer-processing', 'button.size-token-button-composer', 'attributeFilter: ["aria-label", "disabled"]',
+    'scheduleSidebarEnsure', 'appliedProfileSignature', '}, 30000);'
   )) {
     if (-not $rendererSource.Contains($requiredPerformanceBehavior)) {
       throw "Renderer route-performance behavior is missing: $requiredPerformanceBehavior"
     }
+  }
+  if ($rendererSource.Contains("querySelectorAll('svg:has(path[opacity=""0.3""])')")) {
+    throw 'Renderer restored the expensive full-page SVG spinner fallback scan.'
   }
   $managerSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'engine\theme-manager.js')
   foreach ($requiredManagerBehavior in @(
