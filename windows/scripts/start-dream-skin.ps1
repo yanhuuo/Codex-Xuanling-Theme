@@ -28,7 +28,7 @@ try {
   $StdoutPath = Join-Path $StateRoot 'injector.log'
   $StderrPath = Join-Path $StateRoot 'injector-error.log'
   $VerifyPath = Join-Path $StateRoot 'verify.log'
-  $themePaths = Initialize-DreamSkinThemeStore -SkillRoot (Split-Path -Parent $PSScriptRoot) -StateRoot $StateRoot
+  $themePaths = Initialize-DreamSkinThemeStore -SkillRoot (Split-Path -Parent $PSScriptRoot) -StateRoot $StateRoot -ManagerOnly
   $pauseWasSet = Test-DreamSkinPaused -StateRoot $StateRoot
 
   $previousState = Read-DreamSkinState -Path $StatePath

@@ -48,6 +48,21 @@ try {
     $petConfig -notmatch 'appearanceTheme = "system"') {
     throw 'Theme pet selection did not update exactly one desktop key while preserving unrelated config.'
   }
+  $managerConfigPath = Join-Path $temporaryRoot 'manager-base.toml'
+  $managerStateRoot = Join-Path $temporaryRoot 'manager-base-state'
+  $managerOriginal = "model = `"gpt-5`"`r`n`r`n[desktop]`r`nappearanceTheme = `"system`"`r`n"
+  [System.IO.File]::WriteAllText($managerConfigPath, $managerOriginal, $utf8NoBom)
+  & (Join-Path $Root 'scripts\set-theme-base.ps1') -Mode enable -StateRoot $managerStateRoot -ConfigPath $managerConfigPath
+  if ((Read-DreamSkinUtf8File -Path $managerConfigPath) -notmatch 'appearanceLightCodeThemeId = "github"') {
+    throw 'Theme-page activation did not apply the managed base appearance.'
+  }
+  & (Join-Path $Root 'scripts\set-theme-base.ps1') -Mode disable -StateRoot $managerStateRoot -ConfigPath $managerConfigPath
+  $managerRestored = Read-DreamSkinUtf8File -Path $managerConfigPath
+  if ($managerRestored -notmatch 'appearanceTheme = "system"' -or
+    $managerRestored -match 'appearanceLightCodeThemeId = "github"' -or
+    $managerRestored -match 'appearanceLightChromeTheme') {
+    throw 'Theme-page official restore did not recover the pre-theme base appearance.'
+  }
 
   $installed += "afterInstall = `"$laterValue`"`r`n"
   $installed = $installed -replace 'appearanceTheme = "system"', 'appearanceTheme = "dark"'
@@ -366,6 +381,12 @@ try {
     $preseededThemes[0].Name -cne '秧秧·玄翎｜苍羽夜') {
     throw 'Yangyang Xuanling was not preseeded in the Windows saved-theme menu.'
   }
+  $managerOnlyStateRoot = Join-Path $temporaryRoot 'manager-only-state'
+  $managerOnlyPaths = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $managerOnlyStateRoot -ManagerOnly
+  if (-not (Test-Path -LiteralPath (Join-Path $managerOnlyPaths.Active 'theme.json') -PathType Leaf) -or
+    @(Get-DreamSkinSavedThemes -StateRoot $managerOnlyStateRoot).Count -ne 0) {
+    throw 'Manager-only installation exposed a bundled theme as already installed.'
+  }
   $updatedTheme = Set-DreamSkinActiveTheme -ImagePath (Join-Path $bundledTheme 'background.jpg') `
     -Theme $null -Name '测试主题' -StateRoot $themeStateRoot
   if ($updatedTheme.Theme.name -cne '测试主题' -or
@@ -516,7 +537,8 @@ try {
     'MAX_ART_BYTES', 'createHash', 'readImageMetadata', '50MP safety limit', 'STRONG_THEME_AUDIT_MS',
     'Page.addScriptToEvaluateOnNewDocument', 'Page.removeScriptToEvaluateOnNewDocument', 'earlyPayloadFor',
     'watchFiles(options.themeDir', 'theme hot reload', 'resolveGitHubRepository', 'listInstalledPets',
-    'selectPet', 'installAndSelectBundledPet', 'selected-avatar-id', 'MAX_PET_SPRITESHEET_BYTES'
+    'selectPet', 'installAndSelectBundledPet', 'selected-avatar-id', 'MAX_PET_SPRITESHEET_BYTES',
+    'listBundledThemes', 'installBundledTheme', 'setBaseThemeEnabled'
   )) {
     if (-not $injectorSource.Contains($requiredInjectorBehavior)) {
       throw "Injector theme safety is missing: $requiredInjectorBehavior"
@@ -555,7 +577,8 @@ try {
   foreach ($requiredManagerBehavior in @(
     'data-settings-panel-slug', 'dream-theme-manager', '还原官方外观',
     'addLibrary', 'addRepository', 'getCatalog', 'installLibraryTheme',
-    '主题宠物', 'selectPet', '已选择并随主题保存', '热重载已开启'
+    '主题宠物', 'selectPet', '已选择并随主题保存', '热重载已开启',
+    '可安装主题', 'installBundledTheme', '安装主题'
   )) {
     if (-not $managerSource.Contains($requiredManagerBehavior)) {
       throw "Independent theme manager behavior is missing: $requiredManagerBehavior"
@@ -590,7 +613,9 @@ try {
     'Stop-PreviousThemeHelpers',
     "Join-Path `$sourceWindows '*'",
     "'Codex 主题.lnk'",
-    '现在重启并继续安装'
+    '现在重启并继续安装',
+    '& $installer -Port $Port -ManagerOnly',
+    '& $launcher -Port $Port -PreservePause'
   )) {
     if (-not $oneClickInstaller.Contains($requiredInstallerBehavior)) {
       throw "One-click theme-tool installer behavior is missing: $requiredInstallerBehavior"
@@ -598,6 +623,12 @@ try {
   }
   if ($oneClickInstaller.Contains('Copy-Item -LiteralPath $sourceWindows -Destination $runtimeRoot')) {
     throw 'One-click reinstall can still create a nested windows directory.'
+  }
+  $managerInstaller = Read-DreamSkinUtf8File -Path (Join-Path $Root 'scripts\install-dream-skin.ps1')
+  foreach ($requiredManagerInstallBehavior in @('$hadThemeState', '$ManagerOnly -and -not $hadThemeState')) {
+    if (-not $managerInstaller.Contains($requiredManagerInstallBehavior)) {
+      throw "Manager-only install/upgrade behavior is missing: $requiredManagerInstallBehavior"
+    }
   }
   $oneClickLauncher = Read-DreamSkinUtf8File -Path $oneClickLauncherPath
   if (-not $oneClickLauncher.Contains('安装主题工具.ps1') -or

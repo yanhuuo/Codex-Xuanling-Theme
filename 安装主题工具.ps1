@@ -81,7 +81,7 @@ try {
   $installer = Join-Path $runtimeScripts 'install-dream-skin.ps1'
   $launcher = Join-Path $runtimeScripts 'start-dream-skin.ps1'
   $global:LASTEXITCODE = 0
-  & $installer -Port $Port
+  & $installer -Port $Port -ManagerOnly
   if ($LASTEXITCODE -ne 0) { throw "主题工具安装脚本返回了错误代码：$LASTEXITCODE" }
 
   $shell = New-Object -ComObject WScript.Shell
@@ -98,7 +98,7 @@ try {
 
   if (-not $NoLaunch) {
     $global:LASTEXITCODE = 0
-    & $launcher -Port $Port
+    & $launcher -Port $Port -PreservePause
     if ($LASTEXITCODE -ne 0) { throw "主题工具启动脚本返回了错误代码：$LASTEXITCODE" }
   }
 

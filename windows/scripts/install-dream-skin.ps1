@@ -2,7 +2,8 @@
 param(
   [int]$Port = 9335,
   [switch]$NoShortcuts,
-  [switch]$NoAutoHeal
+  [switch]$NoAutoHeal,
+  [switch]$ManagerOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -28,6 +29,7 @@ try {
   $StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
   $themePaths = Get-DreamSkinThemePaths -StateRoot $StateRoot
   Ensure-DreamSkinManagedDirectory -Path $themePaths.Root -Root $themePaths.Root
+  $hadThemeState = Test-Path -LiteralPath (Join-Path $themePaths.Active 'theme.json') -PathType Leaf
   $StatePath = Join-Path $StateRoot 'state.json'
   $existingState = Read-DreamSkinState -Path $StatePath
   $savedPathCandidate = Get-DreamSkinCodexStatePathCandidate -State $existingState
@@ -36,10 +38,14 @@ try {
     (Get-DreamSkinCodexProcesses -Codex $savedPathCandidate).Count -gt 0) {
     throw 'The saved Codex path is still running but no longer matches a registered Store package. Close it manually before installing.'
   }
-  $null = Initialize-DreamSkinThemeStore -SkillRoot $SkillRoot -StateRoot $StateRoot
+  $null = Initialize-DreamSkinThemeStore -SkillRoot $SkillRoot -StateRoot $StateRoot -ManagerOnly:$ManagerOnly
   $ConfigPath = Join-Path $HOME '.codex\config.toml'
   $BackupPath = Join-Path $StateRoot 'config.before-dream-skin.toml'
-  Install-DreamSkinBaseTheme -ConfigPath $ConfigPath -BackupPath $BackupPath
+  if ($ManagerOnly -and -not $hadThemeState) {
+    Set-DreamSkinPaused -Paused $true -StateRoot $StateRoot | Out-Null
+  } elseif (-not $ManagerOnly) {
+    Install-DreamSkinBaseTheme -ConfigPath $ConfigPath -BackupPath $BackupPath
+  }
 
   if (-not $NoShortcuts) {
     $shell = New-Object -ComObject WScript.Shell

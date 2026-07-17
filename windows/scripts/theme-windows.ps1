@@ -308,7 +308,8 @@ function Upgrade-DreamSkinLegacyThemeBundle {
 function Initialize-DreamSkinThemeStore {
   param(
     [Parameter(Mandatory = $true)][string]$SkillRoot,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'),
+    [switch]$ManagerOnly
   )
   $paths = Get-DreamSkinThemePaths -StateRoot $StateRoot
   foreach ($directory in @($paths.Root, $paths.Active, $paths.Saved, $paths.Images)) {
@@ -336,11 +337,13 @@ function Initialize-DreamSkinThemeStore {
   foreach ($savedDirectory in Get-ChildItem -LiteralPath $paths.Saved -Directory -ErrorAction SilentlyContinue) {
     Upgrade-DreamSkinLegacyThemeBundle -ThemeDirectory $savedDirectory.FullName -BundledThemeDirectory $assetRoot
   }
-  $presetDirectory = Join-Path $paths.Saved 'preset-xuanling-azure-plume'
-  $presetTheme = Join-Path $presetDirectory 'theme.json'
-  Assert-DreamSkinNoReparseComponents -Path $presetDirectory
-  Assert-DreamSkinNoReparseComponents -Path $presetTheme
-  Copy-DreamSkinThemeBundleFiles -SourceDirectory $assetRoot -DestinationDirectory $presetDirectory -ManagedRoot $paths.Root
+  if (-not $ManagerOnly) {
+    $presetDirectory = Join-Path $paths.Saved 'preset-xuanling-azure-plume'
+    $presetTheme = Join-Path $presetDirectory 'theme.json'
+    Assert-DreamSkinNoReparseComponents -Path $presetDirectory
+    Assert-DreamSkinNoReparseComponents -Path $presetTheme
+    Copy-DreamSkinThemeBundleFiles -SourceDirectory $assetRoot -DestinationDirectory $presetDirectory -ManagedRoot $paths.Root
+  }
   $null = Read-DreamSkinTheme -ThemeDirectory $paths.Active
   return $paths
 }

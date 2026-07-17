@@ -722,6 +722,15 @@ async function installAndSelectBundledPet(options, loaded) {
   return pet.id;
 }
 
+async function setBaseThemeEnabled(options, enabled) {
+  await execFile("powershell.exe", [
+    "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+    "-File", path.join(here, "set-theme-base.ps1"),
+    "-Mode", enabled ? "enable" : "disable",
+    "-StateRoot", stateRootFor(options),
+  ], { windowsHide: true, timeout: 15000, maxBuffer: 1024 * 1024 });
+}
+
 async function readPetAssociations(options) {
   const filePath = path.join(stateRootFor(options), "pet-associations.json");
   try {
@@ -749,7 +758,7 @@ async function writePetAssociations(options, associations) {
 }
 
 async function previewDataUrl(loaded) {
-  if (loaded.imageBytes.length > 1024 * 1024) return null;
+  if (loaded.imageBytes.length > 192 * 1024) return null;
   const extension = path.extname(loaded.imagePath).toLowerCase();
   const mime = extension === ".jpg" || extension === ".jpeg" ? "image/jpeg"
     : extension === ".webp" ? "image/webp" : "image/png";
@@ -783,15 +792,43 @@ async function listInstalledThemes(options) {
   return items.sort((left, right) => left.name.localeCompare(right.name, "zh-CN"));
 }
 
+async function listBundledThemes() {
+  const bundledRoot = path.join(root, "themes");
+  const items = [];
+  for (const entry of await fs.readdir(bundledRoot, { withFileTypes: true }).catch(() => [])) {
+    if (!entry.isDirectory()) continue;
+    try {
+      const loaded = await loadTheme(path.join(bundledRoot, entry.name));
+      items.push({
+        key: entry.name,
+        id: loaded.theme.id,
+        name: loaded.theme.name,
+        description: loaded.theme.description,
+        author: loaded.theme.author,
+        version: loaded.theme.version,
+        accent: loaded.theme.palette?.accent ?? "#6edaf2",
+        preview: await previewDataUrl(loaded),
+      });
+    } catch {
+      // Invalid bundled folders are omitted from the install catalog.
+    }
+  }
+  return items.sort((left, right) => left.name.localeCompare(right.name, "zh-CN"));
+}
+
 async function themeControlState(options) {
   const active = await loadTheme(options.themeDir);
-  const selectedPet = active.petBundle?.id ?? null;
+  const themes = await listInstalledThemes(options);
+  const canEnableActive = themes.some((theme) => theme.id === active.theme.id);
+  const selectedPet = canEnableActive ? active.petBundle?.id ?? null : null;
   return {
     version: SKIN_VERSION,
     hotReload: true,
     paused: await fileExists(options.pauseFile),
     active: { id: active.theme.id, name: active.theme.name },
-    themes: await listInstalledThemes(options),
+    themes,
+    canEnableActive,
+    bundledThemes: await listBundledThemes(),
     libraries: await readLibraries(options),
     pets: await listInstalledPets(selectedPet),
     selectedPet,
@@ -1003,8 +1040,18 @@ async function handleThemeControl(options, request) {
   if (request.command === "getState") return themeControlState(options);
   if (request.command === "setPaused") {
     await fs.mkdir(stateRoot, { recursive: true });
-    if (Boolean(payload.paused)) await fs.writeFile(options.pauseFile, "paused\n");
-    else await fs.rm(options.pauseFile, { force: true });
+    if (Boolean(payload.paused)) {
+      await fs.writeFile(options.pauseFile, "paused\n");
+      await setBaseThemeEnabled(options, false);
+    } else {
+      const active = await loadTheme(options.themeDir);
+      if (!(await listInstalledThemes(options)).some((theme) => theme.id === active.theme.id)) {
+        throw new Error("请先安装主题，再启用主题外观");
+      }
+      await setBaseThemeEnabled(options, true);
+      await installAndSelectBundledPet(options, active);
+      await fs.rm(options.pauseFile, { force: true });
+    }
     return themeControlState(options);
   }
   if (request.command === "useTheme") {
@@ -1014,12 +1061,27 @@ async function handleThemeControl(options, request) {
     if (!isPathInside(directory, path.resolve(savedRoot))) throw new Error("主题路径越界");
     const loaded = await loadTheme(directory);
     await writeThemeDirectory(options.themeDir, loaded);
+    await setBaseThemeEnabled(options, true);
     await installAndSelectBundledPet(options, loaded);
     await fs.rm(options.pauseFile, { force: true });
     return themeControlState(options);
   }
+  if (request.command === "installBundledTheme") {
+    const key = safeThemeId(payload.key, "");
+    if (!key || key !== String(payload.key)) throw new Error("无效的内置主题标识");
+    const bundledRoot = await fs.realpath(path.join(root, "themes"));
+    const directory = await fs.realpath(path.resolve(bundledRoot, key));
+    if (!isPathInside(directory, bundledRoot)) throw new Error("内置主题路径越界");
+    const loaded = await loadTheme(directory);
+    await fs.mkdir(savedRoot, { recursive: true });
+    await writeThemeDirectory(path.join(savedRoot, `bundled-${safeThemeId(loaded.theme.id)}`), loaded);
+    return themeControlState(options);
+  }
   if (request.command === "selectPet" || request.command === "associatePet") {
     const active = await loadTheme(options.themeDir);
+    if (!(await listInstalledThemes(options)).some((theme) => theme.id === active.theme.id)) {
+      throw new Error("请先安装并启用一个主题，再选择主题宠物");
+    }
     const petId = String(payload.petId || "").trim();
     let selectedBundle = null;
     if (petId) {
@@ -1126,9 +1188,16 @@ async function handleThemeControl(options, request) {
 }
 
 async function attachThemeControl(session, options) {
-  await session.send("Runtime.addBinding", { name: THEME_CONTROL_BINDING });
+  const bindingName = `${THEME_CONTROL_BINDING}_${process.pid}_${Math.random().toString(16).slice(2)}`;
+  await session.send("Runtime.addBinding", { name: bindingName });
+  const bridgeSource = `(() => {
+    const target = ${JSON.stringify(bindingName)};
+    window[${JSON.stringify(THEME_CONTROL_BINDING)}] = (payload) => window[target](payload);
+  })();`;
+  const bridgeScriptId = (await session.send("Page.addScriptToEvaluateOnNewDocument", { source: bridgeSource })).identifier ?? null;
+  await session.evaluate(bridgeSource);
   session.on("Runtime.bindingCalled", ({ name, payload }) => {
-    if (name !== THEME_CONTROL_BINDING) return;
+    if (name !== bindingName) return;
     let request;
     try {
       if (typeof payload !== "string" || Buffer.byteLength(payload, "utf8") > 32768) throw new Error("主题控制请求过大");
@@ -1148,6 +1217,7 @@ async function attachThemeControl(session, options) {
       await session.evaluate(`window.dispatchEvent(new CustomEvent(${JSON.stringify(THEME_CONTROL_RESPONSE)}, { detail: ${JSON.stringify(detail)} }))`).catch(() => {});
     });
   });
+  return bridgeScriptId;
 }
 
 async function fileExists(filePath) {
@@ -1487,6 +1557,7 @@ async function runWatch(options) {
   const sessions = new Map();
   const earlyScripts = new Map();
   const managerScripts = new Map();
+  const controlScripts = new Map();
   const fallbackTargets = new Map();
   const fallbackListeners = new Set();
   const targetFailures = new Map();
@@ -1537,7 +1608,8 @@ async function runWatch(options) {
 
   try {
     loadedPayload = await loadPayload(options.themeDir);
-    await installAndSelectBundledPet(options, loadedPayload);
+    paused = await fileExists(options.pauseFile);
+    if (!paused) await installAndSelectBundledPet(options, loadedPayload);
     managerPayload = await fs.readFile(path.join(root, "engine", "theme-manager.js"), "utf8");
     try {
       const themeWatcher = watchFiles(options.themeDir, { recursive: true }, (_event, fileName) => {
@@ -1561,7 +1633,6 @@ async function runWatch(options) {
       console.error(`[dream-skin] filesystem hot reload unavailable; polling remains active: ${error.message}`);
     }
     lastStrongThemeAuditAt = Date.now();
-    paused = await fileExists(options.pauseFile);
     while (!stopping) {
       if (identityAnchor.closed) {
         console.error("[dream-skin] original CDP browser identity closed; watcher is stopping instead of reconnecting");
@@ -1640,7 +1711,7 @@ async function runWatch(options) {
       loadedPayload = nextPayload;
       paused = nextPaused;
 
-      if (payloadChanged) await installAndSelectBundledPet(options, loadedPayload);
+      if (payloadChanged && !paused) await installAndSelectBundledPet(options, loadedPayload);
 
       if (pauseChanged || payloadChanged) {
         for (const [id, session] of sessions) {
@@ -1693,8 +1764,10 @@ async function runWatch(options) {
         if (!activeIds.has(id) || session.closed) {
           await removeEarlyPayload(session, earlyScripts.get(id));
           await removeEarlyPayload(session, managerScripts.get(id));
+          await removeEarlyPayload(session, controlScripts.get(id));
           earlyScripts.delete(id);
           managerScripts.delete(id);
+          controlScripts.delete(id);
           fallbackTargets.delete(id);
           fallbackListeners.delete(id);
           session.close();
@@ -1712,7 +1785,8 @@ async function runWatch(options) {
         try {
           session = await connectTarget(target, options.port);
           if (identityAnchor.closed) throw new CdpIdentityMismatchError("Original CDP browser identity closed");
-          await attachThemeControl(session, options);
+          const controlScriptId = await attachThemeControl(session, options);
+          if (controlScriptId) controlScripts.set(target.id, controlScriptId);
           const managerScriptId = (await session.send("Page.addScriptToEvaluateOnNewDocument", { source: managerPayload })).identifier ?? null;
           if (managerScriptId) managerScripts.set(target.id, managerScriptId);
           await session.evaluate(managerPayload);
@@ -1737,7 +1811,9 @@ async function runWatch(options) {
           if (!probe?.codex) {
             await removeEarlyPayload(session, earlyScriptId);
             await removeEarlyPayload(session, managerScripts.get(target.id));
+            await removeEarlyPayload(session, controlScripts.get(target.id));
             managerScripts.delete(target.id);
+            controlScripts.delete(target.id);
             rejectTarget(target, 5000);
             session.close();
             continue;
@@ -1760,7 +1836,9 @@ async function runWatch(options) {
         } catch (error) {
           await removeEarlyPayload(session, earlyScriptId);
           await removeEarlyPayload(session, managerScripts.get(target.id));
+          await removeEarlyPayload(session, controlScripts.get(target.id));
           managerScripts.delete(target.id);
+          controlScripts.delete(target.id);
           fallbackTargets.delete(target.id);
           fallbackListeners.delete(target.id);
           session?.close();
@@ -1776,10 +1854,12 @@ async function runWatch(options) {
     for (const [id, session] of sessions) {
       await removeEarlyPayload(session, earlyScripts.get(id));
       await removeEarlyPayload(session, managerScripts.get(id));
+      await removeEarlyPayload(session, controlScripts.get(id));
       session.close();
     }
     earlyScripts.clear();
     managerScripts.clear();
+    controlScripts.clear();
     fallbackTargets.clear();
     fallbackListeners.clear();
   }
