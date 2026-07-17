@@ -339,7 +339,7 @@ try {
   $themePaths = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $themeStateRoot
   $initialTheme = Read-DreamSkinTheme -ThemeDirectory $themePaths.Active
   if ($initialTheme.Theme.id -cne 'yangyang-xuanling-azure-plume' -or
-    $initialTheme.Theme.name -cne '秧秧·玄翎｜官网视觉 V2' -or
+    $initialTheme.Theme.name -cne '秧秧·玄翎｜苍羽夜' -or
     [int]$initialTheme.Theme.schemaVersion -ne 2 -or
     -not (Test-Path -LiteralPath $initialTheme.CssPath) -or
     -not (Test-Path -LiteralPath $initialTheme.RendererPath) -or
@@ -352,7 +352,7 @@ try {
   $preseededThemes = @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot)
   if ($preseededThemes.Count -ne 1 -or
     $preseededThemes[0].Id -cne 'yangyang-xuanling-azure-plume' -or
-    $preseededThemes[0].Name -cne '秧秧·玄翎｜官网视觉 V2') {
+    $preseededThemes[0].Name -cne '秧秧·玄翎｜苍羽夜') {
     throw 'Yangyang Xuanling was not preseeded in the Windows saved-theme menu.'
   }
   $updatedTheme = Set-DreamSkinActiveTheme -ImagePath (Join-Path $bundledTheme 'background.jpg') `
@@ -528,7 +528,10 @@ try {
   if (-not $commonSource.Contains('State was preserved.')) {
     throw 'Mismatched live injector identity does not fail closed with preserved state.'
   }
-  foreach ($requiredPerformanceBehavior in @('adornmentsDirty', 'dream-route-home', 'SPINNER_SELECTOR', '}, 48);')) {
+  foreach ($requiredPerformanceBehavior in @(
+    'sidebarDirty', 'spinnerDirty', 'dream-route-home', 'SPINNER_SELECTOR', '}, 48);',
+    'dream-composer-processing', 'button.size-token-button-composer', 'attributeFilter: ["aria-label", "disabled"]'
+  )) {
     if (-not $rendererSource.Contains($requiredPerformanceBehavior)) {
       throw "Renderer route-performance behavior is missing: $requiredPerformanceBehavior"
     }
