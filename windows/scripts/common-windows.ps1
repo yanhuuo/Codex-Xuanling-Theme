@@ -110,6 +110,7 @@ function ConvertTo-DreamSkinCodexInstall {
     Version = "$($Package.Version)"
     PackageFullName = "$($Package.PackageFullName)"
     PackageFamilyName = "$($Package.PackageFamilyName)"
+    AppUserModelId = "$($Package.PackageFamilyName)!App"
     SignatureKind = "$($Package.SignatureKind)"
   }
 }
@@ -171,6 +172,7 @@ function Resolve-DreamSkinCodexInstallFromState {
       Version = $install.Version
       PackageFullName = $install.PackageFullName
       PackageFamilyName = $install.PackageFamilyName
+      AppUserModelId = $install.AppUserModelId
       SignatureKind = $install.SignatureKind
       FromState = $true
       RegisteredPackageVerified = $true
@@ -487,6 +489,72 @@ function Stop-DreamSkinCodex {
   }
   Start-Sleep -Milliseconds 500
   if ((Get-DreamSkinCodexProcesses -Codex $Codex).Count -gt 0) { throw 'Codex could not be stopped safely.' }
+}
+
+function Initialize-DreamSkinAppActivator {
+  if ('DreamSkin.AppActivator' -as [type]) { return }
+  Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+namespace DreamSkin {
+  public enum ActivateOptions {
+    None = 0
+  }
+
+  [ComImport]
+  [Guid("2e941141-7f97-4756-ba1d-9decde894a3d")]
+  [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IApplicationActivationManager {
+    int ActivateApplication(
+      [MarshalAs(UnmanagedType.LPWStr)] string appUserModelId,
+      [MarshalAs(UnmanagedType.LPWStr)] string arguments,
+      ActivateOptions options,
+      out uint processId);
+    int ActivateForFile();
+    int ActivateForProtocol();
+  }
+
+  [ComImport]
+  [Guid("45ba127d-10a8-46ea-8ab7-56ea9078943c")]
+  public class ApplicationActivationManager {
+  }
+
+  public static class AppActivator {
+    public static uint Activate(string appUserModelId, string arguments) {
+      var manager = (IApplicationActivationManager)new ApplicationActivationManager();
+      uint processId;
+      int hr = manager.ActivateApplication(appUserModelId, arguments ?? "", ActivateOptions.None, out processId);
+      if (hr < 0) {
+        Marshal.ThrowExceptionForHR(hr);
+      }
+      return processId;
+    }
+  }
+}
+'@
+}
+
+function Start-DreamSkinCodex {
+  param(
+    [Parameter(Mandatory = $true)][object]$Codex,
+    [string[]]$ArgumentList = @()
+  )
+  try {
+    Start-Process -FilePath $Codex.Executable -ArgumentList $ArgumentList | Out-Null
+    return
+  } catch {
+    $directError = $_
+    $appUserModelId = if ($Codex.AppUserModelId) { "$($Codex.AppUserModelId)" } else { "$($Codex.PackageFamilyName)!App" }
+    if (-not $appUserModelId -or $appUserModelId -eq '!App') { throw $directError }
+    Initialize-DreamSkinAppActivator
+    $arguments = if ($ArgumentList -and $ArgumentList.Count -gt 0) { $ArgumentList -join ' ' } else { '' }
+    try {
+      [void][DreamSkin.AppActivator]::Activate($appUserModelId, $arguments)
+    } catch {
+      throw $directError
+    }
+  }
 }
 
 function Confirm-DreamSkinRestart {
