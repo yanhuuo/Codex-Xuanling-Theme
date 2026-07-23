@@ -28,9 +28,10 @@
     #${PANEL_ID} .dtm-card{overflow:hidden;border:1px solid var(--border-light,#263642);border-radius:14px;background:color-mix(in srgb,var(--main-surface-secondary,#13212c) 90%,transparent)}
     #${PANEL_ID} .dtm-preview{height:122px;background:linear-gradient(135deg,#10263d,#173957 55%,#0c1828);position:relative;overflow:hidden}
     #${PANEL_ID} .dtm-preview img{width:100%;height:100%;display:block;object-fit:cover} #${PANEL_ID} .dtm-preview>svg{position:absolute;width:54px;height:54px;left:50%;top:50%;transform:translate(-50%,-50%)}
-    #${PANEL_ID} .dtm-card-body{padding:13px} #${PANEL_ID} .dtm-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px;font-weight:600;margin-bottom:10px}
+    #${PANEL_ID} .dtm-card-body{padding:13px} #${PANEL_ID} .dtm-card-line{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    #${PANEL_ID} .dtm-card-main{min-width:0;flex:1} #${PANEL_ID} .dtm-title{font-size:14px;font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     #${PANEL_ID} .dtm-chip{font-size:10px;font-weight:500;color:#8ee8f8;border:1px solid #397a8d;border-radius:999px;padding:2px 7px}
-    #${PANEL_ID} button{font:inherit;cursor:pointer} #${PANEL_ID} .dtm-button{border:1px solid var(--border-heavy,#38505f);border-radius:9px;padding:7px 12px;color:inherit;background:var(--main-surface-secondary,#14232e);font-size:12px}
+    #${PANEL_ID} button{font:inherit;cursor:pointer} #${PANEL_ID} .dtm-button{border:1px solid var(--border-heavy,#38505f);border-radius:9px;padding:7px 12px;color:inherit;background:var(--main-surface-secondary,#14232e);font-size:12px;white-space:nowrap}
     #${PANEL_ID} .dtm-button:hover{border-color:var(--dream-manager-accent,#6edaf2);background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 12%,var(--main-surface-secondary,#14232e))}
     #${PANEL_ID} .dtm-button-primary{background:#397e91;border-color:#5ac7e1;color:#f5fdff} #${PANEL_ID} .dtm-button-danger{border-color:#95534e;color:#ffc0b8}
     #${PANEL_ID} .dtm-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap} #${PANEL_ID} .dtm-row .dtm-grow{flex:1;min-width:220px}
@@ -100,26 +101,26 @@
     const preview = safePreview(theme.preview);
     const active = state && !state.paused && state.active?.id === theme.id;
     const meta = [theme.author, theme.version].filter(Boolean).map(escapeHtml).join(" · ");
-    return `<article class="dtm-card"><div class="dtm-preview">${preview ? `<img src="${escapeHtml(preview)}" alt="">` : bird}</div><div class="dtm-card-body"><div class="dtm-title"><span>${escapeHtml(theme.name)}</span>${active ? '<span class="dtm-chip">使用中</span>' : ""}</div>${meta ? `<p style="margin:-4px 0 9px">${meta}</p>` : ""}<button class="dtm-button ${active ? "" : "dtm-button-primary"}" data-theme-use="${escapeHtml(theme.key)}" ${active ? "disabled" : ""}>${active ? "当前主题" : "启用主题"}</button></div></article>`;
+    return `<article class="dtm-card"><div class="dtm-preview">${preview ? `<img src="${escapeHtml(preview)}" alt="">` : bird}</div><div class="dtm-card-body"><div class="dtm-card-line"><div class="dtm-card-main"><div class="dtm-title">${escapeHtml(theme.name)}</div>${meta ? `<p>${meta}</p>` : ""}</div><button class="dtm-button ${active ? "" : "dtm-button-primary"}" data-theme-use="${escapeHtml(theme.key)}" ${active ? "disabled" : ""}>${active ? "当前主题" : "启用主题"}</button></div></div></article>`;
   };
   const bundledCardHtml = (theme) => {
     const preview = safePreview(theme.preview);
     const installed = Boolean(state?.themes?.some((item) => item.id === theme.id));
     const meta = [theme.author, theme.version].filter(Boolean).map(escapeHtml).join(" · ");
-    return `<article class="dtm-card"><div class="dtm-preview">${preview ? `<img src="${escapeHtml(preview)}" alt="">` : bird}</div><div class="dtm-card-body"><div class="dtm-title"><span>${escapeHtml(theme.name)}</span><span class="dtm-chip">内置主题</span></div>${meta ? `<p style="margin:-4px 0 9px">${meta}</p>` : ""}<button class="dtm-button ${installed ? "" : "dtm-button-primary"}" data-bundled-install="${escapeHtml(theme.key)}" ${installed ? "disabled" : ""}>${installed ? "已安装" : "安装主题"}</button></div></article>`;
+    return `<article class="dtm-card"><div class="dtm-preview">${preview ? `<img src="${escapeHtml(preview)}" alt="">` : bird}</div><div class="dtm-card-body"><div class="dtm-card-line"><div class="dtm-card-main"><div class="dtm-title">${escapeHtml(theme.name)}</div>${meta ? `<p>${meta}</p>` : ""}</div><button class="dtm-button ${installed ? "" : "dtm-button-primary"}" data-bundled-install="${escapeHtml(theme.key)}" ${installed ? "disabled" : ""}>${installed ? "已安装" : "安装主题"}</button></div></div></article>`;
   };
   const petHtml = (pet) => {
     const active = state?.selectedPet === pet.id;
     const selectable = Boolean(state?.canEnableActive);
     const chips = [`<span class="dtm-chip">宠物 v${escapeHtml(pet.spriteVersionNumber)}</span>`];
     if (pet.selectedInCodex) chips.push('<span class="dtm-chip">Codex 当前使用</span>');
-    return `<article class="dtm-card"><div class="dtm-preview">${bird}</div><div class="dtm-card-body"><div class="dtm-title"><span>${escapeHtml(pet.displayName)}</span><span class="dtm-row">${chips.join("")}</span></div>${pet.description ? `<p style="margin:-4px 0 10px">${escapeHtml(pet.description)}</p>` : ""}<button class="dtm-button ${active ? "" : "dtm-button-primary"}" data-pet-select="${escapeHtml(pet.id)}" ${active || !selectable ? "disabled" : ""}>${active ? "已绑定到当前主题" : (selectable ? "绑定此宠物" : "请先安装并启用主题")}</button></div></article>`;
+    return `<article class="dtm-card"><div class="dtm-preview">${bird}</div><div class="dtm-card-body"><div class="dtm-card-line"><div class="dtm-card-main"><div class="dtm-title">${escapeHtml(pet.displayName)}</div><div class="dtm-row">${chips.join("")}</div>${pet.description ? `<p style="margin-top:8px">${escapeHtml(pet.description)}</p>` : ""}</div><button class="dtm-button ${active ? "" : "dtm-button-primary"}" data-pet-select="${escapeHtml(pet.id)}" ${active || !selectable ? "disabled" : ""}>${active ? "已绑定" : (selectable ? "绑定" : "需先启用主题")}</button></div></div></article>`;
   };
   const catalogHtml = () => {
     if (!catalog) return "";
     const cards = catalog.themes.map((theme) => {
       const preview = safePreview(theme.preview);
-      return `<article class="dtm-card"><div class="dtm-preview">${preview ? `<img src="${escapeHtml(preview)}" alt="">` : bird}</div><div class="dtm-card-body"><div class="dtm-title"><span>${escapeHtml(theme.name)}</span><span class="dtm-chip">库</span></div><button class="dtm-button dtm-button-primary" data-library-install="${escapeHtml(theme.key)}" data-source-id="${escapeHtml(catalog.source.id)}">安装</button></div></article>`;
+      return `<article class="dtm-card"><div class="dtm-preview">${preview ? `<img src="${escapeHtml(preview)}" alt="">` : bird}</div><div class="dtm-card-body"><div class="dtm-card-line"><div class="dtm-card-main"><div class="dtm-title">${escapeHtml(theme.name)}</div><span class="dtm-chip">库</span></div><button class="dtm-button dtm-button-primary" data-library-install="${escapeHtml(theme.key)}" data-source-id="${escapeHtml(catalog.source.id)}">安装</button></div></div></article>`;
     }).join("");
     return `<div class="dtm-section"><h2>${escapeHtml(catalog.source.label)} · 可安装主题</h2>${cards ? `<div class="dtm-grid">${cards}</div>` : '<div class="dtm-empty">这个主题库中没有找到有效主题。</div>'}</div>`;
   };
