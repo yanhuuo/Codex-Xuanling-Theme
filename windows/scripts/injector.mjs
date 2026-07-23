@@ -11,7 +11,7 @@ import { readImageMetadata } from "./image-metadata.mjs";
 const scriptPath = fileURLToPath(import.meta.url);
 const here = path.dirname(scriptPath);
 const root = path.resolve(here, "..");
-const DEFAULT_THEME_DIR = path.join(root, "themes", "yangyang-xuanling-official-v2");
+const DEFAULT_THEME_DIR = path.join(root, "themes", "鸣潮 秧秧·玄翎");
 const SKIN_VERSION = "1.4.0";
 const MAX_ART_BYTES = 16 * 1024 * 1024;
 const MAX_THEME_CSS_BYTES = 512 * 1024;

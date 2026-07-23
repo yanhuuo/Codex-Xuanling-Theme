@@ -12,7 +12,7 @@ import {
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const windowsRoot = path.resolve(here, "..");
-const featuredPath = path.join(windowsRoot, "themes", "yangyang-xuanling-official-v2", "background.jpg");
+const featuredPath = path.join(windowsRoot, "themes", "鸣潮 秧秧·玄翎", "background.jpg");
 const featured = await fs.readFile(featuredPath);
 const helper = path.join(windowsRoot, "scripts", "image-metadata.mjs");
 

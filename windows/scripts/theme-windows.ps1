@@ -352,7 +352,7 @@ function Initialize-DreamSkinThemeStore {
   foreach ($directory in @($paths.Root, $paths.Active, $paths.Saved, $paths.Pets, $paths.Images)) {
     Ensure-DreamSkinManagedDirectory -Path $directory -Root $paths.Root
   }
-  $assetRoot = Join-Path $SkillRoot 'themes\yangyang-xuanling-official-v2'
+  $assetRoot = Join-Path $SkillRoot 'themes\鸣潮 秧秧·玄翎'
   $assetImage = Join-Path $assetRoot 'background.jpg'
   Assert-DreamSkinImageFile -Path $assetImage
   $activeTheme = Join-Path $paths.Active 'theme.json'

@@ -371,7 +371,7 @@ try {
   }
 
   $themeStateRoot = Join-Path $temporaryRoot 'theme-state'
-  $bundledTheme = Join-Path $Root 'themes\yangyang-xuanling-official-v2'
+  $bundledTheme = Join-Path $Root 'themes\鸣潮 秧秧·玄翎'
   $themePaths = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $themeStateRoot
   $initialTheme = Read-DreamSkinTheme -ThemeDirectory $themePaths.Active
   if ($initialTheme.Theme.id -cne 'yangyang-xuanling-azure-plume' -or

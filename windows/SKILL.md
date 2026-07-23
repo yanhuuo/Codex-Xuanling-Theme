@@ -39,7 +39,7 @@ Apply a reversible renderer skin through Chromium DevTools Protocol while launch
 ```powershell
 powershell -NoProfile -File tests\run-tests.ps1
 node --check scripts\injector.mjs
-node --check themes\yangyang-xuanling-official-v2\theme.js
+node --check "themes\鸣潮 秧秧·玄翎\theme.js"
 ```
 
 ## Resources
@@ -49,7 +49,7 @@ node --check themes\yangyang-xuanling-official-v2\theme.js
 - `scripts/config-utf8.ps1`: atomic UTF-8 configuration backup, selective restore, and explicit recovery.
 - `engine/theme-manager.js`: theme-neutral `设置 → 主题` page, installed-theme switching, official-appearance pause, and configurable local/HTTPS theme libraries.
 - `themes/<theme-id>/`: a self-contained executable theme bundle. Each folder owns its `theme.json`, `theme.css`, `theme.js`, background, icons, and optional private assets.
-- `themes/yangyang-xuanling-official-v2/`: bundled Yangyang Xuanling theme; its Xuanniao icons and animations do not live in the shared engine.
+- `themes/鸣潮 秧秧·玄翎/`: bundled Yangyang Xuanling theme; its Xuanniao icons and animations do not live in the shared engine.
 - `scripts/theme-windows.ps1`: persistent active/saved theme store, safe image import, pause state, and preset seeding.
 - `scripts/tray-dream-skin.ps1`: Windows Forms tray for apply, pause, import, save, switch, and complete restore.
 - `scripts/guard-dream-skin.ps1`: user-level Store-update and injector auto-heal loop with verified package/process identity.

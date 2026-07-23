@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const windowsRoot = path.resolve(here, "..");
-const template = await fs.readFile(path.join(windowsRoot, "themes", "yangyang-xuanling-official-v2", "theme.js"), "utf8");
+const template = await fs.readFile(path.join(windowsRoot, "themes", "鸣潮 秧秧·玄翎", "theme.js"), "utf8");
 const buildPayload = (config = {}) => template
   .replace("__DREAM_CSS_JSON__", JSON.stringify(".fixture { color: blue; }"))
   .replace("__DREAM_ART_JSON__", JSON.stringify("data:image/png;base64,AA=="))
