@@ -595,7 +595,9 @@ try {
     'data-settings-panel-slug', 'dream-theme-manager', '还原官方外观',
     'addLibrary', 'addRepository', 'getCatalog', 'installLibraryTheme',
     '主题宠物', 'selectPet', '已绑定到当前主题', '热重载已开启',
-    '可安装主题', 'installBundledTheme', '安装主题', 'dtm-preview', '<img src="${escapeHtml(preview)}"'
+    'installBundledTheme', '安装主题', 'dtm-preview', '<img src="${escapeHtml(preview)}"',
+    'dtm-tabs', 'data-manager-tab="themes"', 'data-manager-tab="pets"',
+    'installedThemeIds', '!installedThemeIds.has(theme.id)'
   )) {
     if (-not $managerSource.Contains($requiredManagerBehavior)) {
       throw "Independent theme manager behavior is missing: $requiredManagerBehavior"

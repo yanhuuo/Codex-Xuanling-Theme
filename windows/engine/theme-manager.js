@@ -20,6 +20,9 @@
     #${PANEL_ID} p{margin:0;color:var(--text-secondary,#9bb0bc);font-size:13px;line-height:1.55}
     #${PANEL_ID} .dtm-status{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 35%,transparent);border-radius:999px;background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 9%,transparent);font-size:12px;white-space:nowrap}
     #${PANEL_ID} .dtm-dot{width:7px;height:7px;border-radius:50%;background:var(--dream-manager-accent,#6edaf2);box-shadow:0 0 10px var(--dream-manager-accent,#6edaf2)}
+    #${PANEL_ID} .dtm-tabs{display:inline-flex;gap:4px;margin:14px 0 2px;padding:4px;border:1px solid var(--border-light,#263642);border-radius:12px;background:color-mix(in srgb,var(--main-surface-secondary,#13212c) 75%,transparent)}
+    #${PANEL_ID} .dtm-tab{border:0;border-radius:8px;padding:7px 14px;background:transparent;color:var(--text-secondary,#9bb0bc);font-size:13px}
+    #${PANEL_ID} .dtm-tab[aria-selected="true"]{background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 18%,transparent);color:var(--text-primary,#edf7fb);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 34%,transparent)}
     #${PANEL_ID} .dtm-section{margin-top:24px;padding-top:20px;border-top:1px solid var(--border-light,#263642)}
     #${PANEL_ID} .dtm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:14px}
     #${PANEL_ID} .dtm-card{overflow:hidden;border:1px solid var(--border-light,#263642);border-radius:14px;background:color-mix(in srgb,var(--main-surface-secondary,#13212c) 90%,transparent)}
@@ -47,6 +50,7 @@
   let catalog = null;
   let message = "";
   let showing = false;
+  let activeTab = "themes";
 
   const call = (command, payload = {}) => new Promise((resolve, reject) => {
     const requestId = `theme-${Date.now()}-${++sequence}`;
@@ -122,11 +126,18 @@
   const render = () => {
     const panel = document.getElementById(PANEL_ID);
     if (!panel || !state) return;
-    const themes = state.themes.map(cardHtml).join("");
-    const bundledThemes = (state.bundledThemes || []).map(bundledCardHtml).join("");
+    const installedThemeIds = new Set(state.themes.map((theme) => theme.id));
+    const themes = [
+      ...state.themes.map(cardHtml),
+      ...(state.bundledThemes || [])
+        .filter((theme) => !installedThemeIds.has(theme.id))
+        .map(bundledCardHtml),
+    ].join("");
     const pets = (state.pets || []).map(petHtml).join("");
     const libraries = state.libraries.map((source) => `<div class="dtm-source"><strong>${escapeHtml(source.label)}${source.type === "repository" ? ' <span class="dtm-chip">GitHub</span>' : ""}</strong><span class="dtm-path" title="${escapeHtml(source.location)}">${escapeHtml(source.location)}</span><span class="dtm-row"><button class="dtm-button" data-library-open="${escapeHtml(source.id)}">读取</button><button class="dtm-button dtm-button-danger" data-library-remove="${escapeHtml(source.id)}">移除</button></span></div>`).join("");
-    panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1><p>主题管理工具独立安装；主题、背景图片和可选宠物都在本页安装与启用。</p></div><div class="dtm-status"><span class="dtm-dot"></span>${state.paused ? "官方外观" : `当前：${escapeHtml(state.active?.name || "主题")}`} · ${state.hotReload ? "热重载已开启" : "自动刷新"}</div></div><div class="dtm-row"><button class="dtm-button ${state.paused ? "dtm-button-primary" : "dtm-button-danger"}" data-official ${state.paused && !state.canEnableActive ? "disabled" : ""}>${state.paused ? (state.canEnableActive ? "启用当前主题" : "请先安装主题") : "还原官方外观"}</button><button class="dtm-button" data-refresh>立即刷新</button><p>新安装的管理工具默认保持官方外观；还原不会删除已安装主题、宠物或主题库配置。</p></div><section class="dtm-section"><h2>可安装主题</h2>${bundledThemes ? `<div class="dtm-grid">${bundledThemes}</div>` : '<div class="dtm-empty">安装包中没有内置主题，可从下方仓库或主题库安装。</div>'}</section><section class="dtm-section"><h2>已安装主题</h2>${themes ? `<div class="dtm-grid">${themes}</div>` : '<div class="dtm-empty">暂无已安装主题。请先在“可安装主题”或主题库中点击安装。</div>'}</section><section class="dtm-section"><h2>主题宠物</h2><p style="margin-bottom:12px">宠物库与主题库分离保存。选择后只把宠物 ID 绑定到当前主题；换机安装并启用主题时，会从主题包关联的独立宠物目录安装并选中同一只宠物。</p>${pets ? `<div class="dtm-grid">${pets}</div><div class="dtm-row" style="margin-top:12px"><button class="dtm-button ${state.selectedPet ? "dtm-button-danger" : ""}" data-pet-clear ${state.selectedPet ? "" : "disabled"}>解除主题宠物绑定</button></div>` : '<div class="dtm-empty">没有发现有效的 Codex v2 宠物包。</div>'}</section><section class="dtm-section"><h2>从 GitHub 仓库安装</h2><p style="margin-bottom:12px">公开仓库根目录放置 <code>theme-library.json</code> 后，可直接添加仓库并读取主题；无需手填 Raw 地址。</p><div class="dtm-row"><div class="dtm-grow"><input data-repository-location placeholder="https://github.com/owner/repository"></div><div style="min-width:150px"><input data-repository-label placeholder="名称（可选）"></div><button class="dtm-button dtm-button-primary" data-repository-add>添加仓库</button></div></section><section class="dtm-section"><h2>主题库</h2><p style="margin-bottom:12px">也支持本地主题包目录，或 HTTPS 远程索引。主题包包含可执行渲染脚本，只添加你信任的来源。远程索引格式为 <code>{ "themes": [{ "id", "name", "themeUrl" }] }</code>。</p><div class="dtm-row"><div class="dtm-grow"><input data-library-location placeholder="本地主题包目录或 https://…/index.json"></div><div style="min-width:150px"><input data-library-label placeholder="名称（可选）"></div><button class="dtm-button dtm-button-primary" data-library-add>添加主题库</button></div><div style="margin-top:12px">${libraries || '<div class="dtm-empty">尚未配置主题库。</div>'}</div></section>${catalogHtml()}${message ? `<div class="dtm-message">${escapeHtml(message)}</div>` : ""}</div>`;
+    const themePane = `<section class="dtm-section"><h2>主题</h2>${themes ? `<div class="dtm-grid">${themes}</div>` : '<div class="dtm-empty">暂无主题。请先从内置主题、GitHub 仓库或主题库安装。</div>'}</section><section class="dtm-section"><h2>从 GitHub 仓库安装</h2><p style="margin-bottom:12px">公开仓库根目录放置 <code>theme-library.json</code> 后，可直接添加仓库并读取主题；无需手填 Raw 地址。</p><div class="dtm-row"><div class="dtm-grow"><input data-repository-location placeholder="https://github.com/owner/repository"></div><div style="min-width:150px"><input data-repository-label placeholder="名称（可选）"></div><button class="dtm-button dtm-button-primary" data-repository-add>添加仓库</button></div></section><section class="dtm-section"><h2>主题库</h2><p style="margin-bottom:12px">也支持本地主题包目录，或 HTTPS 远程索引。主题包包含可执行渲染脚本，只添加你信任的来源。远程索引格式为 <code>{ "themes": [{ "id", "name", "themeUrl" }] }</code>。</p><div class="dtm-row"><div class="dtm-grow"><input data-library-location placeholder="本地主题包目录或 https://…/index.json"></div><div style="min-width:150px"><input data-library-label placeholder="名称（可选）"></div><button class="dtm-button dtm-button-primary" data-library-add>添加主题库</button></div><div style="margin-top:12px">${libraries || '<div class="dtm-empty">尚未配置主题库。</div>'}</div></section>${catalogHtml()}`;
+    const petPane = `<section class="dtm-section"><h2>主题宠物</h2><p style="margin-bottom:12px">宠物库与主题库分离保存。选择后只把宠物 ID 绑定到当前主题；换机安装并启用主题时，会从主题包关联的独立宠物目录安装并选中同一只宠物。</p>${pets ? `<div class="dtm-grid">${pets}</div><div class="dtm-row" style="margin-top:12px"><button class="dtm-button ${state.selectedPet ? "dtm-button-danger" : ""}" data-pet-clear ${state.selectedPet ? "" : "disabled"}>解除主题宠物绑定</button></div>` : '<div class="dtm-empty">没有发现有效的 Codex v2 宠物包。</div>'}</section>`;
+    panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1><p>主题管理工具独立安装；主题、背景图片和可选宠物都在本页安装与启用。</p></div><div class="dtm-status"><span class="dtm-dot"></span>${state.paused ? "官方外观" : `当前：${escapeHtml(state.active?.name || "主题")}`} · ${state.hotReload ? "热重载已开启" : "自动刷新"}</div></div><div class="dtm-row"><button class="dtm-button ${state.paused ? "dtm-button-primary" : "dtm-button-danger"}" data-official ${state.paused && !state.canEnableActive ? "disabled" : ""}>${state.paused ? (state.canEnableActive ? "启用当前主题" : "请先安装主题") : "还原官方外观"}</button><button class="dtm-button" data-refresh>立即刷新</button><p>新安装的管理工具默认保持官方外观；还原不会删除已安装主题、宠物或主题库配置。</p></div><div class="dtm-tabs" role="tablist" aria-label="主题内容"><button class="dtm-tab" role="tab" aria-selected="${activeTab === "themes"}" data-manager-tab="themes">主题</button><button class="dtm-tab" role="tab" aria-selected="${activeTab === "pets"}" data-manager-tab="pets">宠物</button></div>${activeTab === "pets" ? petPane : themePane}${message ? `<div class="dtm-message">${escapeHtml(message)}</div>` : ""}</div>`;
   };
   const refreshState = async () => { state = await call("getState"); render(); };
   const act = async (operation, success) => {
@@ -136,10 +147,11 @@
   };
   const onPanelClick = (event) => {
     const target = event.target.closest("button"); if (!target) return;
-    if (target.hasAttribute("data-official")) act(() => call("setPaused", { paused: !state.paused }), state.paused ? "主题已重新启用" : "已恢复 Codex 官方外观");
+    if (target.dataset.managerTab) { activeTab = target.dataset.managerTab === "pets" ? "pets" : "themes"; render(); }
+    else if (target.hasAttribute("data-official")) act(() => call("setPaused", { paused: !state.paused }), state.paused ? "主题已重新启用" : "已恢复 Codex 官方外观");
     else if (target.hasAttribute("data-refresh")) act(() => call("getState"), "主题状态已刷新");
     else if (target.dataset.themeUse) act(() => call("useTheme", { key: target.dataset.themeUse }), "主题已启用");
-    else if (target.dataset.bundledInstall) act(() => call("installBundledTheme", { key: target.dataset.bundledInstall }), "主题安装完成，可在“已安装主题”中启用");
+    else if (target.dataset.bundledInstall) act(() => call("installBundledTheme", { key: target.dataset.bundledInstall }), "主题安装完成，可在主题列表中启用");
     else if (target.dataset.petSelect) act(() => call("selectPet", { petId: target.dataset.petSelect }), "宠物已绑定到主题并设为 Codex 当前宠物");
     else if (target.hasAttribute("data-pet-clear")) act(() => call("selectPet", { petId: "" }), "主题宠物绑定已解除");
     else if (target.hasAttribute("data-repository-add")) {
