@@ -42,7 +42,7 @@ windows/themes/yangyang-xuanling-official-v2/
 
 ## 主题宠物
 
-主题页会读取 `~/.codex/pets` 下符合 `spriteVersionNumber: 2` 的 Codex 原生宠物包。选择后会把完整宠物包复制进主题；该主题在另一台主机安装并启用时，会自动安装并选中同一宠物。
+主题页会读取 `~/.codex/pets` 下符合 `spriteVersionNumber: 2` 的 Codex 原生宠物包。选择后主题只保存宠物 ID 绑定，宠物包保存在独立的 `pets/` 目录；该主题在另一台主机安装并启用时，会自动安装并选中同一宠物。
 
 ## 开发与验证
 

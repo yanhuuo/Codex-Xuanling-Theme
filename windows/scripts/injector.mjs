@@ -383,6 +383,41 @@ async function loadPetPackage(packageDirectory, expectedId = null) {
   };
 }
 
+function petSearchDirectories(realThemeDir, petId, declaredDirectory = "") {
+  const candidates = [];
+  const add = (candidate) => {
+    const resolved = path.resolve(candidate);
+    if (!candidates.includes(resolved)) candidates.push(resolved);
+  };
+  if (declaredDirectory) add(path.resolve(realThemeDir, declaredDirectory));
+  for (let cursor = realThemeDir; ; cursor = path.dirname(cursor)) {
+    add(path.join(cursor, "pets", petId));
+    const parent = path.dirname(cursor);
+    if (parent === cursor) break;
+  }
+  return candidates;
+}
+
+async function loadThemePetBundle(realThemeDir, rawPet) {
+  if (rawPet === undefined || rawPet === null) return { petBundle: null, normalizedPet: null };
+  if (typeof rawPet !== "object" || Array.isArray(rawPet)) throw new Error("theme.pet must be an object");
+  const petId = normalizedText(rawPet.id, "pet.id", "", 80);
+  if (!PET_ID_PATTERN.test(petId)) throw new Error("theme.pet.id is invalid");
+  const declaredDirectory = normalizedText(rawPet.directory, "pet.directory", "", 240);
+  if (declaredDirectory && path.isAbsolute(declaredDirectory)) throw new Error("theme.pet.directory must be relative");
+  const attempted = [];
+  for (const directory of petSearchDirectories(realThemeDir, petId, declaredDirectory)) {
+    try {
+      const petBundle = await loadPetPackage(directory, petId);
+      return { petBundle, normalizedPet: { id: petId } };
+    } catch (error) {
+      if (error?.code !== "ENOENT") attempted.push(error);
+    }
+  }
+  if (attempted.length > 0) throw attempted[0];
+  throw new Error(`Theme pet package was not found: ${petId}`);
+}
+
 async function loadTheme(themeDir) {
   const realThemeDir = await fs.realpath(themeDir);
   const themePath = path.join(realThemeDir, "theme.json");
@@ -444,21 +479,7 @@ async function loadTheme(themeDir) {
   const art = raw.art && typeof raw.art === "object" && !Array.isArray(raw.art) ? raw.art : {};
   const palette = raw.palette && typeof raw.palette === "object" && !Array.isArray(raw.palette)
     ? raw.palette : {};
-  let petBundle = null;
-  let normalizedPet = null;
-  if (raw.pet !== undefined && raw.pet !== null) {
-    if (typeof raw.pet !== "object" || Array.isArray(raw.pet)) throw new Error("theme.pet 必须是对象");
-    const petId = normalizedText(raw.pet.id, "pet.id", "", 80);
-    if (!PET_ID_PATTERN.test(petId)) throw new Error("theme.pet.id 无效");
-    const petDirectory = normalizedText(raw.pet.directory, "pet.directory", "", 240);
-    if (!petDirectory || path.isAbsolute(petDirectory)) throw new Error("theme.pet.directory 必须是相对路径");
-    const resolvedPetDirectory = path.resolve(realThemeDir, petDirectory);
-    if (!isPathInside(resolvedPetDirectory, realThemeDir)) throw new Error("主题宠物必须保留在主题目录内");
-    const realPetDirectory = await fs.realpath(resolvedPetDirectory);
-    if (!isPathInside(realPetDirectory, realThemeDir)) throw new Error("主题宠物不能通过链接跳出主题目录");
-    petBundle = await loadPetPackage(realPetDirectory, petId);
-    normalizedPet = { id: petId, directory: `pets/${petId}` };
-  }
+  const { petBundle, normalizedPet } = await loadThemePetBundle(realThemeDir, raw.pet);
   const theme = {
     schemaVersion: Number(raw.schemaVersion) === 2 ? 2 : 1,
     id: normalizedText(raw.id, "id", "custom", 80),
@@ -569,12 +590,34 @@ function safeThemeId(value, fallback = "theme") {
 
 function themeForDisk(loaded, imageName) {
   const { artMetadata: _metadata, ...theme } = loaded.theme;
-  return {
+  const diskTheme = {
     ...theme,
     schemaVersion: 2,
     entrypoints: { css: "theme.css", renderer: "theme.js" },
     image: imageName,
   };
+  if (loaded.petBundle) diskTheme.pet = { id: loaded.petBundle.id };
+  else delete diskTheme.pet;
+  return diskTheme;
+}
+
+function stateRootFromThemeDestination(destination) {
+  const parent = path.dirname(destination);
+  return path.basename(parent).toLowerCase() === "themes" ? path.dirname(parent) : parent;
+}
+
+async function writePetBundleToStore(stateRoot, petBundle) {
+  if (!petBundle) return null;
+  const petsRoot = path.join(stateRoot, "pets");
+  await fs.mkdir(petsRoot, { recursive: true });
+  const realPetsRoot = await fs.realpath(petsRoot);
+  const petDirectory = path.join(realPetsRoot, petBundle.id);
+  const spritesheetPath = path.resolve(petDirectory, petBundle.spritesheetPath);
+  if (!isPathInside(spritesheetPath, petDirectory)) throw new Error("Pet spritesheet target escaped the pet store");
+  await fs.mkdir(path.dirname(spritesheetPath), { recursive: true });
+  await fs.writeFile(spritesheetPath, petBundle.spritesheetBytes);
+  await fs.writeFile(path.join(petDirectory, "pet.json"), petBundle.manifestBytes);
+  return petDirectory;
 }
 
 async function writeThemeDirectory(destination, loaded) {
@@ -594,16 +637,8 @@ async function writeThemeDirectory(destination, loaded) {
     await fs.copyFile(imageTemp, imagePath);
     await fs.writeFile(cssPath, loaded.cssText, "utf8");
     await fs.writeFile(rendererPath, loaded.rendererText, "utf8");
-    const petsRoot = path.join(resolvedDestination, "pets");
-    await fs.rm(petsRoot, { recursive: true, force: true });
-    if (loaded.petBundle) {
-      const petDirectory = path.join(petsRoot, loaded.petBundle.id);
-      const spritesheetPath = path.resolve(petDirectory, loaded.petBundle.spritesheetPath);
-      if (!isPathInside(spritesheetPath, petDirectory)) throw new Error("宠物图集目标路径越界");
-      await fs.mkdir(path.dirname(spritesheetPath), { recursive: true });
-      await fs.writeFile(spritesheetPath, loaded.petBundle.spritesheetBytes);
-      await fs.writeFile(path.join(petDirectory, "pet.json"), loaded.petBundle.manifestBytes);
-    }
+    await fs.rm(path.join(resolvedDestination, "pets"), { recursive: true, force: true });
+    await writePetBundleToStore(stateRootFromThemeDestination(resolvedDestination), loaded.petBundle);
     await fs.writeFile(jsonTemp, `${JSON.stringify(themeForDisk(loaded, imageName), null, 2)}\n`, { flag: "wx" });
     await fs.copyFile(jsonTemp, path.join(resolvedDestination, "theme.json"));
   } finally {
@@ -758,7 +793,7 @@ async function writePetAssociations(options, associations) {
 }
 
 async function previewDataUrl(loaded) {
-  if (loaded.imageBytes.length > 192 * 1024) return null;
+  if (loaded.imageBytes.length > 4 * 1024 * 1024) return null;
   const extension = path.extname(loaded.imagePath).toLowerCase();
   const mime = extension === ".jpg" || extension === ".jpeg" ? "image/jpeg"
     : extension === ".webp" ? "image/webp" : "image/png";
@@ -974,7 +1009,7 @@ async function fetchRemoteTheme(themeUrl) {
     if (typeof rawTheme.pet !== "object" || Array.isArray(rawTheme.pet)) throw new Error("远程主题 pet 必须是对象");
     const petId = normalizedText(rawTheme.pet.id, "pet.id", "", 80);
     if (!PET_ID_PATTERN.test(petId)) throw new Error("远程主题 pet.id 无效");
-    const petDirectory = normalizedText(rawTheme.pet.directory, "pet.directory", "", 240);
+    const petDirectory = normalizedText(rawTheme.pet.directory, "pet.directory", `../../pets/${petId}`, 240);
     if (!petDirectory || path.isAbsolute(petDirectory)) throw new Error("远程主题 pet.directory 必须是相对路径");
     const manifestUrl = new URL(`${petDirectory.replace(/\/$/, "")}/pet.json`, url);
     if (manifestUrl.protocol !== "https:") throw new Error("远程宠物只允许 HTTPS 地址");
@@ -992,7 +1027,7 @@ async function fetchRemoteTheme(themeUrl) {
     if (!spritesheetResponse.ok) throw new Error(`宠物图集请求失败：HTTP ${spritesheetResponse.status}`);
     const spritesheetBytes = Buffer.from(await spritesheetResponse.arrayBuffer());
     petBundle = petBundleFromBytes(manifestBytes, spritesheetBytes, petId);
-    normalizedPet = { id: petId, directory: `pets/${petId}` };
+    normalizedPet = { id: petId };
   }
   const theme = {
     schemaVersion: 2,
@@ -1016,7 +1051,6 @@ async function fetchRemoteTheme(themeUrl) {
     },
     palette: {},
   };
-  if (normalizedPet) theme.pet = normalizedPet;
   if (normalizedPet) theme.pet = normalizedPet;
   if (typeof palette.accent === "string" && palette.accent.trim()) {
     const accent = palette.accent.trim();
@@ -1093,7 +1127,7 @@ async function handleThemeControl(options, request) {
       theme: { ...active.theme },
       petBundle: selectedBundle,
     };
-    if (selectedBundle) withSelection.theme.pet = { id: selectedBundle.id, directory: `pets/${selectedBundle.id}` };
+    if (selectedBundle) withSelection.theme.pet = { id: selectedBundle.id };
     else delete withSelection.theme.pet;
     await writeThemeDirectory(options.themeDir, withSelection);
     for (const entry of await fs.readdir(savedRoot, { withFileTypes: true }).catch(() => [])) {
@@ -1107,7 +1141,7 @@ async function handleThemeControl(options, request) {
           theme: { ...saved.theme },
           petBundle: selectedBundle,
         };
-        if (selectedBundle) savedWithSelection.theme.pet = { id: selectedBundle.id, directory: `pets/${selectedBundle.id}` };
+        if (selectedBundle) savedWithSelection.theme.pet = { id: selectedBundle.id };
         else delete savedWithSelection.theme.pet;
         await writeThemeDirectory(directory, savedWithSelection);
       } catch {

@@ -96,6 +96,7 @@ function Get-DreamSkinThemePaths {
     Root = $fullRoot
     Active = Join-Path $fullRoot 'active-theme'
     Saved = Join-Path $fullRoot 'themes'
+    Pets = Join-Path $fullRoot 'pets'
     Images = Join-Path $fullRoot 'images'
     PauseFile = Join-Path $fullRoot 'paused'
     State = Join-Path $fullRoot 'state.json'
@@ -231,18 +232,32 @@ function Copy-DreamSkinThemePetBundle {
   )
   $sourceTheme = (Read-DreamSkinUtf8File -Path (Join-Path $SourceDirectory 'theme.json')) | ConvertFrom-Json -ErrorAction Stop
   $destinationPets = Join-Path $DestinationDirectory 'pets'
-  if (Test-Path -LiteralPath $destinationPets) {
-    if (-not (Test-DreamSkinThemePathWithin -Path $destinationPets -Root $ManagedRoot)) { throw 'Theme pet destination escaped the managed theme store.' }
-    Remove-Item -LiteralPath $destinationPets -Recurse -Force
-  }
   if (-not $sourceTheme.pet) { return }
   $petId = "$($sourceTheme.pet.id)"
-  $relativeDirectory = "$($sourceTheme.pet.directory)"
-  if ($petId -notmatch '^[A-Za-z0-9._-]{1,80}$' -or [System.IO.Path]::IsPathRooted($relativeDirectory)) {
+  if ($petId -notmatch '^[A-Za-z0-9._-]{1,80}$') {
     throw 'Bundled theme pet metadata is invalid.'
   }
-  $sourcePet = [System.IO.Path]::GetFullPath((Join-Path $SourceDirectory $relativeDirectory))
-  if (-not (Test-DreamSkinThemePathWithin -Path $sourcePet -Root $SourceDirectory)) { throw 'Bundled theme pet escaped its theme directory.' }
+  $petCandidates = @()
+  if ($sourceTheme.pet.directory) {
+    $relativeDirectory = "$($sourceTheme.pet.directory)"
+    if ([System.IO.Path]::IsPathRooted($relativeDirectory)) { throw 'Bundled theme pet metadata is invalid.' }
+    $petCandidates += [System.IO.Path]::GetFullPath((Join-Path $SourceDirectory $relativeDirectory))
+  }
+  $cursor = [System.IO.Path]::GetFullPath($SourceDirectory)
+  while ($true) {
+    $petCandidates += [System.IO.Path]::GetFullPath((Join-Path $cursor (Join-Path 'pets' $petId)))
+    $parent = [System.IO.Path]::GetDirectoryName($cursor)
+    if (-not $parent -or $parent.Equals($cursor, [System.StringComparison]::OrdinalIgnoreCase)) { break }
+    $cursor = $parent
+  }
+  $sourcePet = $null
+  foreach ($candidate in @($petCandidates | Select-Object -Unique)) {
+    if (Test-Path -LiteralPath (Join-Path $candidate 'pet.json') -PathType Leaf) {
+      $sourcePet = $candidate
+      break
+    }
+  }
+  if (-not $sourcePet) { throw "Bundled theme pet package was not found: $petId" }
   $manifestPath = Join-Path $sourcePet 'pet.json'
   $manifest = (Read-DreamSkinUtf8File -Path $manifestPath) | ConvertFrom-Json -ErrorAction Stop
   if ("$($manifest.id)" -cne $petId -or [int]$manifest.spriteVersionNumber -ne 2) { throw 'Bundled pet must be a matching Codex v2 package.' }
@@ -253,12 +268,29 @@ function Copy-DreamSkinThemePetBundle {
   $spritesheetPath = [System.IO.Path]::GetFullPath((Join-Path $sourcePet $spritesheetName))
   if (-not (Test-DreamSkinThemePathWithin -Path $spritesheetPath -Root $sourcePet)) { throw 'Bundled pet spritesheet escaped its package.' }
   Assert-DreamSkinImageFile -Path $spritesheetPath
-  $destinationPet = Join-Path $destinationPets $petId
-  Ensure-DreamSkinManagedDirectory -Path $destinationPet -Root $ManagedRoot
+  $stateRoot = [System.IO.Path]::GetFullPath($ManagedRoot)
+  if ([System.IO.Path]::GetFileName($stateRoot) -ieq 'themes') {
+    $stateRoot = [System.IO.Path]::GetDirectoryName($stateRoot)
+  }
+  $destinationPet = Join-Path (Join-Path $stateRoot 'pets') $petId
+  Ensure-DreamSkinManagedDirectory -Path $destinationPet -Root $stateRoot
   $destinationSheet = Join-Path $destinationPet $spritesheetName
   New-Item -ItemType Directory -Force -Path ([System.IO.Path]::GetDirectoryName($destinationSheet)) | Out-Null
-  Copy-Item -LiteralPath $spritesheetPath -Destination $destinationSheet -Force
-  Copy-Item -LiteralPath $manifestPath -Destination (Join-Path $destinationPet 'pet.json') -Force
+  if ([System.IO.Path]::GetFullPath($spritesheetPath) -ine [System.IO.Path]::GetFullPath($destinationSheet)) {
+    Copy-Item -LiteralPath $spritesheetPath -Destination $destinationSheet -Force
+  }
+  $destinationManifest = Join-Path $destinationPet 'pet.json'
+  if ([System.IO.Path]::GetFullPath($manifestPath) -ine [System.IO.Path]::GetFullPath($destinationManifest)) {
+    Copy-Item -LiteralPath $manifestPath -Destination $destinationManifest -Force
+  }
+  if (Test-Path -LiteralPath $destinationPets) {
+    if (-not (Test-DreamSkinThemePathWithin -Path $destinationPets -Root $ManagedRoot)) { throw 'Theme pet destination escaped the managed theme store.' }
+    $fullDestinationPets = [System.IO.Path]::GetFullPath($destinationPets)
+    $fullStorePets = [System.IO.Path]::GetFullPath((Join-Path $stateRoot 'pets'))
+    if (-not $fullDestinationPets.Equals($fullStorePets, [System.StringComparison]::OrdinalIgnoreCase)) {
+      Remove-Item -LiteralPath $destinationPets -Recurse -Force
+    }
+  }
 }
 
 function Upgrade-DreamSkinLegacyThemeBundle {
@@ -302,6 +334,11 @@ function Upgrade-DreamSkinLegacyThemeBundle {
     $theme | Add-Member -NotePropertyName pet -NotePropertyValue $bundledTheme.pet -Force
     $changed = $true
   }
+  if ($theme.pet -and $theme.pet.directory) {
+    Copy-DreamSkinThemePetBundle -SourceDirectory $ThemeDirectory -DestinationDirectory $ThemeDirectory -ManagedRoot ([System.IO.Path]::GetDirectoryName($ThemeDirectory))
+    $theme.pet = [pscustomobject]@{ id = "$($theme.pet.id)" }
+    $changed = $true
+  }
   if ($changed) { Write-DreamSkinTheme -ThemeDirectory $ThemeDirectory -Theme $theme }
 }
 
@@ -312,7 +349,7 @@ function Initialize-DreamSkinThemeStore {
     [switch]$ManagerOnly
   )
   $paths = Get-DreamSkinThemePaths -StateRoot $StateRoot
-  foreach ($directory in @($paths.Root, $paths.Active, $paths.Saved, $paths.Images)) {
+  foreach ($directory in @($paths.Root, $paths.Active, $paths.Saved, $paths.Pets, $paths.Images)) {
     Ensure-DreamSkinManagedDirectory -Path $directory -Root $paths.Root
   }
   $assetRoot = Join-Path $SkillRoot 'themes\yangyang-xuanling-official-v2'

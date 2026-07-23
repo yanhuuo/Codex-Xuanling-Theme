@@ -594,8 +594,8 @@ try {
   foreach ($requiredManagerBehavior in @(
     'data-settings-panel-slug', 'dream-theme-manager', '还原官方外观',
     'addLibrary', 'addRepository', 'getCatalog', 'installLibraryTheme',
-    '主题宠物', 'selectPet', '已选择并随主题保存', '热重载已开启',
-    '可安装主题', 'installBundledTheme', '安装主题'
+    '主题宠物', 'selectPet', '已绑定到当前主题', '热重载已开启',
+    '可安装主题', 'installBundledTheme', '安装主题', 'dtm-preview', '<img src="${escapeHtml(preview)}"'
   )) {
     if (-not $managerSource.Contains($requiredManagerBehavior)) {
       throw "Independent theme manager behavior is missing: $requiredManagerBehavior"
@@ -615,10 +615,14 @@ try {
     -not $rendererSource.Contains('aside.app-shell-left-panel svg')) {
     throw 'The global Xuanniao orbit spinner is missing or still scoped to the sidebar.'
   }
-  $bundledPet = Join-Path $bundledTheme 'pets\yangyang-xuanling-official-drum-r3'
+  $bundledPet = Join-Path $Root 'pets\yangyang-xuanling-official-drum-r3'
   $bundledPetManifestPath = Join-Path $bundledPet 'pet.json'
   if (-not (Test-Path -LiteralPath $bundledPetManifestPath -PathType Leaf)) {
-    throw 'The Xuanling theme no longer carries its selected v2 pet package.'
+    throw 'The Xuanling package no longer carries its selected v2 pet package in the independent pets folder.'
+  }
+  $bundledThemeManifest = Get-Content -LiteralPath (Join-Path $bundledTheme 'theme.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ($bundledThemeManifest.pet.id -ne 'yangyang-xuanling-official-drum-r3' -or $bundledThemeManifest.pet.directory) {
+    throw 'The Xuanling theme must bind pets by id without nesting a pet directory inside themes.'
   }
   $bundledPetManifest = Get-Content -LiteralPath $bundledPetManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
   if ($bundledPetManifest.id -ne 'yangyang-xuanling-official-drum-r3' -or
