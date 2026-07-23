@@ -13,4 +13,15 @@ if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
   $ConfigPath = Join-Path $codexConfigRoot 'config.toml'
 }
 . (Join-Path $PSScriptRoot 'config-utf8.ps1')
-Set-DreamSkinSelectedPet -ConfigPath $ConfigPath -PetId $PetId
+$lastError = $null
+for ($attempt = 1; $attempt -le 6; $attempt++) {
+  try {
+    Set-DreamSkinSelectedPet -ConfigPath $ConfigPath -PetId $PetId
+    return
+  } catch {
+    $lastError = $_
+    if ($_.Exception.Message -notlike 'File changed during the operation*' -or $attempt -ge 6) { throw }
+    Start-Sleep -Milliseconds (120 * $attempt)
+  }
+}
+throw $lastError

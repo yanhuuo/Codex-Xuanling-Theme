@@ -9,7 +9,7 @@ Apply a reversible renderer skin through Chromium DevTools Protocol while launch
 
 ## Workflow
 
-1. Install Node.js 22 or newer, close Codex, then run `scripts/install-dream-skin.ps1` once to preserve the user's native appearance settings, discover the default theme from its `install.json`, and create launch/restore/tray shortcuts.
+1. Install Node.js 22 or newer, close Codex, then run `scripts/install-dream-skin.ps1` once to preserve the user's native appearance settings, discover the default theme from `theme.json.install.default`, and create launch/restore/tray shortcuts.
 2. Run `scripts/start-dream-skin.ps1`. The shortcut asks before restarting an already-open Codex app; CLI callers must explicitly add `-RestartExisting`.
 3. Run `scripts/verify-dream-skin.ps1 -ScreenshotPath <absolute-path>` after launch. Treat a missing continuous wallpaper, home shell, native composer, sidebar layer, or injection marker as failure. The native suggestion count is responsive and may be two to four.
 4. Inspect the screenshot against `references/qa-inventory.md`. Verify both the home screen and a normal task before signing off.
@@ -44,12 +44,13 @@ node --check engine\theme-runtime.js
 
 ## Resources
 
-- `scripts/injector.mjs`: CDP connection, renderer injection, verification, screenshot, and removal.
+- `scripts/injector.mjs`: CDP connection, renderer injection, verification, screenshot, watch/reload, and removal.
+- `scripts/theme-package.mjs`: theme package loading, strict asset/icon validation, library catalog handling, local-only theme creation, and pet binding.
 - `scripts/common-windows.ps1`: Store-package discovery, Node validation, port ownership, state, and process identity safety.
 - `scripts/config-utf8.ps1`: atomic UTF-8 configuration backup, selective restore, and explicit recovery.
 - `engine/theme-manager.js`: theme-neutral `设置 → 主题` page, installed-theme switching, official-appearance pause, and configurable local/HTTPS theme libraries.
 - `engine/theme-base.css` and `engine/theme-runtime.js`: shared layout, settings-shell adaptation, icon/animation placement, DOM integration, and cleanup.
-- `themes/<theme-id>/`: a theme configuration bundle. Each folder owns its `install.json`, `theme.json`, palette-only `theme.css`, `icons.json`, background, and optional private assets.
+- `themes/<theme-id>/`: a theme configuration bundle. Each folder owns a single self-describing `theme.json`, palette-only `theme.css`, background, and optional private assets; icons and install metadata live inside `theme.json`.
 - `../pets/<pet-id>/`: repository-level pet packages shared by theme ID; pets never live inside a theme folder.
 - `themes/鸣潮 秧秧·玄翎/`: bundled Yangyang Xuanling palette, Xuanniao icon set, artwork, metadata, and pet binding.
 - `scripts/theme-windows.ps1`: persistent active/saved theme store, safe image import, pause state, and preset seeding.

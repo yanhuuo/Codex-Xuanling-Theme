@@ -76,7 +76,7 @@ function Assert-DreamSkinImageFile {
     throw "Image does not exist: $fullPath"
   }
   $extension = [System.IO.Path]::GetExtension($fullPath).ToLowerInvariant()
-  if ($extension -notin @('.png', '.jpg', '.jpeg', '.webp')) {
+  if ($extension -notin @('.png', '.jpg', '.jpeg', '.webp', '.gif')) {
     throw "Unsupported image format: $extension"
   }
   $length = (Get-Item -LiteralPath $fullPath -Force).Length
@@ -223,6 +223,29 @@ function Read-DreamSkinTheme {
 function Read-DreamSkinThemeInstallManifest {
   param([Parameter(Mandatory = $true)][string]$ThemeDirectory)
   $directory = [System.IO.Path]::GetFullPath($ThemeDirectory)
+  $theme = $null
+  try { $theme = (Read-DreamSkinUtf8File -Path (Join-Path $directory 'theme.json')) | ConvertFrom-Json -ErrorAction Stop } catch {}
+  if ($theme -and $theme.install) {
+    $files = @()
+    foreach ($relative in @($theme.install.files)) {
+      $name = "$relative"
+      if (-not $name -or [System.IO.Path]::IsPathRooted($name)) { throw 'Theme install files must be relative paths.' }
+      $source = [System.IO.Path]::GetFullPath((Join-Path $directory $name))
+      if (-not (Test-DreamSkinThemePathWithin -Path $source -Root $directory) -or
+        -not (Test-Path -LiteralPath $source -PathType Leaf)) {
+        throw "Theme install file escaped the package or is missing: $name"
+      }
+      $files += $name
+    }
+    if (@($files | Where-Object { $_ -ceq 'theme.json' }).Count -lt 1) { $files = @('theme.json') + $files }
+    return [pscustomobject]@{
+      SchemaVersion = 2
+      Default = [bool]$theme.install.default
+      Files = @($files | Select-Object -Unique)
+      Pets = @($theme.install.pets)
+      Path = $null
+    }
+  }
   $installPath = Join-Path $directory 'install.json'
   if (-not (Test-Path -LiteralPath $installPath -PathType Leaf)) {
     $theme = Read-DreamSkinTheme -ThemeDirectory $directory -SkipImageMetadata
@@ -284,17 +307,17 @@ function Write-DreamSkinThemeInstallManifest {
     "$($loaded.Theme.entrypoints.css)",
     "$($loaded.Theme.entrypoints.renderer)"
   )
-  if ($loaded.Theme.entrypoints.icons) { $files += "$($loaded.Theme.entrypoints.icons)" }
   $files += "$($loaded.Theme.image)"
-  $install = [ordered]@{
-    schemaVersion = 1
+  $loaded.Theme | Add-Member -NotePropertyName install -NotePropertyValue ([pscustomobject]([ordered]@{
     default = $false
-    manifest = 'theme.json'
     files = @($files | Select-Object -Unique)
     pets = $(if ($loaded.Theme.pet) { @("$($loaded.Theme.pet.id)") } else { @() })
+  })) -Force
+  if (-not $loaded.Theme.schemaVersion -or [int]$loaded.Theme.schemaVersion -lt 4) {
+    $loaded.Theme | Add-Member -NotePropertyName schemaVersion -NotePropertyValue 4 -Force
   }
-  Write-DreamSkinUtf8FileAtomically -Path (Join-Path $ThemeDirectory 'install.json') `
-    -Content (($install | ConvertTo-Json -Depth 8) + "`r`n")
+  Write-DreamSkinTheme -ThemeDirectory $ThemeDirectory -Theme $loaded.Theme
+  Remove-Item -LiteralPath (Join-Path $ThemeDirectory 'install.json') -Force -ErrorAction SilentlyContinue
 }
 
 function Copy-DreamSkinThemeBundleFiles {
@@ -313,9 +336,8 @@ function Copy-DreamSkinThemeBundleFiles {
     Assert-DreamSkinNoReparseComponents -Path $destination
     Copy-Item -LiteralPath $source -Destination $destination -Force
   }
-  if ($package.Path) {
-    Copy-Item -LiteralPath $package.Path -Destination (Join-Path $DestinationDirectory 'install.json') -Force
-  }
+  Remove-Item -LiteralPath (Join-Path $DestinationDirectory 'install.json') -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath (Join-Path $DestinationDirectory 'icons.json') -Force -ErrorAction SilentlyContinue
   if ($sourceTheme.FrameworkCssPath) {
     $themeCssPath = Join-Path $DestinationDirectory 'theme.css'
     $combinedCss = (Read-DreamSkinUtf8File -Path $sourceTheme.FrameworkCssPath).TrimEnd() +
@@ -326,8 +348,8 @@ function Copy-DreamSkinThemeBundleFiles {
       ConvertFrom-Json -ErrorAction Stop
     $materializedTheme.PSObject.Properties.Remove('framework')
     $entrypoints = [ordered]@{ css = 'theme.css'; renderer = 'theme.js' }
-    if ($materializedTheme.entrypoints.icons) { $entrypoints.icons = "$($materializedTheme.entrypoints.icons)" }
     $materializedTheme | Add-Member -NotePropertyName entrypoints -NotePropertyValue ([pscustomobject]$entrypoints) -Force
+    $materializedTheme | Add-Member -NotePropertyName schemaVersion -NotePropertyValue 4 -Force
     Write-DreamSkinTheme -ThemeDirectory $DestinationDirectory -Theme $materializedTheme
     Write-DreamSkinThemeInstallManifest -ThemeDirectory $DestinationDirectory
   }
@@ -457,6 +479,49 @@ function Upgrade-DreamSkinLegacyThemeBundle {
   if ($changed) { Write-DreamSkinTheme -ThemeDirectory $ThemeDirectory -Theme $theme }
 }
 
+function Update-DreamSkinMaterializedThemeFramework {
+  param(
+    [Parameter(Mandatory = $true)][string]$ThemeDirectory,
+    [Parameter(Mandatory = $true)][object[]]$BundledPackages,
+    [Parameter(Mandatory = $true)][string]$ManagedRoot
+  )
+  $themePath = Join-Path $ThemeDirectory 'theme.json'
+  if (-not (Test-Path -LiteralPath $themePath -PathType Leaf)) { return $false }
+  $theme = (Read-DreamSkinUtf8File -Path $themePath) | ConvertFrom-Json -ErrorAction Stop
+  if (-not $theme.id -or $theme.localOnly) { return $false }
+  $matchedDirectory = $null
+  foreach ($packageInfo in @($BundledPackages)) {
+    $sourceThemePath = Join-Path $packageInfo.Directory 'theme.json'
+    if (-not (Test-Path -LiteralPath $sourceThemePath -PathType Leaf)) { continue }
+    $sourceTheme = (Read-DreamSkinUtf8File -Path $sourceThemePath) | ConvertFrom-Json -ErrorAction Stop
+    $usesSharedFramework = $sourceTheme.framework -and
+      "$($sourceTheme.framework.id)" -ceq 'dream-skin' -and
+      [int]$sourceTheme.framework.version -eq 1
+    if ($usesSharedFramework -and "$($sourceTheme.id)" -ceq "$($theme.id)") {
+      $matchedDirectory = $packageInfo.Directory
+      break
+    }
+  }
+  if (-not $matchedDirectory) { return $false }
+  $source = Read-DreamSkinTheme -ThemeDirectory $matchedDirectory -SkipImageMetadata
+  if (-not $source.FrameworkCssPath) { return $false }
+  Ensure-DreamSkinManagedDirectory -Path $ThemeDirectory -Root $ManagedRoot
+  $themeCssPath = Join-Path $ThemeDirectory 'theme.css'
+  Assert-DreamSkinNoReparseComponents -Path $themeCssPath
+  $combinedCss = (Read-DreamSkinUtf8File -Path $source.FrameworkCssPath).TrimEnd() +
+    "`r`n`r`n" + (Read-DreamSkinUtf8File -Path $source.CssPath).Trim() + "`r`n"
+  Write-DreamSkinUtf8FileAtomically -Path $themeCssPath -Content $combinedCss
+  Copy-Item -LiteralPath $source.RendererPath -Destination (Join-Path $ThemeDirectory 'theme.js') -Force
+  $theme | Add-Member -NotePropertyName entrypoints -NotePropertyValue `
+    ([pscustomobject]([ordered]@{ css = 'theme.css'; renderer = 'theme.js' })) -Force
+  if (-not $theme.schemaVersion -or [int]$theme.schemaVersion -lt 4) {
+    $theme | Add-Member -NotePropertyName schemaVersion -NotePropertyValue 4 -Force
+  }
+  Write-DreamSkinTheme -ThemeDirectory $ThemeDirectory -Theme $theme
+  Write-DreamSkinThemeInstallManifest -ThemeDirectory $ThemeDirectory
+  return $true
+}
+
 function Initialize-DreamSkinThemeStore {
   param(
     [Parameter(Mandatory = $true)][string]$SkillRoot,
@@ -476,7 +541,7 @@ function Initialize-DreamSkinThemeStore {
     } catch {}
   }
   $defaultPackages = @($bundledPackages | Where-Object { $_.Package.Default })
-  if ($defaultPackages.Count -ne 1) { throw 'Exactly one bundled theme install.json must set default to true.' }
+  if ($defaultPackages.Count -ne 1) { throw 'Exactly one bundled theme.json install.default must be true.' }
   $assetRoot = $defaultPackages[0].Directory
   $assetTheme = Read-DreamSkinTheme -ThemeDirectory $assetRoot
   $assetImage = $assetTheme.ImagePath
@@ -497,9 +562,11 @@ function Initialize-DreamSkinThemeStore {
     Assert-DreamSkinImageFile -Path $imageArchive
   } else {
     Upgrade-DreamSkinLegacyThemeBundle -ThemeDirectory $paths.Active -BundledThemeDirectory $assetRoot
+    $null = Update-DreamSkinMaterializedThemeFramework -ThemeDirectory $paths.Active -BundledPackages $bundledPackages -ManagedRoot $paths.Root
   }
   foreach ($savedDirectory in Get-ChildItem -LiteralPath $paths.Saved -Directory -ErrorAction SilentlyContinue) {
     Upgrade-DreamSkinLegacyThemeBundle -ThemeDirectory $savedDirectory.FullName -BundledThemeDirectory $assetRoot
+    $null = Update-DreamSkinMaterializedThemeFramework -ThemeDirectory $savedDirectory.FullName -BundledPackages $bundledPackages -ManagedRoot $paths.Root
   }
   if (-not $ManagerOnly) {
     $presetId = ("$($assetTheme.Theme.id)" -replace '[^A-Za-z0-9._-]+', '-').Trim('-')
@@ -568,7 +635,7 @@ function Set-DreamSkinActiveTheme {
     if (-not $Theme.palette) {
       $Theme | Add-Member -NotePropertyName palette -NotePropertyValue ([pscustomobject]@{}) -Force
     }
-    $Theme | Add-Member -NotePropertyName schemaVersion -NotePropertyValue 2 -Force
+    $Theme | Add-Member -NotePropertyName schemaVersion -NotePropertyValue 4 -Force
     $Theme | Add-Member -NotePropertyName entrypoints -NotePropertyValue `
       ([pscustomobject]@{ css = 'theme.css'; renderer = 'theme.js' }) -Force
     Write-DreamSkinTheme -ThemeDirectory $paths.Active -Theme $Theme
@@ -612,9 +679,6 @@ function Save-DreamSkinCurrentTheme {
   Copy-Item -LiteralPath $active.ImagePath -Destination $destinationImage -Force
   Copy-Item -LiteralPath $active.CssPath -Destination (Join-Path $destination 'theme.css') -Force
   Copy-Item -LiteralPath $active.RendererPath -Destination (Join-Path $destination 'theme.js') -Force
-  if ($active.IconsPath) {
-    Copy-Item -LiteralPath $active.IconsPath -Destination (Join-Path $destination 'icons.json') -Force
-  }
   if ($active.Theme.pet) {
     Copy-DreamSkinThemePetBundle -SourceDirectory $paths.Active -DestinationDirectory $destination -ManagedRoot $paths.Root
   }
@@ -624,21 +688,11 @@ function Save-DreamSkinCurrentTheme {
   $theme.id = $id
   $theme.name = $trimmed
   $theme.image = $imageName
-  $schemaVersion = if ($active.IconsPath) { 3 } else { 2 }
   $entrypoints = [ordered]@{ css = 'theme.css'; renderer = 'theme.js' }
-  if ($active.IconsPath) { $entrypoints.icons = 'icons.json' }
-  $theme | Add-Member -NotePropertyName schemaVersion -NotePropertyValue $schemaVersion -Force
+  $theme | Add-Member -NotePropertyName schemaVersion -NotePropertyValue 4 -Force
   $theme | Add-Member -NotePropertyName entrypoints -NotePropertyValue ([pscustomobject]$entrypoints) -Force
   Write-DreamSkinTheme -ThemeDirectory $destination -Theme $theme
-  $install = [ordered]@{
-    schemaVersion = 1
-    default = $false
-    manifest = 'theme.json'
-    files = @('theme.json', 'theme.css', 'theme.js') + $(if ($active.IconsPath) { @('icons.json') } else { @() }) + @($imageName)
-    pets = $(if ($theme.pet) { @("$($theme.pet.id)") } else { @() })
-  }
-  Write-DreamSkinUtf8FileAtomically -Path (Join-Path $destination 'install.json') `
-    -Content (($install | ConvertTo-Json -Depth 8) + "`r`n")
+  Write-DreamSkinThemeInstallManifest -ThemeDirectory $destination
   return Read-DreamSkinTheme -ThemeDirectory $destination
 }
 
@@ -681,16 +735,11 @@ function Use-DreamSkinSavedTheme {
   $theme = $saved.Theme | ConvertTo-Json -Depth 8 | ConvertFrom-Json
   Copy-Item -LiteralPath $saved.CssPath -Destination (Join-Path $paths.Active 'theme.css') -Force
   Copy-Item -LiteralPath $saved.RendererPath -Destination (Join-Path $paths.Active 'theme.js') -Force
-  if ($saved.IconsPath) {
-    Copy-Item -LiteralPath $saved.IconsPath -Destination (Join-Path $paths.Active 'icons.json') -Force
-  } else {
-    Remove-Item -LiteralPath (Join-Path $paths.Active 'icons.json') -Force -ErrorAction SilentlyContinue
-  }
+  Remove-Item -LiteralPath (Join-Path $paths.Active 'icons.json') -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath (Join-Path $paths.Active 'install.json') -Force -ErrorAction SilentlyContinue
   Copy-DreamSkinThemePetBundle -SourceDirectory $directory -DestinationDirectory $paths.Active -ManagedRoot $paths.Root
-  $schemaVersion = if ($saved.IconsPath) { 3 } else { 2 }
   $entrypoints = [ordered]@{ css = 'theme.css'; renderer = 'theme.js' }
-  if ($saved.IconsPath) { $entrypoints.icons = 'icons.json' }
-  $theme | Add-Member -NotePropertyName schemaVersion -NotePropertyValue $schemaVersion -Force
+  $theme | Add-Member -NotePropertyName schemaVersion -NotePropertyValue 4 -Force
   $theme | Add-Member -NotePropertyName entrypoints -NotePropertyValue ([pscustomobject]$entrypoints) -Force
   return Set-DreamSkinActiveTheme -ImagePath $saved.ImagePath -Theme $theme -StateRoot $StateRoot
 }

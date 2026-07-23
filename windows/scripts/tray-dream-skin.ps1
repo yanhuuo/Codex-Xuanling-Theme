@@ -15,6 +15,9 @@ $paths = Initialize-DreamSkinThemeStore -SkillRoot $SkillRoot -StateRoot $StateR
 $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source
 $startScript = Join-Path $PSScriptRoot 'start-dream-skin.ps1'
 $restoreScript = Join-Path $PSScriptRoot 'restore-dream-skin.ps1'
+$guardLogPath = Join-Path $StateRoot 'guard.log'
+$injectorLogPath = Join-Path $StateRoot 'injector.log'
+$injectorErrorLogPath = Join-Path $StateRoot 'injector-error.log'
 
 $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $mutex = [System.Threading.Mutex]::new($false, "Local\CodexDreamSkin.$sid.Tray")
@@ -66,18 +69,112 @@ try {
     return $item
   }
 
-  function Rebuild-DreamSkinTrayMenu {
-    $menu.Items.Clear()
+  function Get-DreamSkinTrayLogLines {
+    param(
+      [Parameter(Mandatory = $true)][string]$Path,
+      [ValidateRange(1, 20)][int]$Count = 5
+    )
+    try {
+      if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return @() }
+      return @(Get-Content -LiteralPath $Path -Encoding UTF8 -Tail $Count -ErrorAction Stop)
+    } catch {
+      return @("日志读取失败：$($_.Exception.Message)")
+    }
+  }
+
+  function Get-DreamSkinTrayStatus {
     $paused = Test-DreamSkinPaused -StateRoot $StateRoot
     $state = $null
     try { $state = Read-DreamSkinState -Path $paths.State } catch {}
+    $codex = $null
+    $identity = $null
+    try {
+      $codex = Get-DreamSkinCodexInstall
+      $identity = Get-DreamSkinVerifiedCdpIdentity -Port $Port -Codex $codex
+    } catch {}
+    $injectorHealthy = $false
+    if ($null -ne $state -and $state.injectorPid) {
+      try {
+        $process = Get-Process -Id ([int]$state.injectorPid) -ErrorAction Stop
+        $injectorHealthy = -not $process.HasExited
+      } catch {}
+    }
     $active = $null
     try { $active = Read-DreamSkinTheme -ThemeDirectory $paths.Active -SkipImageMetadata } catch {}
-    $status = if ($paused) { '状态：已暂停' } elseif ($state) { '状态：运行中' } else { '状态：未运行' }
-    if ($null -ne $active -and $null -ne $active.Theme -and $active.Theme.name) {
-      $status += " · $($active.Theme.name)"
+    $themeName = if ($null -ne $active -and $null -ne $active.Theme -and $active.Theme.name) { "$($active.Theme.name)" } else { '未选择主题' }
+    $statusText = if ($paused) {
+      '已暂停'
+    } elseif ($null -eq $identity) {
+      '等待 Codex 调试端口'
+    } elseif ($injectorHealthy) {
+      '注入器运行中'
+    } elseif ($state) {
+      '注入器需修复'
+    } else {
+      '未运行'
     }
+    return [pscustomobject]@{
+      Paused = $paused
+      State = $state
+      Codex = $codex
+      Identity = $identity
+      InjectorHealthy = $injectorHealthy
+      ThemeName = $themeName
+      StatusText = $statusText
+    }
+  }
+
+  function Update-DreamSkinNotifyText {
+    $snapshot = Get-DreamSkinTrayStatus
+    $text = "Dream Skin：$($snapshot.StatusText)"
+    if ($snapshot.ThemeName -and $snapshot.ThemeName -ne '未选择主题') {
+      $text += " · $($snapshot.ThemeName)"
+    }
+    if ($text.Length -gt 63) { $text = $text.Substring(0, 60) + '...' }
+    $notify.Text = $text
+  }
+
+  function Add-DreamSkinLogMenu {
+    param(
+      [Parameter(Mandatory = $true)][System.Windows.Forms.ToolStripItemCollection]$Items,
+      [Parameter(Mandatory = $true)][string]$Title,
+      [Parameter(Mandatory = $true)][string]$Path
+    )
+    $logMenu = [System.Windows.Forms.ToolStripMenuItem]::new($Title)
+    $lines = @(Get-DreamSkinTrayLogLines -Path $Path -Count 6)
+    if ($lines.Count -eq 0) {
+      $empty = [System.Windows.Forms.ToolStripMenuItem]::new('暂无日志')
+      $empty.Enabled = $false
+      [void]$logMenu.DropDownItems.Add($empty)
+    } else {
+      foreach ($line in $lines) {
+        $text = "$line"
+        if ($text.Length -gt 96) { $text = $text.Substring(0, 93) + '...' }
+        $item = [System.Windows.Forms.ToolStripMenuItem]::new($text)
+        $item.Enabled = $false
+        [void]$logMenu.DropDownItems.Add($item)
+      }
+    }
+    [void]$Items.Add($logMenu)
+  }
+
+  function Rebuild-DreamSkinTrayMenu {
+    $menu.Items.Clear()
+    $snapshot = Get-DreamSkinTrayStatus
+    $paused = $snapshot.Paused
+    $state = $snapshot.State
+    $status = "状态：$($snapshot.StatusText) · $($snapshot.ThemeName)"
     $null = Add-DreamSkinTrayItem -Items $menu.Items -Text $status -Action $null -Enabled $false
+    $portStatus = if ($null -ne $snapshot.Identity) { "端口：127.0.0.1:$Port 已连接" } else { "端口：127.0.0.1:$Port 未连接" }
+    $null = Add-DreamSkinTrayItem -Items $menu.Items -Text $portStatus -Action $null -Enabled $false
+    $injectorStatus = if ($snapshot.InjectorHealthy) { "注入器：PID $($state.injectorPid)" } elseif ($state -and $state.injectorPid) { "注入器：PID $($state.injectorPid) 已失效" } else { '注入器：未记录' }
+    $null = Add-DreamSkinTrayItem -Items $menu.Items -Text $injectorStatus -Action $null -Enabled $false
+    Add-DreamSkinLogMenu -Items $menu.Items -Title '最近 Guard 日志' -Path $guardLogPath
+    Add-DreamSkinLogMenu -Items $menu.Items -Title '最近注入日志' -Path $injectorLogPath
+    Add-DreamSkinLogMenu -Items $menu.Items -Title '最近错误日志' -Path $injectorErrorLogPath
+    $null = Add-DreamSkinTrayItem -Items $menu.Items -Text '打开日志文件夹' -Action {
+      Start-Process -FilePath explorer.exe -ArgumentList @($StateRoot) | Out-Null
+    }
     [void]$menu.Items.Add([System.Windows.Forms.ToolStripSeparator]::new())
 
     $null = Add-DreamSkinTrayItem -Items $menu.Items -Text '应用或重新应用' -Action {
@@ -93,7 +190,7 @@ try {
     $null = Add-DreamSkinTrayItem -Items $menu.Items -Text '更换背景图' -Action {
       $dialog = [System.Windows.Forms.OpenFileDialog]::new()
       $dialog.Title = '选择 Codex Dream Skin 背景图'
-      $dialog.Filter = 'Image files|*.png;*.jpg;*.jpeg;*.webp|All files|*.*'
+      $dialog.Filter = 'Image files|*.png;*.jpg;*.jpeg;*.webp;*.gif|All files|*.*'
       $dialog.Multiselect = $false
       try {
         if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
@@ -151,6 +248,11 @@ try {
   }
 
   $menu.add_Opening({ Rebuild-DreamSkinTrayMenu })
+  $timer = [System.Windows.Forms.Timer]::new()
+  $timer.Interval = 10000
+  $timer.add_Tick({ try { Update-DreamSkinNotifyText } catch {} })
+  $timer.Start()
+  Update-DreamSkinNotifyText
   $notify.add_DoubleClick({
     try {
       Set-DreamSkinPaused -Paused $false -StateRoot $StateRoot | Out-Null
@@ -161,6 +263,7 @@ try {
   })
   [System.Windows.Forms.Application]::Run()
 } finally {
+  if ($null -ne $timer) { $timer.Stop(); $timer.Dispose() }
   if ($null -ne $notify) { $notify.Dispose() }
   if ($acquired) { try { $mutex.ReleaseMutex() } catch {} }
   $mutex.Dispose()

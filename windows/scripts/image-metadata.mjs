@@ -102,6 +102,15 @@ function webpDimensions(bytes) {
   return null;
 }
 
+function gifDimensions(bytes) {
+  if (bytes.length < 10) return null;
+  const signature = ascii(bytes, 0, 6);
+  if (signature !== "GIF87a" && signature !== "GIF89a") return null;
+  const width = uint16le(bytes, 6);
+  const height = uint16le(bytes, 8);
+  return width > 0 && height > 0 ? { width, height } : null;
+}
+
 export function classifyImageDimensions({ width, height }) {
   const ratio = width / height;
   if (
@@ -131,6 +140,7 @@ export function readImageMetadata(value, extension = "") {
   else if (normalized === ".jpg" || normalized === ".jpeg" ||
     (bytes[0] === 0xff && bytes[1] === 0xd8)) dimensions = jpegDimensions(bytes);
   else if (normalized === ".webp" || ascii(bytes, 8, 4) === "WEBP") dimensions = webpDimensions(bytes);
+  else if (normalized === ".gif" || ascii(bytes, 0, 3) === "GIF") dimensions = gifDimensions(bytes);
   return dimensions ? classifyImageDimensions(dimensions) : null;
 }
 

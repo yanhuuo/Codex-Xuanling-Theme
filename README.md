@@ -1,72 +1,195 @@
 # Codex Xuanling Theme
 
-Codex Desktop 独立主题管理工具，并内置玄翎与蕾米埃尔主题。设置页适配、布局、加载动画和 DOM 注入由公共主题框架统一维护；主题目录只配置色板、背景、文案、图标和宠物绑定。宠物统一存放在仓库根目录 `pets/`。
+一个面向 Codex Desktop 的 Dream Skin 主题框架。它不修改 `WindowsApps`、`app.asar` 或 Codex 官方文件，而是通过本机 Chromium DevTools Protocol 注入可恢复的外观层。
 
-> 非 OpenAI 或库洛游戏官方项目。主题壁纸为原创同人视觉，不包含官方安装包或官方二进制文件。
+内置能力：
+
+- 一键安装主题管理工具
+- 在 Codex 设置页新增“主题”入口
+- 安装/启用内置主题
+- 创建本地自定义主题
+- 绑定 Codex 原生 v2 宠物
+- 热重载当前主题
+- 一键恢复官方外观
+
+> 非 OpenAI 官方项目。主题壁纸与视觉资源为同人/自定义视觉，请勿把官方安装包或官方二进制文件放入本仓库。
+
+## 给 AI 的快速任务索引
+
+如果你是 AI 助手，要根据用户意图选择这些路径：
+
+| 用户意图 | 应执行/阅读 |
+| --- | --- |
+| 一键安装或重新安装 | 运行 `安装主题工具.cmd`，或等价调用 `windows/scripts/install-dream-skin.ps1` |
+| 启动已安装皮肤 | `windows/scripts/start-dream-skin.ps1` |
+| 恢复官方外观 | `windows/scripts/restore-dream-skin.ps1` |
+| 验证安装是否正常 | `npm test`；运行中验证可用 `windows/scripts/verify-dream-skin.ps1` |
+| 制作新主题 | 复制 `windows/themes/鸣潮 秧秧·玄翎` 或 `windows/themes/绝区零 蕾米埃尔`，按 `windows/THEME_FORMAT.md` 改 `theme.json/theme.css/background.jpg` |
+| 添加/修改图标 | 修改 `theme.json.icons`，不要再新建独立 `icons.json` |
+| 自定义发送/执行中/加载动图 | 设置 `theme.json.icons.send`、`theme.json.icons.processing`、`theme.json.icons.spinner`，或显式指定 `sendIcon/processingIcon/spinnerIcon` |
+| 设置默认内置主题 | 在对应主题 `theme.json.install.default` 设为 `true`，确保只有一个内置主题为 `true` |
+| 添加宠物 | 放到项目根目录 `pets/<pet-id>/pet.json` 和 `spritesheet.webp`，主题中只写 `theme.json.pet.id` |
 
 ## 一键安装
 
-下载仓库后双击 `安装主题工具.cmd`。安装器会：
-
-- 将运行文件复制到 `%LOCALAPPDATA%\CodexDreamSkin\runtime`；
-- 只安装 `设置 → 主题` 管理页，首次启动保持 Codex 官方外观；
-- 玄翎及其他主题均在主题页中点击“安装主题”，随后再启用；
-- 创建桌面和开始菜单的 `Codex 主题` 入口；
-- 首次启用时明确询问是否重启正在运行的 Codex；
-- 安装自动恢复守护，在 Microsoft Store 更新后重新匹配已注册的 Codex 包；
-- 保留 `设置 → 主题 → 还原官方外观` 和桌面完整恢复入口。
-
-安装器不修改 `WindowsApps`、`app.asar` 或 Codex 官方文件，只连接 `127.0.0.1` 上的本机 CDP 会话。
-
-## 主题目录
+下载或克隆仓库后，双击：
 
 ```text
-windows/themes/鸣潮 秧秧·玄翎/
-├─ install.json
-├─ theme.json
-├─ theme.css
-├─ icons.json
-└─ background.jpg
-
-windows/engine/
-├─ theme-base.css
-└─ theme-runtime.js
-
-pets/
-└─ yangyang-xuanling-official-drum-r3/
-   ├─ pet.json
-   └─ spritesheet-official-drum-r3.webp
+安装主题工具.cmd
 ```
 
-玄翎主题会携带当前在“主题”页选择的 Codex v2 宠物。仓库或本地主题库换机安装后，启用主题会自动安装并选中同一只宠物；当前仓库默认携带 `秧秧·玄翎（官鼓连续版 R3）`。
+安装器会：
 
-每个主题通过 `theme.json.framework` 继承公共框架，并在自己的 `theme.css` 与 `icons.json` 中保存主题差异。安装时会物化为可独立启用的本地包。详细格式见 [`windows/THEME_FORMAT.md`](windows/THEME_FORMAT.md)。
+- 复制运行文件到 `%LOCALAPPDATA%\CodexDreamSkin\runtime`
+- 在 Codex 设置页添加“主题”管理入口
+- 保持 Codex 首次启动时的官方外观，不会默认强行套主题
+- 创建桌面/开始菜单入口
+- 安装更新守护逻辑：Codex 更新后自动匹配；如果你从普通 Codex 入口打开，守护进程会按冷却间隔自动重启一次并接入 Dream Skin
+- 保留“还原官方外观”和完整恢复入口
 
-主题列表包含“本地自定义主题”卡片。点击后可在分区弹窗中选择背景图片；所有基础图标会以独立表单项显示真实预览，可逐项选择 SVG，也可导入完整/部分 `icons.json` 并即时查看覆盖结果。生成结果只保存在 `%LOCALAPPDATA%\CodexDreamSkin\themes`，不会写入 `theme-library.json` 或上传到远程仓库。
+如果 Codex 已经打开，启动脚本会询问是否重启。开机 Guard 默认会自动接管“普通方式打开的 Codex”；需要禁用这个行为时，可用 `guard-dream-skin.ps1 -NoRestartExisting` 启动守护。
 
-## 热重载
-
-注入器会监听当前活动主题的清单、CSS、JS、`icons.json` 和图片。保存文件后会在约 120 ms 的稳定窗口后重新校验并注入，无需重启 Codex；文件监听不可用时自动回退到轮询校验。主题管理页自身也支持热重载。
-
-## GitHub 主题仓库
-
-仓库根目录的 [`theme-library.json`](theme-library.json) 是主题索引。在 Codex 的 `设置 → 主题 → 从 GitHub 仓库安装` 中粘贴本仓库 URL，即可读取并安装主题。仅支持公开 HTTPS GitHub 仓库，远程主题包含可执行 JS，请只添加可信来源。
-
-## 主题宠物
-
-主题页会读取 `~/.codex/pets` 下符合 `spriteVersionNumber: 2` 的 Codex 原生宠物包。选择后主题只保存宠物 ID 绑定；仓库附带的宠物包统一位于项目根目录 `pets/`，不会嵌套进任何主题目录。
-
-## 开发与验证
+## 常用命令
 
 ```powershell
+# 安装/更新
+powershell -NoProfile -ExecutionPolicy Bypass -File windows/scripts/install-dream-skin.ps1
+
+# 启动皮肤
+powershell -NoProfile -ExecutionPolicy Bypass -File windows/scripts/start-dream-skin.ps1
+
+# 验证运行状态
+powershell -NoProfile -ExecutionPolicy Bypass -File windows/scripts/verify-dream-skin.ps1
+
+# 恢复官方外观
+powershell -NoProfile -ExecutionPolicy Bypass -File windows/scripts/restore-dream-skin.ps1
+
+# 开发测试
 npm install
 npm test
 ```
 
-主题管理器源码位于 `windows/src/theme-manager.ts`，编译结果写入运行时使用的 `windows/engine/theme-manager.js`。PowerShell 安装、恢复和进程控制脚本继续保留 PowerShell；Node 注入器可按同一方式逐步迁移，不要求最终用户安装 TypeScript。
+## 主题目录结构
 
-更多使用说明见 [`使用说明.md`](使用说明.md)。
+新主题格式是 v4，主题配置集中在单个 `theme.json`：
 
-## 致谢与许可
+```text
+windows/themes/<theme-name>/
+├─ theme.json
+├─ theme.css
+└─ background.jpg
 
-底层方案参考 [Fei-Away/Codex-Dream-Skin](https://github.com/Fei-Away/Codex-Dream-Skin)，本仓库代码按 [`LICENSE`](LICENSE) 提供。Codex、鸣潮、秧秧及相关名称和角色权利归各自权利人所有。
+pets/<pet-id>/
+├─ pet.json
+└─ spritesheet.webp
+```
+
+不要再为新主题创建独立 `icons.json` 或 `install.json`：
+
+- 图标写入 `theme.json.icons`
+- 安装信息写入 `theme.json.install`
+- 宠物只在 `theme.json.pet.id` 中绑定 ID
+
+详细字段见 [windows/THEME_FORMAT.md](windows/THEME_FORMAT.md)。
+
+## 制作一个新主题
+
+最稳的做法：
+
+1. 复制一个内置主题目录，例如：
+
+   ```text
+   windows/themes/鸣潮 秧秧·玄翎
+   ```
+
+2. 改目录名，例如：
+
+   ```text
+   windows/themes/我的主题
+   ```
+
+3. 替换背景图，建议：
+
+   - PNG/JPG/WebP/GIF
+   - 小于 16 MB
+   - 不要把窗口、侧边栏、按钮、文字 UI 烘焙进图片
+
+4. 修改 `theme.json`：
+
+   - `id`
+   - `name`
+   - `author`
+   - `version`
+   - `image`
+  - `palette.accent`
+  - `icons`
+  - `sendIcon` / `processingIcon` / `spinnerIcon`（可选）
+  - `pet.id`
+   - `install.files`
+
+5. 修改 `theme.css` 中的主题变量。
+
+6. 运行：
+
+   ```powershell
+   npm test
+   ```
+
+7. 重新安装或刷新运行时。
+
+## 本地自定义主题
+
+Codex 的“设置 → 主题”页里有“本地自定义主题”卡片。它会在本机创建主题，不写回 GitHub，也不会加入远程主题库。
+
+支持：
+
+- 选择背景图
+- 选择基础主题
+- 配置主题色
+- 从默认图标库选择图标
+- 上传单个 SVG 图标
+- 导入一个 `icons.json` 作为输入来源
+
+注意：导入的 `icons.json` 只是输入格式；生成结果会合并进 `theme.json.icons`，不会保留独立 `icons.json` 文件。
+
+## 宠物规则
+
+宠物按 Codex 官方的独立资源思路管理：
+
+- 宠物包放在项目根目录 `pets/`
+- 主题只绑定宠物 ID
+- 管理页从本机 `~/.codex/pets` 按需读取宠物预览
+- 解除主题宠物绑定不会删除用户已有宠物
+
+当前只接受 Codex v2 宠物：
+
+- `spriteVersionNumber: 2`
+- `1536×2288`
+- WebP spritesheet
+
+## 开发结构
+
+```text
+windows/src/theme-manager.ts      # 主题管理页源码
+windows/engine/theme-manager.js   # 编译后的管理页运行文件
+windows/engine/theme-runtime.js   # 公共渲染器
+windows/engine/theme-base.css     # 公共 CSS 框架
+windows/scripts/theme-package.mjs # 主题包读取/写入/校验/本地主题创建
+windows/scripts/injector.mjs      # CDP 连接、注入、热重载
+windows/scripts/theme-windows.ps1 # Windows 主题库和安装流程
+windows/THEME_FORMAT.md           # 主题包 v4 格式
+```
+
+## 安全边界
+
+- 不修改 Codex 官方安装目录
+- 不接管 `WindowsApps`
+- 不修改 `app.asar`
+- 只连接本机 `127.0.0.1` CDP
+- 所有主题图片、SVG、脚本入口都有大小和路径校验
+- managed store 写入会拒绝 junction/reparse point
+- `config.toml` 使用 UTF-8 原子写入，检测并重试并发修改
+
+## 许可证与致谢
+
+底层方案参考 [Fei-Away/Codex-Dream-Skin](https://github.com/Fei-Away/Codex-Dream-Skin)。本仓库代码按 [LICENSE](LICENSE) 提供。Codex、鸣潮、秧秧及相关名称和角色权利归各自权利人所有。

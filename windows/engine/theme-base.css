@@ -31,6 +31,10 @@
   --dream-task-immersive-edge: color-mix(in oklab, var(--dream-surface) 86%, transparent);
   --dream-task-immersive-mid: color-mix(in oklab, var(--dream-surface) 78%, transparent);
   --dream-task-immersive-far: color-mix(in oklab, var(--dream-surface) 66%, transparent);
+  --dream-floating-surface: color-mix(in oklab, var(--dream-surface-raised) 91%, transparent);
+  --dream-floating-surface-strong: color-mix(in oklab, var(--dream-surface-raised) 96%, var(--dream-accent) 4%);
+  --dream-floating-line: color-mix(in oklab, var(--dream-line) 74%, var(--dream-accent) 26%);
+  --dream-floating-shadow: 0 18px 48px color-mix(in oklab, var(--dream-accent) 14%, transparent), 0 6px 20px #0003;
 }
 
 :root.codex-dream-skin.dream-theme-dark {
@@ -58,6 +62,10 @@
   --dream-task-immersive-edge: color-mix(in oklab, var(--dream-surface) 90%, transparent);
   --dream-task-immersive-mid: color-mix(in oklab, var(--dream-surface) 84%, transparent);
   --dream-task-immersive-far: color-mix(in oklab, var(--dream-surface) 72%, transparent);
+  --dream-floating-surface: color-mix(in oklab, var(--dream-surface-raised) 88%, transparent);
+  --dream-floating-surface-strong: color-mix(in oklab, var(--dream-surface-raised) 94%, var(--dream-accent) 6%);
+  --dream-floating-line: color-mix(in oklab, var(--dream-line) 68%, var(--dream-accent) 32%);
+  --dream-floating-shadow: 0 18px 52px color-mix(in oklab, #000 58%, transparent), 0 0 0 1px color-mix(in oklab, var(--dream-accent) 9%, transparent);
 }
 
 html.codex-dream-skin body {
@@ -898,7 +906,192 @@ html.codex-dream-skin [role="menu"].dream-permission-menu .dream-permission-item
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--dream-detail) 38%, transparent));
 }
 
-html.codex-dream-skin .composer-surface-chrome .dream-theme-icon-brand {
+/* Shared floating layer skin: review status pills, model menus, attachment/source
+   pickers, task hover cards, and other Codex portal/popper surfaces. */
+html.codex-dream-skin body > [data-radix-popper-content-wrapper] > *,
+html.codex-dream-skin body > [data-radix-portal] :is([role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"], [data-side]),
+html.codex-dream-skin body > div :is([role="menu"], [role="listbox"], [role="tooltip"])[data-side],
+html.codex-dream-skin :is([role="menu"], [role="listbox"], [role="tooltip"]).bg-token-main-surface-primary,
+html.codex-dream-skin :is([role="menu"], [role="listbox"], [role="tooltip"]).bg-token-main-surface-secondary,
+html.codex-dream-skin :is([role="menu"], [role="listbox"], [role="tooltip"])[class*="bg-token-"] {
+  color: var(--dream-text) !important;
+  border-color: var(--dream-floating-line) !important;
+  background:
+    linear-gradient(135deg,
+      color-mix(in oklab, var(--dream-floating-surface-strong) 96%, transparent),
+      color-mix(in oklab, var(--dream-floating-surface) 92%, var(--dream-accent) 8%)) !important;
+  box-shadow: var(--dream-floating-shadow) !important;
+  backdrop-filter: blur(22px) saturate(1.05) !important;
+}
+
+html.codex-dream-skin body > [data-radix-popper-content-wrapper] > * *,
+html.codex-dream-skin body > [data-radix-portal] :is([role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"], [data-side]) *,
+html.codex-dream-skin :is([role="menu"], [role="listbox"], [role="tooltip"])[class*="bg-token-"] * {
+  border-color: color-mix(in oklab, var(--dream-line) 62%, transparent) !important;
+}
+
+html.codex-dream-skin body > [data-radix-popper-content-wrapper] > * :is(button, [role="menuitem"], [role="option"], [cmdk-item], a),
+html.codex-dream-skin body > [data-radix-portal] :is([role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"], [data-side]) :is(button, [role="menuitem"], [role="option"], [cmdk-item], a),
+html.codex-dream-skin :is([role="menu"], [role="listbox"], [role="tooltip"])[class*="bg-token-"] :is(button, [role="menuitem"], [role="option"], [cmdk-item], a) {
+  color: var(--dream-text) !important;
+}
+
+html.codex-dream-skin body > [data-radix-popper-content-wrapper] > * :is(button, [role="menuitem"], [role="option"], [cmdk-item], a):is(:hover, :focus, [data-highlighted], [data-state="open"], [aria-selected="true"]),
+html.codex-dream-skin body > [data-radix-portal] :is([role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"], [data-side]) :is(button, [role="menuitem"], [role="option"], [cmdk-item], a):is(:hover, :focus, [data-highlighted], [data-state="open"], [aria-selected="true"]),
+html.codex-dream-skin :is([role="menu"], [role="listbox"], [role="tooltip"])[class*="bg-token-"] :is(button, [role="menuitem"], [role="option"], [cmdk-item], a):is(:hover, :focus, [data-highlighted], [data-state="open"], [aria-selected="true"]) {
+  color: var(--dream-text) !important;
+  background: var(--dream-accent-soft) !important;
+}
+
+html.codex-dream-skin body > [data-radix-popper-content-wrapper] > * :is(svg, .text-token-text-secondary),
+html.codex-dream-skin body > [data-radix-portal] :is([role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"], [data-side]) :is(svg, .text-token-text-secondary),
+html.codex-dream-skin :is([role="menu"], [role="listbox"], [role="tooltip"])[class*="bg-token-"] :is(svg, .text-token-text-secondary) {
+  color: var(--dream-text-muted) !important;
+}
+
+html.codex-dream-skin :is(
+  .bg-token-main-surface-primary,
+  .bg-token-main-surface-secondary,
+  .bg-token-sidebar-surface-primary,
+  .bg-token-sidebar-surface-secondary
+):is([data-side], [role="menu"], [role="listbox"], [role="tooltip"], [role="dialog"]) {
+  background: var(--dream-floating-surface) !important;
+  border-color: var(--dream-floating-line) !important;
+  box-shadow: var(--dream-floating-shadow) !important;
+}
+
+html.codex-dream-skin :is([class*="shadow-"], [class*="drop-shadow"]):has(> :is(.text-green-500, .text-red-500, .text-emerald-500, .text-destructive)) {
+  color: var(--dream-text) !important;
+  border: 1px solid var(--dream-floating-line) !important;
+  background: var(--dream-floating-surface) !important;
+  box-shadow: var(--dream-floating-shadow) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+html.codex-dream-skin :is(
+  .bg-token-dropdown-background,
+  [class*="bg-token-dropdown-background"],
+  [class*="bg-token-main-surface-primary"][class*="rounded"],
+  [class*="bg-token-main-surface-secondary"][class*="rounded"],
+  [class*="bg-token-sidebar-surface-primary"][class*="rounded"],
+  [class*="bg-token-sidebar-surface-secondary"][class*="rounded"]
+) {
+  color: var(--dream-text) !important;
+  border-color: var(--dream-floating-line) !important;
+  background:
+    linear-gradient(135deg,
+      color-mix(in oklab, var(--dream-floating-surface-strong) 96%, transparent),
+      color-mix(in oklab, var(--dream-floating-surface) 92%, var(--dream-accent) 8%)) !important;
+  box-shadow: var(--dream-floating-shadow) !important;
+  backdrop-filter: blur(20px) saturate(1.05) !important;
+}
+
+html.codex-dream-skin :is(.bg-token-dropdown-background, [class*="bg-token-dropdown-background"]) :is(
+  header,
+  [class*="bg-token-dropdown-background"],
+  [class*="bg-token-main-surface-primary"],
+  [class*="bg-token-main-surface-secondary"]
+) {
+  color: var(--dream-text-muted) !important;
+  background: color-mix(in oklab, var(--dream-floating-surface-strong) 92%, transparent) !important;
+  border-color: color-mix(in oklab, var(--dream-line) 62%, transparent) !important;
+}
+
+html.codex-dream-skin :is(
+  [data-slot="thread-summary-panel-item-button"],
+  [data-slot="thread-summary-panel-item-label"],
+  [data-pip-obstacle="thread-summary-panel"] button,
+  [data-pip-obstacle="thread-summary-panel"] [role="button"]
+) {
+  color: var(--dream-text-muted) !important;
+}
+
+html.codex-dream-skin :is(
+  [data-slot="thread-summary-panel-item-button"],
+  [data-pip-obstacle="thread-summary-panel"] button,
+  [data-pip-obstacle="thread-summary-panel"] [role="button"]
+):is(:hover, :focus-visible, [data-highlighted], [aria-selected="true"]) {
+  color: var(--dream-text) !important;
+  background: var(--dream-accent-soft) !important;
+}
+
+html.codex-dream-skin [data-pip-obstacle="thread-summary-panel"] {
+  color: var(--dream-text) !important;
+}
+
+html.codex-dream-skin [data-pip-obstacle="thread-summary-panel"] :is(
+  .bg-token-dropdown-background,
+  [class*="bg-token-dropdown-background"],
+  [class*="bg-token-main-surface-primary"],
+  [class*="bg-token-main-surface-secondary"]
+) {
+  color: var(--dream-text) !important;
+  border-color: var(--dream-floating-line) !important;
+  background:
+    linear-gradient(145deg,
+      color-mix(in oklab, var(--dream-floating-surface-strong) 95%, transparent),
+      color-mix(in oklab, var(--dream-floating-surface) 88%, var(--dream-accent) 12%)) !important;
+  box-shadow: var(--dream-floating-shadow) !important;
+  backdrop-filter: blur(22px) saturate(1.08) !important;
+}
+
+html.codex-dream-skin [data-pip-obstacle="thread-summary-panel"] header {
+  color: color-mix(in oklab, var(--dream-text-muted) 84%, var(--dream-accent)) !important;
+  background: color-mix(in oklab, var(--dream-floating-surface-strong) 93%, transparent) !important;
+  box-shadow: 0 1px 0 color-mix(in oklab, var(--dream-line) 54%, transparent) !important;
+}
+
+html.codex-dream-skin [data-pip-obstacle="thread-summary-panel"] section::after {
+  background: color-mix(in oklab, var(--dream-line) 58%, transparent) !important;
+}
+
+html.codex-dream-skin [data-pip-obstacle="thread-summary-panel"] :is(
+  [data-slot="thread-summary-panel-item-group"],
+  [data-slot="thread-summary-panel-item-button"],
+  [data-slot="thread-summary-panel-item-label"]
+) {
+  color: inherit !important;
+}
+
+html.codex-dream-skin [data-pip-obstacle="thread-summary-panel"] [data-slot="thread-summary-panel-item-button"] {
+  border-radius: 10px !important;
+  color: var(--dream-text-muted) !important;
+  transition: background-color 160ms cubic-bezier(.22, 1, .36, 1), color 160ms cubic-bezier(.22, 1, .36, 1), box-shadow 160ms cubic-bezier(.22, 1, .36, 1) !important;
+}
+
+html.codex-dream-skin [data-pip-obstacle="thread-summary-panel"] [data-slot="thread-summary-panel-item-button"]::before {
+  background: transparent !important;
+}
+
+html.codex-dream-skin [data-pip-obstacle="thread-summary-panel"] [data-slot="thread-summary-panel-item-button"]:is(:hover, :focus-visible) {
+  color: var(--dream-text) !important;
+  background: color-mix(in oklab, var(--dream-accent) 16%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--dream-accent) 22%, transparent) !important;
+}
+
+html.codex-dream-skin :is(
+  [class*="bg-token-main-surface-primary"][class*="rounded-full"],
+  [class*="bg-token-main-surface-secondary"][class*="rounded-full"],
+  [class*="bg-token-dropdown-background"][class*="rounded-full"],
+  [class*="border-token-border-default"][class*="rounded-full"]
+) {
+  color: var(--dream-text) !important;
+  border-color: var(--dream-floating-line) !important;
+  background: color-mix(in oklab, var(--dream-floating-surface-strong) 88%, transparent) !important;
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--dream-accent) 13%, transparent) !important;
+}
+
+html.codex-dream-skin :is(.text-green-500, .text-emerald-500) {
+  color: color-mix(in srgb, #28e982 86%, var(--dream-accent)) !important;
+}
+
+html.codex-dream-skin :is(.text-red-500, .text-destructive) {
+  color: color-mix(in srgb, #ff665f 84%, var(--dream-detail)) !important;
+}
+
+html.codex-dream-skin .composer-surface-chrome .dream-theme-icon-brand,
+html.codex-dream-skin .composer-surface-chrome .dream-theme-icon-send,
+html.codex-dream-skin .composer-surface-chrome .dream-theme-icon-processing {
   width: 20px;
   height: 20px;
 }
@@ -915,7 +1108,8 @@ html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing 
   box-shadow: 0 0 13px color-mix(in srgb, var(--dream-accent) 20%, transparent) !important;
 }
 
-html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-brand {
+html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-brand,
+html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-processing {
   position: relative;
   width: 24px;
   height: 24px;
@@ -925,7 +1119,8 @@ html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing 
   will-change: transform;
 }
 
-html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-brand::after {
+html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-brand::after,
+html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-processing::after {
   content: "";
   position: absolute;
   inset: 5px;
@@ -933,7 +1128,8 @@ html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing 
   border-radius: 50%;
 }
 
-html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-brand > svg {
+html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-brand > svg,
+html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-processing > svg {
   position: absolute;
   left: 50%;
   top: -1px;
@@ -995,6 +1191,134 @@ html.codex-dream-skin.dream-art-wide:is(.dream-task-ambient, .dream-task-banner)
   background: transparent !important;
 }
 
+html.codex-dream-skin.dream-art-wide:is(.dream-task-ambient, .dream-task-banner)
+  main.main-surface:not(.dream-home-shell)
+  :is(
+    [class*="bg-token-main-surface-primary"],
+    [class*="bg-token-main-surface-secondary"],
+    [class*="bg-token-main-surface-tertiary"]
+  ):is([class*="h-full"], [class*="min-h-0"], [class*="flex-1"], [class*="w-full"]):not(.composer-surface-chrome):not(button):not(input):not(textarea):not(select) {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+html.codex-dream-skin.dream-art-wide:is(.dream-task-ambient, .dream-task-banner)
+  main.main-surface:not(.dream-home-shell)
+  :is(
+    [class*="bg-token-main-surface-primary"],
+    [class*="bg-token-main-surface-secondary"]
+  ):is([class*="rounded"], [class*="border"], [class*="shadow"]):not(.composer-surface-chrome):not(button):not(input):not(textarea):not(select) {
+  color: var(--dream-text) !important;
+  border-color: var(--dream-floating-line) !important;
+  background: color-mix(in oklab, var(--dream-floating-surface) 78%, transparent) !important;
+  box-shadow: var(--dream-floating-shadow) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+/* Codex' right-side app panel is mounted as an app-shell aside, outside the
+   main thread viewport. Keep it visually continuous with the chat page rather
+   than styling it like a detached floating menu. */
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"] {
+  color: var(--dream-text) !important;
+}
+
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  > .absolute.inset-0,
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  > .absolute.top-0.bottom-0.left-0,
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  > [class*="absolute"][class*="top-0"][class*="bottom-0"][class*="left-0"],
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  [data-app-shell-tabs="true"],
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  :is(
+    [class*="bg-token-main-surface-primary"],
+    [class*="bg-token-main-surface-secondary"],
+    [class*="bg-token-main-surface-tertiary"]
+  ):is([class*="h-full"], [class*="min-h-0"], [class*="flex-1"], [class*="w-full"]):not(button) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  > .absolute.top-0.bottom-0.left-0,
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  > [class*="absolute"][class*="top-0"][class*="bottom-0"][class*="left-0"] {
+  border-left-color: color-mix(in oklab, var(--dream-line) 42%, transparent) !important;
+}
+
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  :is(
+    .bg-token-main-surface-primary,
+    [class*="bg-token-main-surface-primary"],
+    .bg-token-main-surface-secondary,
+    [class*="bg-token-main-surface-secondary"],
+    .bg-token-main-surface-tertiary,
+    [class*="bg-token-main-surface-tertiary"]
+  ) {
+  color: var(--dream-text) !important;
+  background:
+    linear-gradient(90deg,
+      var(--dream-task-immersive-edge),
+      var(--dream-task-immersive-mid) 64%,
+      var(--dream-task-immersive-far)) !important;
+  border-color: var(--dream-immersive-line) !important;
+}
+
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  :is(.h-toolbar, [class*="h-toolbar"], .sticky, [class*="sticky"]) {
+  color: var(--dream-text) !important;
+  background: transparent !important;
+  border-color: color-mix(in oklab, var(--dream-line) 30%, transparent) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  :is(button, [role="button"]):is(
+    .bg-token-bg-fog,
+    [class*="bg-token-bg-fog"],
+    [class*="hover:bg-token-list-hover-background"]
+  ) {
+  color: var(--dream-text) !important;
+  border: 1px solid color-mix(in oklab, var(--dream-line) 32%, transparent) !important;
+  background: color-mix(in oklab, var(--dream-surface-raised) 42%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, #fff 4%, transparent) !important;
+  transition: background-color 160ms cubic-bezier(.22, 1, .36, 1), border-color 160ms cubic-bezier(.22, 1, .36, 1), box-shadow 160ms cubic-bezier(.22, 1, .36, 1) !important;
+}
+
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  :is(button, [role="button"]):is(
+    .bg-token-bg-fog,
+    [class*="bg-token-bg-fog"],
+    [class*="hover:bg-token-list-hover-background"]
+  ):is(:hover, :focus-visible, [aria-selected="true"], [data-state="active"]) {
+  color: var(--dream-text-strong) !important;
+  border-color: color-mix(in oklab, var(--dream-accent) 38%, var(--dream-line)) !important;
+  background: var(--dream-accent-soft) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--dream-accent) 20%, transparent) !important;
+}
+
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  :is(.text-token-text-primary, [class*="text-token-text-primary"]) {
+  color: var(--dream-text) !important;
+}
+
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"]
+  :is(.text-token-text-secondary, [class*="text-token-text-secondary"]) {
+  color: var(--dream-text-muted) !important;
+}
+
+html.codex-dream-skin aside[data-app-shell-focus-area="right-panel"] kbd {
+  color: color-mix(in oklab, var(--dream-text) 84%, var(--dream-accent)) !important;
+  background: color-mix(in oklab, var(--dream-accent) 16%, transparent) !important;
+  border: 1px solid color-mix(in oklab, var(--dream-accent) 26%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, #fff 8%, transparent) !important;
+}
+
 html.codex-dream-skin.dream-art-wide main.main-surface .app-shell-main-content-frame {
   border-top: 0 !important;
 }
@@ -1007,6 +1331,111 @@ html.codex-dream-skin.dream-art-wide main.main-surface .app-shell-main-content-t
 html.codex-dream-skin.dream-art-wide main.main-surface
   .thread-scroll-container .bg-gradient-to-t.from-token-main-surface-primary {
   background: transparent !important;
+}
+
+/* Final right-panel pass. These selectors intentionally live after the generic
+   token-surface rules so the right app-shell panel stays continuous with the
+   chat background instead of reverting to Codex' opaque gray utility colors. */
+html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+  [class*="absolute"][class*="top-0"][class*="bottom-0"][class*="left-0"][class*="bg-token-main-surface-primary"],
+html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+  [data-app-shell-tabs="true"],
+html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+  [class*="bg-token-main-surface-primary"]:is([class*="h-full"], [class*="min-h-0"], [class*="flex-1"], [class*="w-full"]):not(button),
+html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+  [class*="bg-token-main-surface-secondary"]:is([class*="h-full"], [class*="min-h-0"], [class*="flex-1"], [class*="w-full"]):not(button),
+html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+  [class*="bg-token-main-surface-tertiary"]:is([class*="h-full"], [class*="min-h-0"], [class*="flex-1"], [class*="w-full"]):not(button) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+  [class*="absolute"][class*="top-0"][class*="bottom-0"][class*="left-0"][class*="bg-token-main-surface-primary"] {
+  border-left-color: color-mix(in oklab, var(--dream-line) 42%, transparent) !important;
+}
+
+html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+  :is([class*="h-toolbar"], [class*="sticky"][class*="top-0"]) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: color-mix(in oklab, var(--dream-line) 30%, transparent) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+  :is(button, [role="button"]):is([class~="bg-token-bg-fog"], [class*="hover:bg-token-list-hover-background"]) {
+  color: var(--dream-text) !important;
+  border: 1px solid color-mix(in oklab, var(--dream-line) 32%, transparent) !important;
+  background: color-mix(in oklab, var(--dream-surface-raised) 42%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, #fff 4%, transparent) !important;
+}
+
+html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+  :is(button, [role="button"]):is([class~="bg-token-bg-fog"], [class*="hover:bg-token-list-hover-background"]):is(:hover, :focus-visible, [aria-selected="true"], [data-state="active"]) {
+  color: var(--dream-text-strong) !important;
+  border-color: color-mix(in oklab, var(--dream-accent) 38%, var(--dream-line)) !important;
+  background: var(--dream-accent-soft) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--dream-accent) 20%, transparent) !important;
+}
+
+@layer utilities {
+  html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+    [class*="absolute"][class*="top-0"][class*="bottom-0"][class*="left-0"][class*="bg-token-main-surface-primary"],
+  html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+    [data-app-shell-tabs="true"],
+  html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+    [class*="bg-token-main-surface-primary"]:is([class*="h-full"], [class*="min-h-0"], [class*="flex-1"], [class*="w-full"]):not(button),
+  html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+    [class*="bg-token-main-surface-secondary"]:is([class*="h-full"], [class*="min-h-0"], [class*="flex-1"], [class*="w-full"]):not(button),
+  html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+    [class*="bg-token-main-surface-tertiary"]:is([class*="h-full"], [class*="min-h-0"], [class*="flex-1"], [class*="w-full"]):not(button) {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+    [class*="absolute"][class*="top-0"][class*="bottom-0"][class*="left-0"][class*="bg-token-main-surface-primary"] {
+    border-left-color: color-mix(in oklab, var(--dream-line) 42%, transparent) !important;
+  }
+
+  html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+    :is([class*="h-toolbar"], [class*="sticky"][class*="top-0"]) {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border-color: color-mix(in oklab, var(--dream-line) 30%, transparent) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+    button.bg-token-bg-fog,
+  html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+    button[class*="hover:bg-token-list-hover-background"] {
+    color: var(--dream-text) !important;
+    border: 1px solid color-mix(in oklab, var(--dream-line) 32%, transparent) !important;
+    background: color-mix(in oklab, var(--dream-surface-raised) 42%, transparent) !important;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, #fff 4%, transparent) !important;
+  }
+
+  html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+    button.bg-token-bg-fog:is(:hover, :focus-visible, [aria-selected="true"], [data-state="active"]),
+  html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-panel"]
+    button[class*="hover:bg-token-list-hover-background"]:is(:hover, :focus-visible, [aria-selected="true"], [data-state="active"]) {
+    color: var(--dream-text-strong) !important;
+    border-color: color-mix(in oklab, var(--dream-accent) 38%, var(--dream-line)) !important;
+    background: var(--dream-accent-soft) !important;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--dream-accent) 20%, transparent) !important;
+  }
 }
 
 @media (max-width: 1120px) {

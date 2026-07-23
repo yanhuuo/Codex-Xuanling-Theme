@@ -2,7 +2,9 @@
 param(
   [int]$Port = 9335,
   [ValidateRange(5, 300)][int]$PollSeconds = 12,
-  [ValidateRange(1, 10)][int]$MaxConsecutiveFailures = 3
+  [ValidateRange(1, 10)][int]$MaxConsecutiveFailures = 3,
+  [ValidateRange(60, 1800)][int]$RestartCooldownSeconds = 180,
+  [switch]$NoRestartExisting
 )
 
 $ErrorActionPreference = 'Stop'
@@ -51,6 +53,7 @@ try {
   if (-not $ownsMutex) { exit 0 }
   New-Item -ItemType Directory -Force -Path $stateRoot | Out-Null
   $lastAttempt = [datetime]::MinValue
+  $lastRestartAttempt = [datetime]::MinValue
   $lastError = ''
   $lastErrorAt = [datetime]::MinValue
   $consecutiveFailures = 0
@@ -66,9 +69,19 @@ try {
         if (-not (Test-RecordedInjectorHealthy -State $state -Codex $codex -Identity $identity)) {
           $now = Get-Date
           if ($null -eq $identity) {
-            if (($now - $lastErrorAt).TotalMinutes -ge 5) {
-              Write-GuardLog 'Codex is running without a verified Dream Skin endpoint. Automatic restart is disabled; use the Dream Skin launcher to enable it.'
-              $lastErrorAt = $now
+            if ($NoRestartExisting) {
+              if (($now - $lastErrorAt).TotalMinutes -ge 5) {
+                Write-GuardLog 'Codex is running without a verified Dream Skin endpoint. Automatic restart is disabled by -NoRestartExisting; use the Dream Skin launcher to enable it.'
+                $lastErrorAt = $now
+              }
+            } elseif (($now - $lastRestartAttempt).TotalSeconds -ge $RestartCooldownSeconds) {
+              $lastRestartAttempt = $now
+              Write-GuardLog "Restarting Codex $($codex.Version) with Dream Skin endpoint because it was opened without one."
+              & $startScript -Port $Port -RestartExisting -PreservePause *> $null
+              if ($LASTEXITCODE -ne 0) { throw "start-dream-skin.ps1 -RestartExisting returned exit code $LASTEXITCODE" }
+              $consecutiveFailures = 0
+              Remove-Item -LiteralPath $failurePath -Force -ErrorAction SilentlyContinue
+              Write-GuardLog "Dream Skin endpoint restart completed for Codex $($codex.Version)."
             }
           } elseif (($now - $lastAttempt).TotalSeconds -ge 90) {
             $lastAttempt = $now

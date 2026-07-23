@@ -110,6 +110,9 @@
       statusText: cleanText(config.statusText, 80),
       quote: cleanText(config.quote, 100),
       brandIcon: /^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(config.brandIcon || "") ? config.brandIcon : "",
+      sendIcon: /^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(config.sendIcon || "") ? config.sendIcon : "",
+      processingIcon: /^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(config.processingIcon || "") ? config.processingIcon : "",
+      spinnerIcon: /^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(config.spinnerIcon || "") ? config.spinnerIcon : "",
       focusX: hasNumber(art.focusX) ? clamp(art.focusX) : null,
       focusY: hasNumber(art.focusY) ? clamp(art.focusY) : null,
       accent: safeAccent,
@@ -134,6 +137,9 @@
   const brandIcon = THEME_ICON_SVGS[config.brandIcon]
     ? config.brandIcon
     : (THEME_ICON_SVGS.bird ? "bird" : (THEME_ICON_SVGS.seraph ? "seraph" : Object.keys(THEME_ICON_SVGS)[0]));
+  const sendIcon = THEME_ICON_SVGS[config.sendIcon] ? config.sendIcon : (THEME_ICON_SVGS.send ? "send" : brandIcon);
+  const processingIcon = THEME_ICON_SVGS[config.processingIcon] ? config.processingIcon : (THEME_ICON_SVGS.processing ? "processing" : brandIcon);
+  const spinnerIcon = THEME_ICON_SVGS[config.spinnerIcon] ? config.spinnerIcon : (THEME_ICON_SVGS.spinner ? "spinner" : processingIcon);
   let profile = {
     ...defaultProfile,
     aspect: config.initialAspect ?? defaultProfile.aspect,
@@ -450,7 +456,7 @@
     setChromeText("dream-theme-status", config.statusText);
     setChromeText("dream-theme-quote", config.quote);
 
-    const installThemeIcon = (source, iconName) => {
+    const installThemeIcon = (source, iconName, semanticClass = "") => {
       if (!source || !iconName || !THEME_ICON_SVGS[iconName]) return;
       if (!source.classList.contains("dream-native-icon-source")) {
         source.classList.add("dream-native-icon-source");
@@ -461,7 +467,7 @@
         replacement.setAttribute("aria-hidden", "true");
         source.parentElement?.insertBefore(replacement, source);
       }
-      const expectedClass = `dream-theme-icon dream-theme-icon-${iconName}${iconName === brandIcon ? " dream-theme-icon-brand" : ""}`;
+      const expectedClass = `dream-theme-icon dream-theme-icon-${iconName}${iconName === brandIcon ? " dream-theme-icon-brand" : ""}${semanticClass ? ` ${semanticClass}` : ""}`;
       const iconSignature = `${THEME_ICON_VERSION}:${iconName}`;
       if (replacement.className !== expectedClass) replacement.className = expectedClass;
       if (replacement.dataset.dreamIcon !== iconSignature) {
@@ -549,10 +555,10 @@
         }
       }
       else if (["听写", "Dictate"].includes(label)) iconName = "mic";
-      else if (isComposerAction) iconName = brandIcon;
+      else if (isComposerAction) iconName = isProcessing ? processingIcon : sendIcon;
       button.classList.toggle("dream-composer-send", isComposerAction && !isProcessing);
       button.classList.toggle("dream-composer-processing", isProcessing);
-      if (iconName) installThemeIcon(button.querySelector("svg:not(.dream-theme-svg)"), iconName);
+      if (iconName) installThemeIcon(button.querySelector("svg:not(.dream-theme-svg)"), iconName, isProcessing ? "dream-theme-icon-processing" : isComposerAction ? "dream-theme-icon-send" : "");
     }
 
     const permissionIconFor = (label) => {
@@ -618,9 +624,9 @@
         spinnerMark.setAttribute("aria-hidden", "true");
         host.appendChild?.(spinnerMark);
       }
-      const spinnerSignature = `${THEME_ICON_VERSION}:${brandIcon}-spinner`;
+      const spinnerSignature = `${THEME_ICON_VERSION}:${spinnerIcon}-spinner`;
       if (spinnerMark.dataset.dreamIcon !== spinnerSignature) {
-        spinnerMark.innerHTML = THEME_ICON_SVGS[brandIcon] || "";
+        spinnerMark.innerHTML = THEME_ICON_SVGS[spinnerIcon] || "";
         spinnerMark.querySelector("svg")?.classList.add("dream-theme-svg");
         spinnerMark.dataset.dreamIcon = spinnerSignature;
       }
