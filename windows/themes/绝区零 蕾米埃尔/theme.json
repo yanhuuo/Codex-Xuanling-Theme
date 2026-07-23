@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "id": "remiel-seraph-system",
+  "name": "蕾米埃尔｜星芒圣翼",
+  "description": "绝区零蕾米埃尔风格的粉紫机械圣翼主题，包含独立星芒按钮图标与轻量环绕加载动画。",
+  "author": "mizunagare",
+  "version": "1.0.0",
+  "entrypoints": {
+    "css": "theme.css",
+    "renderer": "theme.js"
+  },
+  "image": "background.jpg",
+  "pet": {
+    "id": "remiel-switch"
+  },
+  "brandSubtitle": "NEW ERIDU · REMIEL",
+  "tagline": "以星芒校准心跳，让灵感抵达指尖。",
+  "projectPrefix": "选择项目 · ",
+  "projectLabel": "✦  选择项目",
+  "statusText": "SERAPH LINK · ONLINE",
+  "quote": "A WISH, DELIVERED IN LIGHT",
+  "appearance": "auto",
+  "art": {
+    "focusX": 0.76,
+    "focusY": 0.44,
+    "safeArea": "left",
+    "taskMode": "ambient"
+  },
+  "palette": {
+    "accent": "#e84f92"
+  }
+}
