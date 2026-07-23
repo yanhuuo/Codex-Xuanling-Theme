@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
   [int]$Port = 9335,
-  [ValidateRange(5, 300)][int]$PollSeconds = 12
+  [ValidateRange(5, 300)][int]$PollSeconds = 12,
+  [ValidateRange(1, 10)][int]$MaxConsecutiveFailures = 3
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,6 +12,7 @@ Assert-DreamSkinPort -Port $Port
 $stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
 $statePath = Join-Path $stateRoot 'state.json'
 $enabledPath = Join-Path $stateRoot 'guard.enabled'
+$failurePath = Join-Path $stateRoot 'guard.failed.json'
 $logPath = Join-Path $stateRoot 'guard.log'
 $startScript = Join-Path $PSScriptRoot 'start-dream-skin.ps1'
 $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
@@ -51,6 +53,7 @@ try {
   $lastAttempt = [datetime]::MinValue
   $lastError = ''
   $lastErrorAt = [datetime]::MinValue
+  $consecutiveFailures = 0
   Write-GuardLog 'Auto-heal guard started.'
 
   while (Test-Path -LiteralPath $enabledPath -PathType Leaf) {
@@ -62,23 +65,43 @@ try {
         $identity = Get-DreamSkinVerifiedCdpIdentity -Port $Port -Codex $codex
         if (-not (Test-RecordedInjectorHealthy -State $state -Codex $codex -Identity $identity)) {
           $now = Get-Date
-          if (($now - $lastAttempt).TotalSeconds -ge 90) {
+          if ($null -eq $identity) {
+            if (($now - $lastErrorAt).TotalMinutes -ge 5) {
+              Write-GuardLog 'Codex is running without a verified Dream Skin endpoint. Automatic restart is disabled; use the Dream Skin launcher to enable it.'
+              $lastErrorAt = $now
+            }
+          } elseif (($now - $lastAttempt).TotalSeconds -ge 90) {
             $lastAttempt = $now
-            Write-GuardLog "Repairing Codex $($codex.Version): CDP or injector state is missing/stale."
-            & $startScript -Port $Port -RestartExisting -PreservePause *> $null
+            Write-GuardLog "Repairing the injector for Codex $($codex.Version) without restarting Codex."
+            & $startScript -Port $Port -PreservePause *> $null
             if ($LASTEXITCODE -ne 0) { throw "start-dream-skin.ps1 returned exit code $LASTEXITCODE" }
+            $consecutiveFailures = 0
+            Remove-Item -LiteralPath $failurePath -Force -ErrorAction SilentlyContinue
             Write-GuardLog "Repair completed for Codex $($codex.Version)."
           }
         }
       }
       $lastError = ''
     } catch {
+      $consecutiveFailures += 1
       $message = $_.Exception.Message
       $now = Get-Date
       if ($message -ne $lastError -or ($now - $lastErrorAt).TotalMinutes -ge 5) {
         Write-GuardLog "Repair deferred: $message"
         $lastError = $message
         $lastErrorAt = $now
+      }
+      if ($consecutiveFailures -ge $MaxConsecutiveFailures) {
+        $failure = [pscustomobject]@{
+          schemaVersion = 1
+          failedAt = $now.ToUniversalTime().ToString('o')
+          consecutiveFailures = $consecutiveFailures
+          message = $message
+        }
+        Write-DreamSkinUtf8FileAtomically -Path $failurePath -Content (($failure | ConvertTo-Json -Depth 4) + "`r`n")
+        Remove-Item -LiteralPath $enabledPath -Force -ErrorAction SilentlyContinue
+        Write-GuardLog "Auto-heal guard entered fail-safe mode after $consecutiveFailures consecutive failures. Manual launch is required."
+        break
       }
     }
     Start-Sleep -Seconds $PollSeconds

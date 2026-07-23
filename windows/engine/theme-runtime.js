@@ -1,4 +1,5 @@
-((cssText, artDataUrl, rawConfig) => {
+/* Dream Skin shared framework renderer. */
+((cssText, artDataUrl, rawConfig, rawIcons) => {
   const STATE_KEY = "__CODEX_DREAM_SKIN_STATE__";
   const STYLE_ID = "codex-dream-skin-style";
   const CHROME_ID = "codex-dream-skin-chrome";
@@ -34,35 +35,11 @@
   ];
   const HOME_UTILITY_CLASS = "dream-home-utility";
   const SPINNER_SELECTOR = ".animate-spin, [class~='animate-spin'], [role='progressbar'], [data-loading='true']";
-  const REMIEL_ICON_VERSION = "1";
-  const remielSvg = (body) => `<svg class="dream-remiel-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
-  const REMIEL_ICON_SVGS = {
-    seraph: remielSvg(`
-      <path d="M12 2.1 14.1 8l5.8-2.2-3.6 5.1 5.6 2.5-6.1.5.8 6.1-4.6-4.1L7.4 20l.8-6.1-6.1-.5 5.6-2.5-3.6-5.1L9.9 8 12 2.1Z" fill="#fff4fb" stroke="#c7a9ff" stroke-width=".85" stroke-linejoin="round"/>
-      <path d="m12 6.3 2.2 4.1 4.5 1.6-4.5 1.6-2.2 4.1-2.2-4.1L5.3 12l4.5-1.6L12 6.3Z" fill="#ef5f9f" stroke="#7f56ba" stroke-width=".8"/>
-      <circle cx="12" cy="12" r="1.45" fill="#fff"/>
-    `),
-    chevron: remielSvg(`<path d="m4 8 8 7.6L20 8l-3.2-.8L12 11.8 7.2 7.2 4 8Z" fill="#efa0c8" stroke="#c7a9ff" stroke-width=".9" stroke-linejoin="round"/><path d="m9.3 8 2.7-3 2.7 3-2.7 2.1L9.3 8Z" fill="#fff4fb"/>`),
-    search: remielSvg(`<circle cx="10.2" cy="10.2" r="6.2" fill="#342139" stroke="#c7a9ff" stroke-width="1"/><path d="m6.8 10.2 2.2-.8 1.2-2.1 1.2 2.1 2.2.8-2.2.8-1.2 2.1L9 11l-2.2-.8Z" fill="#ef6ba7"/><path d="m14.7 14.7 5 5" stroke="#fff4fb" stroke-width="1.8" stroke-linecap="round"/>`),
-    compose: remielSvg(`<path d="M4 19.5c4.9-1.2 8.9-5.1 12-11.7l2.9-2.9c1-1 2.4.4 1.4 1.4l-2.9 2.9C10.8 12.3 6.9 16.3 5.7 21L4 19.5Z" fill="#ef6ba7" stroke="#c7a9ff" stroke-width=".9"/><path d="m5.2 7.4 1.1-2.2 2.2-1.1-2.2-1.1-1.1-2.2L4.1 3 1.9 4.1l2.2 1.1 1.1 2.2Z" fill="#fff4fb"/>`),
-    quick: remielSvg(`<path d="M3 4.5h18v12.2H9l-4.7 3.6v-3.6H3V4.5Z" fill="#342139" stroke="#c7a9ff" stroke-width=".9"/><path d="m12 7 1.3 2.6L16 11l-2.7 1.4L12 15l-1.3-2.6L8 11l2.7-1.4L12 7Z" fill="#ef6ba7"/>`),
-    branch: remielSvg(`<path d="M6 5v10c0 2.1 1.4 3.2 3.5 3.2H14c2 0 3-1.2 3-3.2V9M6 9c3.2 0 5.3-1.1 6.2-3.4" fill="none" stroke="#ef8fbd" stroke-width="1.45" stroke-linecap="round"/><path d="m3 4.5 3-3 3 3-3 2.3-3-2.3Zm11 .6L17 2l3 3.1L17 7.5l-3-2.4Zm0 13.2 3-3.1 3 3.1-3 2.4-3-2.4Z" fill="#fff4fb" stroke="#c7a9ff" stroke-width=".75"/>`),
-    sites: remielSvg(`<path d="m3 5.5 4-3.3 4 3.3-4 3.3-4-3.3Zm10 0 4-3.3 4 3.3-4 3.3-4-3.3ZM3 16.5l4-4.2 4 4.2-4 5-4-5Zm10 0 4-4.2 4 4.2-4 5-4-5Z" fill="#ef6ba7" stroke="#c7a9ff" stroke-width=".8"/>`),
-    clock: remielSvg(`<circle cx="12" cy="12" r="8.6" fill="#342139" stroke="#c7a9ff" stroke-width="1"/><path d="M12 6.8v5.4l4.2 2.1" fill="none" stroke="#fff4fb" stroke-width="1.35" stroke-linecap="round"/><path d="m4.7 3.1.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2Z" fill="#ef6ba7"/>`),
-    plugins: remielSvg(`<path d="M12 3c5 0 8 3.6 8 8 0 4.8-5.7 7-8.8 3.5-2.8 2.8-7.3.8-7.3-3 0-3.2 3-5.5 6-4.4 2.4.9 3 3.9.8 5.6" fill="none" stroke="#ef8fbd" stroke-width="1.55" stroke-linecap="round"/><path d="m9 4 3-3 3 3-3 2.3L9 4Z" fill="#fff4fb" stroke="#c7a9ff" stroke-width=".8"/><circle cx="12" cy="12" r="1.2" fill="#ef5f9f"/>`),
-    folder: remielSvg(`<path d="M2.5 5.2h6l2 2h11v11.3h-19V5.2Z" fill="#342139" stroke="#c7a9ff" stroke-width=".9"/><path d="M4.2 9h15.6" stroke="#ef8fbd" stroke-width="1"/><path d="m14.7 11.2 1.1 2.2 2.2 1.1-2.2 1.1-1.1 2.2-1.1-2.2-2.2-1.1 2.2-1.1 1.1-2.2Z" fill="#fff4fb"/>`),
-    more: remielSvg(`<path d="m2.8 12 3.2-3.1 3.1 3.1L6 14.5 2.8 12Zm6.2 0 3.1-3.1 3.1 3.1-3.1 2.5L9 12Zm6.1 0 3.1-3.1 3.1 3.1-3.1 2.5-3.1-2.5Z" fill="#ef8fbd" stroke="#c7a9ff" stroke-width=".7"/>`),
-    add: remielSvg(`<path d="M11 3h2v8h8v2h-8v8h-2v-8H3v-2h8V3Z" fill="#ef6ba7" stroke="#c7a9ff" stroke-width=".55"/><path d="m3.8 2 .8 1.6 1.6.8-1.6.8-.8 1.6L3 5.2l-1.6-.8L3 3.6 3.8 2Z" fill="#fff4fb"/>`),
-    pin: remielSvg(`<path d="m7 3 10 4-2.2 2.2 2 4.8-2.8 2.8-4.8-2L7 17l-4-4 2.2-2.2L3 6l4-3Z" fill="#ef6ba7" stroke="#c7a9ff" stroke-width=".9"/><path d="M9.6 14.4 4 21" stroke="#fff4fb" stroke-width="1.3" stroke-linecap="round"/>`),
-    archive: remielSvg(`<path d="M3 4.2h18v5H3v-5Zm1.2 5H20v10.6H4.2V9.2Z" fill="#342139" stroke="#c7a9ff" stroke-width=".9"/><path d="M9 12h6" stroke="#ef8fbd" stroke-width="1.4" stroke-linecap="round"/><path d="m16.8 14 .8 1.6 1.6.8-1.6.8-.8 1.6-.8-1.6-1.6-.8 1.6-.8.8-1.6Z" fill="#fff4fb"/>`),
-    help: remielSvg(`<circle cx="12" cy="12" r="9" fill="#342139" stroke="#c7a9ff" stroke-width="1"/><path d="M9.2 9a3 3 0 1 1 4.1 2.8c-1 .4-1.3 1.1-1.3 2.2m0 3h.01" fill="none" stroke="#ef8fbd" stroke-width="1.7" stroke-linecap="round"/><path d="m4.2 3.2.8 1.6 1.6.8-1.6.8-.8 1.6-.8-1.6-1.6-.8 1.6-.8.8-1.6Z" fill="#fff4fb"/>`),
-    shield: remielSvg(`<path d="M12 2.2 19 5v5.8c0 4.6-2.8 8.1-7 10.8-4.2-2.7-7-6.2-7-10.8V5l7-2.8Z" fill="#342139" stroke="#c7a9ff" stroke-width="1"/><path d="m12 6 1.4 3.1 3.1 1.4-3.1 1.4L12 15l-1.4-3.1-3.1-1.4 3.1-1.4L12 6Z" fill="#ef6ba7"/>`),
-    permissionAsk: remielSvg(`<path d="M4 19c2.4-6.3 6.6-11 12.8-15.7-.7 6.8-4.7 11.6-11.9 14.3L4 19Z" fill="#342139" stroke="#c7a9ff" stroke-width=".9"/><path d="M5.3 16.8c3.8-1.6 6.9-4.3 9.4-8.1" fill="none" stroke="#ef8fbd" stroke-width="1.15" stroke-linecap="round"/><path d="m18 3 .8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8L18 3Z" fill="#fff4fb"/>`),
-    permissionAgent: remielSvg(`<path d="M12 2.2 19 5v5.8c0 4.6-2.8 8.1-7 10.8-4.2-2.7-7-6.2-7-10.8V5l7-2.8Z" fill="#342139" stroke="#c7a9ff" stroke-width="1"/><path d="m7 12 3.2-1.1L12 7.8l1.8 3.1L17 12l-3.2 1.1L12 16.2l-1.8-3.1L7 12Z" fill="#ef6ba7"/>`),
-    permissionFull: remielSvg(`<path d="M12 2 19.4 5v5.9c0 4.8-3 8.4-7.4 11.1-4.4-2.7-7.4-6.3-7.4-11.1V5L12 2Z" fill="#342139" stroke="#c7a9ff" stroke-width="1"/><path d="m6.5 12 3.4-1.2L12 7.4l2.1 3.4 3.4 1.2-3.4 1.2L12 16.6l-2.1-3.4L6.5 12Z" fill="#fff4fb"/><circle cx="12" cy="12" r="1.5" fill="#ef5f9f"/>`),
-    mic: remielSvg(`<rect x="8.3" y="3" width="7.4" height="11" rx="3.7" fill="#342139" stroke="#c7a9ff" stroke-width=".9"/><path d="M5.8 10.5c0 3.4 2.5 5.8 6.2 5.8s6.2-2.4 6.2-5.8M12 16.4V21M8.8 21h6.4" fill="none" stroke="#ef8fbd" stroke-width="1.4" stroke-linecap="round"/><path d="m12 5.4.8 1.6 1.6.8-1.6.8-.8 1.6-.8-1.6-1.6-.8 1.6-.8.8-1.6Z" fill="#fff4fb"/>`),
-    send: remielSvg(`<path d="M3 11.8 21 3l-6.2 18-3.1-6.6L3 11.8Z" fill="#ef6ba7" stroke="#c7a9ff" stroke-width=".9" stroke-linejoin="round"/><path d="m11.7 14.4 4.9-6.7-7.2 5.6" fill="none" stroke="#fff4fb" stroke-width="1.15" stroke-linecap="round"/><path d="m5 6 .8 1.7 1.7.8-1.7.8L5 11l-.8-1.7-1.7-.8 1.7-.8L5 6Z" fill="#fff4fb"/>`),
-  };
+  const THEME_ICON_VERSION = "8";
+  const THEME_ICON_SVGS = Object.freeze(Object.fromEntries(
+    Object.entries(rawIcons && typeof rawIcons === "object" ? rawIcons : {})
+      .filter(([name, svg]) => /^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(name) && typeof svg === "string")
+  ));
   const installToken = {};
   let samplingNativeShell = false;
   let observer = null;
@@ -77,6 +54,7 @@
   let windowDragHeader = null;
   let windowDragStart = null;
   let windowDragEnd = null;
+  let windowDragTimer = null;
   window.__CODEX_DREAM_SKIN_DISABLED__ = false;
 
   const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, Number(value)));
@@ -131,6 +109,7 @@
       tagline: cleanText(config.tagline, 120),
       statusText: cleanText(config.statusText, 80),
       quote: cleanText(config.quote, 100),
+      brandIcon: /^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(config.brandIcon || "") ? config.brandIcon : "",
       focusX: hasNumber(art.focusX) ? clamp(art.focusX) : null,
       focusY: hasNumber(art.focusY) ? clamp(art.focusY) : null,
       accent: safeAccent,
@@ -152,6 +131,9 @@
     return URL.createObjectURL(new Blob([bytes], { type: mime }));
   })();
   const config = normalizeConfig(rawConfig);
+  const brandIcon = THEME_ICON_SVGS[config.brandIcon]
+    ? config.brandIcon
+    : (THEME_ICON_SVGS.bird ? "bird" : (THEME_ICON_SVGS.seraph ? "seraph" : Object.keys(THEME_ICON_SVGS)[0]));
   let profile = {
     ...defaultProfile,
     aspect: config.initialAspect ?? defaultProfile.aspect,
@@ -336,19 +318,19 @@
     document.querySelectorAll(".dream-task").forEach((node) => node.classList.remove("dream-task"));
     document.querySelectorAll(".dream-home-shell").forEach((node) => node.classList.remove("dream-home-shell"));
     document.querySelectorAll(`.${HOME_UTILITY_CLASS}`).forEach((node) => node.classList.remove(HOME_UTILITY_CLASS));
-    document.querySelectorAll(".dream-remiel-icon").forEach((node) => node.remove());
-    document.querySelectorAll(".dream-remiel-brand-mark").forEach((node) => node.remove());
+    document.querySelectorAll(".dream-theme-icon").forEach((node) => node.remove());
+    document.querySelectorAll(".dream-theme-brand-mark").forEach((node) => node.remove());
     document.querySelectorAll(".dream-composer-send").forEach((node) => node.classList.remove("dream-composer-send"));
     document.querySelectorAll(".dream-composer-processing").forEach((node) => node.classList.remove("dream-composer-processing"));
     document.querySelectorAll(".dream-permission-menu").forEach((node) => node.classList.remove("dream-permission-menu"));
     document.querySelectorAll(".dream-permission-item").forEach((node) => node.classList.remove("dream-permission-item"));
-    document.querySelectorAll(".dream-remiel-spinner-mark").forEach((node) => node.remove());
+    document.querySelectorAll(".dream-theme-spinner-mark").forEach((node) => node.remove());
     document.querySelectorAll(".dream-native-icon-source").forEach((node) => node.classList.remove("dream-native-icon-source"));
-    document.querySelectorAll(".dream-remiel-spinner-source").forEach((node) => {
-      node.classList.remove("dream-remiel-spinner-source");
-      node.parentElement?.classList.remove("dream-remiel-spinner");
+    document.querySelectorAll(".dream-theme-spinner-source").forEach((node) => {
+      node.classList.remove("dream-theme-spinner-source");
+      node.parentElement?.classList.remove("dream-theme-spinner");
     });
-    document.querySelectorAll(".dream-remiel-spinner").forEach((node) => node.classList.remove("dream-remiel-spinner"));
+    document.querySelectorAll(".dream-theme-spinner").forEach((node) => node.classList.remove("dream-theme-spinner"));
     document.getElementById(STYLE_ID)?.remove();
     document.getElementById(CHROME_ID)?.remove();
   };
@@ -468,22 +450,23 @@
     setChromeText("dream-theme-status", config.statusText);
     setChromeText("dream-theme-quote", config.quote);
 
-    const installRemielIcon = (source, iconName) => {
-      if (!source || !iconName) return;
+    const installThemeIcon = (source, iconName) => {
+      if (!source || !iconName || !THEME_ICON_SVGS[iconName]) return;
       if (!source.classList.contains("dream-native-icon-source")) {
         source.classList.add("dream-native-icon-source");
       }
       let replacement = source.previousElementSibling;
-      if (!replacement?.classList.contains("dream-remiel-icon")) {
+      if (!replacement?.classList.contains("dream-theme-icon")) {
         replacement = document.createElement("span");
         replacement.setAttribute("aria-hidden", "true");
         source.parentElement?.insertBefore(replacement, source);
       }
-      const expectedClass = `dream-remiel-icon dream-remiel-icon-${iconName}`;
-      const iconSignature = `${REMIEL_ICON_VERSION}:${iconName}`;
+      const expectedClass = `dream-theme-icon dream-theme-icon-${iconName}${iconName === brandIcon ? " dream-theme-icon-brand" : ""}`;
+      const iconSignature = `${THEME_ICON_VERSION}:${iconName}`;
       if (replacement.className !== expectedClass) replacement.className = expectedClass;
       if (replacement.dataset.dreamIcon !== iconSignature) {
-        replacement.innerHTML = REMIEL_ICON_SVGS[iconName];
+        replacement.innerHTML = THEME_ICON_SVGS[iconName];
+        replacement.querySelector("svg")?.classList.add("dream-theme-svg");
         replacement.dataset.dreamIcon = iconSignature;
       }
     };
@@ -523,28 +506,29 @@
       button.classList.toggle("dream-nav-primary", primaryLabels.has(label));
       button.classList.toggle("dream-section-heading", sectionLabels.has(label));
       if (label === "Codex") {
-        let brandMark = button.querySelector?.(":scope > .dream-remiel-brand-mark");
+        let brandMark = button.querySelector?.(":scope > .dream-theme-brand-mark");
         if (!brandMark) {
           brandMark = document.createElement("span");
-          brandMark.className = "dream-remiel-brand-mark";
+          brandMark.className = "dream-theme-brand-mark";
           brandMark.setAttribute("aria-hidden", "true");
           button.insertBefore?.(brandMark, button.firstChild || null);
         }
-        const brandSignature = `${REMIEL_ICON_VERSION}:seraph`;
+        const brandSignature = `${THEME_ICON_VERSION}:${brandIcon}`;
         if (brandMark.dataset.dreamIcon !== brandSignature) {
-          brandMark.innerHTML = REMIEL_ICON_SVGS.seraph;
+          brandMark.innerHTML = THEME_ICON_SVGS[brandIcon] || "";
+          brandMark.querySelector("svg")?.classList.add("dream-theme-svg");
           brandMark.dataset.dreamIcon = brandSignature;
         }
       }
-      installRemielIcon(button.querySelector?.("svg:not(.dream-remiel-svg)"), iconNameForLabel(label));
+      installThemeIcon(button.querySelector?.("svg:not(.dream-theme-svg)"), iconNameForLabel(label));
     }
     for (const source of [...(shellSidebar.querySelectorAll?.("svg") || [])]) {
-      if (source.classList.contains("dream-remiel-svg")) continue;
+      if (source.classList.contains("dream-theme-svg")) continue;
       const firstPath = source.querySelector?.("path")?.getAttribute?.("d") || "";
       const priorReplacement = source.previousElementSibling;
-      const knownFolder = priorReplacement?.classList.contains("dream-remiel-icon-folder") ||
+      const knownFolder = priorReplacement?.classList.contains("dream-theme-icon-folder") ||
         firstPath.startsWith("M4.75488 2.1416") || firstPath.startsWith("M5.36914 2.1416");
-      if (knownFolder) installRemielIcon(source, "folder");
+      if (knownFolder) installThemeIcon(source, "folder");
     }
     }
 
@@ -565,10 +549,10 @@
         }
       }
       else if (["听写", "Dictate"].includes(label)) iconName = "mic";
-      else if (isComposerAction) iconName = "seraph";
+      else if (isComposerAction) iconName = brandIcon;
       button.classList.toggle("dream-composer-send", isComposerAction && !isProcessing);
       button.classList.toggle("dream-composer-processing", isProcessing);
-      if (iconName) installRemielIcon(button.querySelector("svg:not(.dream-remiel-svg)"), iconName);
+      if (iconName) installThemeIcon(button.querySelector("svg:not(.dream-theme-svg)"), iconName);
     }
 
     const permissionIconFor = (label) => {
@@ -588,9 +572,9 @@
       for (const { item, iconName } of themedItems) {
         item.classList.add("dream-permission-item");
         const row = item.querySelector(":scope > div");
-        const nativeIcons = [...(row?.querySelectorAll?.(":scope > svg:not(.dream-remiel-svg)") || [])];
-        installRemielIcon(nativeIcons[0], iconName);
-        if (nativeIcons.length > 1) installRemielIcon(nativeIcons[nativeIcons.length - 1], "seraph");
+        const nativeIcons = [...(row?.querySelectorAll?.(":scope > svg:not(.dream-theme-svg)") || [])];
+        installThemeIcon(nativeIcons[0], iconName);
+        if (nativeIcons.length > 1) installThemeIcon(nativeIcons[nativeIcons.length - 1], brandIcon);
       }
     }
 
@@ -602,12 +586,12 @@
       source.querySelector?.('path[opacity="0.3"], path[opacity=".3"]') &&
       (source.querySelectorAll?.("path")?.length || 0) >= 2
     );
-    for (const source of [...document.querySelectorAll(".dream-remiel-spinner-source")]) {
+    for (const source of [...document.querySelectorAll(".dream-theme-spinner-source")]) {
       if (isNativeSpinner(source)) continue;
-      source.classList.remove("dream-remiel-spinner-source");
+      source.classList.remove("dream-theme-spinner-source");
       const host = source.tagName?.toLowerCase() === "svg" ? source.parentElement : source;
-      host?.classList.remove("dream-remiel-spinner");
-      host?.querySelector?.(":scope > .dream-remiel-spinner-mark")?.remove();
+      host?.classList.remove("dream-theme-spinner");
+      host?.querySelector?.(":scope > .dream-theme-spinner-mark")?.remove();
     }
     const spinnerCandidates = new Set([
       ...document.querySelectorAll(SPINNER_SELECTOR),
@@ -621,22 +605,23 @@
       if (bounds && (bounds.width > 34 || bounds.height > 34)) continue;
       const host = source.tagName?.toLowerCase() === "svg" ? source.parentElement : source;
       if (!host) continue;
-      if (!source.classList.contains("dream-remiel-spinner-source")) {
-        source.classList.add("dream-remiel-spinner-source");
+      if (!source.classList.contains("dream-theme-spinner-source")) {
+        source.classList.add("dream-theme-spinner-source");
       }
-      if (!host.classList.contains("dream-remiel-spinner")) {
-        host.classList.add("dream-remiel-spinner");
+      if (!host.classList.contains("dream-theme-spinner")) {
+        host.classList.add("dream-theme-spinner");
       }
-      let spinnerMark = host.querySelector?.(":scope > .dream-remiel-spinner-mark");
+      let spinnerMark = host.querySelector?.(":scope > .dream-theme-spinner-mark");
       if (!spinnerMark) {
         spinnerMark = document.createElement("span");
-        spinnerMark.className = "dream-remiel-spinner-mark";
+        spinnerMark.className = "dream-theme-spinner-mark";
         spinnerMark.setAttribute("aria-hidden", "true");
         host.appendChild?.(spinnerMark);
       }
-      const spinnerSignature = `${REMIEL_ICON_VERSION}:seraph-spinner`;
+      const spinnerSignature = `${THEME_ICON_VERSION}:${brandIcon}-spinner`;
       if (spinnerMark.dataset.dreamIcon !== spinnerSignature) {
-        spinnerMark.innerHTML = REMIEL_ICON_SVGS.seraph;
+        spinnerMark.innerHTML = THEME_ICON_SVGS[brandIcon] || "";
+        spinnerMark.querySelector("svg")?.classList.add("dream-theme-svg");
         spinnerMark.dataset.dreamIcon = spinnerSignature;
       }
     }
@@ -658,7 +643,11 @@
     permissionButtons.clear();
     windowDragHeader?.removeEventListener?.("mousedown", windowDragStart, true);
     window.removeEventListener?.("mouseup", windowDragEnd, true);
+    window.removeEventListener?.("pointerup", windowDragEnd, true);
+    window.removeEventListener?.("pointercancel", windowDragEnd, true);
     window.removeEventListener?.("blur", windowDragEnd, true);
+    if (windowDragTimer) clearTimeout(windowDragTimer);
+    document.documentElement?.classList.remove("dream-window-dragging");
     windowDragHeader = null;
     if (state?.artUrl) URL.revokeObjectURL(state.artUrl);
     delete window[STATE_KEY];
@@ -730,13 +719,21 @@
   windowDragStart = (event) => {
     if (event.button !== 0 || event.target?.closest?.("button, a, input, textarea, select, [role='button']")) return;
     document.documentElement?.classList.add("dream-window-dragging");
+    if (windowDragTimer) clearTimeout(windowDragTimer);
+    windowDragTimer = setTimeout(windowDragEnd, 4000);
   };
-  windowDragEnd = () => document.documentElement?.classList.remove("dream-window-dragging");
+  windowDragEnd = () => {
+    document.documentElement?.classList.remove("dream-window-dragging");
+    if (windowDragTimer) clearTimeout(windowDragTimer);
+    windowDragTimer = null;
+  };
   window.addEventListener?.("mouseup", windowDragEnd, true);
+  window.addEventListener?.("pointerup", windowDragEnd, true);
+  window.addEventListener?.("pointercancel", windowDragEnd, true);
   window.addEventListener?.("blur", windowDragEnd, true);
   const timer = setInterval(() => { spinnerDirty = true; ensure(); }, 30000);
   window[STATE_KEY] = {
-    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.4.0",
+    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.4.1",
   };
   ensure();
   analyzeArt().then((result) => {
@@ -746,5 +743,6 @@
     state.profile = result;
     ensure();
   });
-  return { installed: true, version: "1.4.0", adaptive: true };
-})(__DREAM_CSS_JSON__, __DREAM_ART_JSON__, __DREAM_THEME_JSON__)
+  return { installed: true, version: "1.4.1", adaptive: true };
+})(__DREAM_CSS_JSON__, __DREAM_ART_JSON__, __DREAM_THEME_JSON__, __DREAM_ICONS_JSON__)
+

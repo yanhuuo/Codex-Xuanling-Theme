@@ -74,8 +74,40 @@ try {
   Copy-Item -LiteralPath (Join-Path $packageRoot '使用说明.md') -Destination $runtimeRoot -Force
   Copy-Item -LiteralPath (Join-Path $packageRoot 'install-xuanling.ps1') -Destination $runtimeRoot -Force
   $runtimeWindows = Join-Path $runtimeRoot 'windows'
+  if (Test-Path -LiteralPath $runtimeWindows -PathType Container) {
+    $fullRuntimeWindows = [System.IO.Path]::GetFullPath($runtimeWindows)
+    $fullRuntimeRoot = [System.IO.Path]::GetFullPath($runtimeRoot).TrimEnd('\')
+    if (-not $fullRuntimeWindows.StartsWith($fullRuntimeRoot + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+      throw '稳定运行目录越界，已拒绝更新。'
+    }
+    Remove-Item -LiteralPath $fullRuntimeWindows -Recurse -Force
+  }
   New-Item -ItemType Directory -Force -Path $runtimeWindows | Out-Null
   Copy-Item -Path (Join-Path $sourceWindows '*') -Destination $runtimeWindows -Recurse -Force
+  $sourcePets = Join-Path $packageRoot 'pets'
+  $runtimePets = Join-Path $runtimeRoot 'pets'
+  if (-not (Test-Path -LiteralPath $sourcePets -PathType Container)) {
+    throw '安装包不完整：缺少项目根目录 pets'
+  }
+  if (Test-Path -LiteralPath $runtimePets -PathType Container) {
+    $fullRuntimePets = [System.IO.Path]::GetFullPath($runtimePets)
+    $fullRuntimeRoot = [System.IO.Path]::GetFullPath($runtimeRoot).TrimEnd('\')
+    if (-not $fullRuntimePets.StartsWith($fullRuntimeRoot + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+      throw '稳定宠物目录越界，已拒绝更新。'
+    }
+    Remove-Item -LiteralPath $fullRuntimePets -Recurse -Force
+  }
+  New-Item -ItemType Directory -Force -Path $runtimePets | Out-Null
+  Copy-Item -Path (Join-Path $sourcePets '*') -Destination $runtimePets -Recurse -Force
+  $legacyRuntimePets = Join-Path $runtimeWindows 'pets'
+  if (Test-Path -LiteralPath $legacyRuntimePets -PathType Container) {
+    $fullLegacyPets = [System.IO.Path]::GetFullPath($legacyRuntimePets)
+    $fullRuntimeWindows = [System.IO.Path]::GetFullPath($runtimeWindows).TrimEnd('\')
+    if (-not $fullLegacyPets.StartsWith($fullRuntimeWindows + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+      throw '旧宠物目录超出稳定运行目录，已拒绝迁移。'
+    }
+    Remove-Item -LiteralPath $fullLegacyPets -Recurse -Force
+  }
 
   $runtimeScripts = Join-Path $runtimeRoot 'windows\scripts'
   $installer = Join-Path $runtimeScripts 'install-dream-skin.ps1'

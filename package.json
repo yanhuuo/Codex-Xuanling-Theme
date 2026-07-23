@@ -1,0 +1,14 @@
+{
+  "name": "codex-xuanling-theme",
+  "private": true,
+  "version": "1.4.0",
+  "description": "Codex Dream Skin theme framework and bundled themes",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File windows/tests/run-tests.ps1"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "default": false,
+  "manifest": "theme.json",
+  "files": [
+    "theme.json",
+    "theme.css",
+    "icons.json",
+    "background.jpg"
+  ],
+  "pets": [
+    "remiel-switch"
+  ]
+}

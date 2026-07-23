@@ -9,7 +9,7 @@ Apply a reversible renderer skin through Chromium DevTools Protocol while launch
 
 ## Workflow
 
-1. Install Node.js 22 or newer, close Codex, then run `scripts/install-dream-skin.ps1` once to preserve the user's native appearance settings, seed the Arina Hashimoto theme, and create launch/restore/tray shortcuts.
+1. Install Node.js 22 or newer, close Codex, then run `scripts/install-dream-skin.ps1` once to preserve the user's native appearance settings, discover the default theme from its `install.json`, and create launch/restore/tray shortcuts.
 2. Run `scripts/start-dream-skin.ps1`. The shortcut asks before restarting an already-open Codex app; CLI callers must explicitly add `-RestartExisting`.
 3. Run `scripts/verify-dream-skin.ps1 -ScreenshotPath <absolute-path>` after launch. Treat a missing continuous wallpaper, home shell, native composer, sidebar layer, or injection marker as failure. The native suggestion count is responsive and may be two to four.
 4. Inspect the screenshot against `references/qa-inventory.md`. Verify both the home screen and a normal task before signing off.
@@ -23,7 +23,7 @@ Apply a reversible renderer skin through Chromium DevTools Protocol while launch
 - `appearance: auto` follows the native computed `color-scheme` first and the system appearance only as a fallback. Image brightness may tune color and composition, but must not flip the user's shell mode; explicit `light` and `dark` remain authoritative.
 - Attach the "选择项目" treatment to Codex's real project-selector toolbar and keep the current project button clickable; never draw a disconnected replacement.
 - Keep decorative layers `pointer-events: none` and keep real buttons, navigation, and composer above them.
-- On app updates, the user-level guard discovers the latest registered Store Appx package and repairs a missing CDP/injector session with a cooldown. Saved paths are never trusted for process control unless they still match a registered package identity. A full restore removes the guard marker; pausing from `设置 → 主题` preserves it and preserves the paused state across repairs.
+- On app updates, the user-level guard discovers the latest registered Store Appx package and may repair an injector only when a verified CDP endpoint already exists. It never authorizes restarting Codex, and enters fail-safe mode after three consecutive failures. Saved paths are never trusted for process control unless they still match a registered package identity.
 - The default launcher scans for a free port when `9335` is occupied. An explicitly requested occupied port fails closed.
 - Keep the injection daemon running for navigation/reload resilience. Its state and logs live under `%LOCALAPPDATA%\CodexDreamSkin`.
 - The watcher registers a generation-checked early payload for connected renderers so reload/navigation can paint the skin before the normal load-event fallback; unsupported CDP targets fall back safely.
@@ -39,7 +39,7 @@ Apply a reversible renderer skin through Chromium DevTools Protocol while launch
 ```powershell
 powershell -NoProfile -File tests\run-tests.ps1
 node --check scripts\injector.mjs
-node --check "themes\鸣潮 秧秧·玄翎\theme.js"
+node --check engine\theme-runtime.js
 ```
 
 ## Resources
@@ -48,11 +48,13 @@ node --check "themes\鸣潮 秧秧·玄翎\theme.js"
 - `scripts/common-windows.ps1`: Store-package discovery, Node validation, port ownership, state, and process identity safety.
 - `scripts/config-utf8.ps1`: atomic UTF-8 configuration backup, selective restore, and explicit recovery.
 - `engine/theme-manager.js`: theme-neutral `设置 → 主题` page, installed-theme switching, official-appearance pause, and configurable local/HTTPS theme libraries.
-- `themes/<theme-id>/`: a self-contained executable theme bundle. Each folder owns its `theme.json`, `theme.css`, `theme.js`, background, icons, and optional private assets.
-- `themes/鸣潮 秧秧·玄翎/`: bundled Yangyang Xuanling theme; its Xuanniao icons and animations do not live in the shared engine.
+- `engine/theme-base.css` and `engine/theme-runtime.js`: shared layout, settings-shell adaptation, icon/animation placement, DOM integration, and cleanup.
+- `themes/<theme-id>/`: a theme configuration bundle. Each folder owns its `install.json`, `theme.json`, palette-only `theme.css`, `icons.json`, background, and optional private assets.
+- `../pets/<pet-id>/`: repository-level pet packages shared by theme ID; pets never live inside a theme folder.
+- `themes/鸣潮 秧秧·玄翎/`: bundled Yangyang Xuanling palette, Xuanniao icon set, artwork, metadata, and pet binding.
 - `scripts/theme-windows.ps1`: persistent active/saved theme store, safe image import, pause state, and preset seeding.
 - `scripts/tray-dream-skin.ps1`: Windows Forms tray for apply, pause, import, save, switch, and complete restore.
-- `scripts/guard-dream-skin.ps1`: user-level Store-update and injector auto-heal loop with verified package/process identity.
+- `scripts/guard-dream-skin.ps1`: non-restarting injector auto-heal loop with verified package/process identity and failure circuit breaker.
 - `references/qa-inventory.md`: required functional and visual signoff coverage.
 - `references/runtime-notes.md`: troubleshooting and update behavior.
 - `tests/run-tests.ps1`: configuration, state, recovery, payload, and CDP validation regression checks.

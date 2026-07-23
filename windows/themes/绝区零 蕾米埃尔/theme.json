@@ -1,14 +1,19 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "remiel-seraph-system",
   "name": "蕾米埃尔｜星芒圣翼",
   "description": "绝区零蕾米埃尔风格的粉紫机械圣翼主题，包含独立星芒按钮图标与轻量环绕加载动画。",
   "author": "mizunagare",
   "version": "1.0.0",
+  "framework": {
+    "id": "dream-skin",
+    "version": 1
+  },
   "entrypoints": {
     "css": "theme.css",
-    "renderer": "theme.js"
+    "icons": "icons.json"
   },
+  "brandIcon": "seraph",
   "image": "background.jpg",
   "pet": {
     "id": "remiel-switch"

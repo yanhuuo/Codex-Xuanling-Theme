@@ -1,14 +1,19 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "yangyang-xuanling-azure-plume",
   "name": "秧秧·玄翎｜苍羽夜",
   "description": "鸣潮秧秧·玄翎深色沉浸主题，包含独立玄鸟图标与环绕加载动画。",
   "author": "yanhuuo",
-  "version": "2.2.3",
+  "version": "2.3.0",
+  "framework": {
+    "id": "dream-skin",
+    "version": 1
+  },
   "entrypoints": {
     "css": "theme.css",
-    "renderer": "theme.js"
+    "icons": "icons.json"
   },
+  "brandIcon": "bird",
   "image": "background.jpg",
   "pet": {
     "id": "yangyang-xuanling-official-drum-r3"

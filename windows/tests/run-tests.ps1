@@ -376,9 +376,11 @@ try {
   $initialTheme = Read-DreamSkinTheme -ThemeDirectory $themePaths.Active
   if ($initialTheme.Theme.id -cne 'yangyang-xuanling-azure-plume' -or
     $initialTheme.Theme.name -cne '秧秧·玄翎｜苍羽夜' -or
-    [int]$initialTheme.Theme.schemaVersion -ne 2 -or
+    [int]$initialTheme.Theme.schemaVersion -ne 3 -or
     -not (Test-Path -LiteralPath $initialTheme.CssPath) -or
     -not (Test-Path -LiteralPath $initialTheme.RendererPath) -or
+    -not (Test-Path -LiteralPath $initialTheme.IconsPath) -or
+    -not (Test-Path -LiteralPath (Join-Path $themePaths.Active 'install.json')) -or
     $initialTheme.Theme.appearance -cne 'dark' -or
     $initialTheme.Theme.art.safeArea -cne 'left' -or
     $initialTheme.Theme.art.taskMode -cne 'ambient' -or
@@ -485,7 +487,38 @@ try {
   if (-not $reparseInitRejected) { throw 'Theme-store initialization followed an active-theme junction.' }
   [System.IO.Directory]::Delete($reparseActive)
 
-  $css = Read-DreamSkinUtf8File -Path (Join-Path $bundledTheme 'theme.css')
+  $bundledThemeDirectories = @(Get-ChildItem -LiteralPath (Join-Path $Root 'themes') -Directory)
+  $sharedRendererPath = Join-Path $Root 'engine\theme-runtime.js'
+  $sharedCssPath = Join-Path $Root 'engine\theme-base.css'
+  $themeRenderer = Read-DreamSkinUtf8File -Path $sharedRendererPath
+  $defaultPackageCount = 0
+  foreach ($themeDirectory in $bundledThemeDirectories) {
+    $installPath = Join-Path $themeDirectory.FullName 'install.json'
+    $iconsPath = Join-Path $themeDirectory.FullName 'icons.json'
+    $themePath = Join-Path $themeDirectory.FullName 'theme.json'
+    if (-not (Test-Path -LiteralPath $installPath -PathType Leaf) -or
+      -not (Test-Path -LiteralPath $iconsPath -PathType Leaf)) {
+      throw "Bundled theme package is missing its manifest or icon configuration: $($themeDirectory.Name)"
+    }
+    $package = (Read-DreamSkinUtf8File -Path $installPath) | ConvertFrom-Json
+    $manifest = (Read-DreamSkinUtf8File -Path $themePath) | ConvertFrom-Json
+    $themeIcons = (Read-DreamSkinUtf8File -Path $iconsPath) | ConvertFrom-Json
+    if ($package.default) { $defaultPackageCount += 1 }
+    if ([int]$manifest.schemaVersion -ne 3 -or "$($manifest.entrypoints.icons)" -cne 'icons.json' -or
+      "$($manifest.framework.id)" -cne 'dream-skin' -or [int]$manifest.framework.version -ne 1 -or
+      $manifest.entrypoints.renderer -or @($package.files) -contains 'theme.js' -or
+      @($themeIcons.PSObject.Properties).Count -lt 1 -or
+      -not $themeRenderer.Contains('__DREAM_ICONS_JSON__') -or
+      $themeRenderer -match ':\s*(?:xuanSvg|remielSvg)\s*\(') {
+      throw "Bundled theme did not use the shared framework and external icon configuration: $($themeDirectory.Name)"
+    }
+  }
+  if ($defaultPackageCount -ne 1) { throw 'Bundled theme packages must declare exactly one default theme.' }
+  if (Test-Path -LiteralPath (Join-Path $Root 'pets')) {
+    throw 'Repository pet packages must live at the project root, not under windows/.'
+  }
+
+  $css = Read-DreamSkinUtf8File -Path $sharedCssPath
   foreach ($requiredCss in @(
     'background-image: var(--dream-art)',
     'main.main-surface > header.app-header-tint',
@@ -496,9 +529,11 @@ try {
     '.dream-home-utility',
     '.dream-home-utility-present .dream-home .composer-surface-chrome',
     '.dream-route-task:is(.dream-task-ambient, .dream-task-banner)',
-    '.composer-surface-chrome .dream-xuan-icon',
+    '.composer-surface-chrome .dream-theme-icon',
+    'body:has(nav[aria-label="设置"], nav[aria-label="Settings"])',
+    'div.main-surface',
     'position: fixed !important',
-    '.dream-permission-menu .dream-permission-item .dream-xuan-icon-bird',
+    '.dream-permission-menu .dream-permission-item .dream-theme-icon-brand',
     'html.codex-dream-skin.dream-window-dragging *',
     'animation-play-state: paused !important'
   )) {
@@ -540,7 +575,7 @@ try {
     throw 'Start does not preserve an existing pause marker when startup rolls back.'
   }
 
-  $rendererSource = Read-DreamSkinUtf8File -Path (Join-Path $bundledTheme 'theme.js')
+  $rendererSource = Read-DreamSkinUtf8File -Path $sharedRendererPath
   foreach ($requiredRendererBehavior in @('dream-home-utility', 'artMetadata', 'detectShellAppearance')) {
     if (-not $rendererSource.Contains($requiredRendererBehavior)) {
       throw "Renderer adaptive behavior is missing: $requiredRendererBehavior"
@@ -581,7 +616,7 @@ try {
     'scheduleSidebarEnsure', 'appliedProfileSignature', '}, 30000);',
     'permissionIconFor', 'permissionFull', 'permissionMenuChanged', 'permissionMenuListener', 'permissionButtons',
     'windowDragStart', 'windowDragEnd', 'dream-window-dragging',
-    'installXuanIcon(nativeIcons[nativeIcons.length - 1], "bird")'
+    'installThemeIcon(nativeIcons[nativeIcons.length - 1], brandIcon)'
   )) {
     if (-not $rendererSource.Contains($requiredPerformanceBehavior)) {
       throw "Renderer route-performance behavior is missing: $requiredPerformanceBehavior"
@@ -597,7 +632,11 @@ try {
     '主题宠物', 'selectPet', '已绑定', '热重载已开启',
     'installBundledTheme', '安装主题', 'dtm-preview', '<img src="${escapeHtml(preview)}"',
     'dtm-tabs', 'data-manager-tab="themes"', 'data-manager-tab="pets"',
-    'installedThemeIds', '!installedThemeIds.has(theme.id)', 'dtm-card-line', 'dtm-card-main'
+    'installedThemeIds', '!installedThemeIds.has(theme.id)', 'dtm-card-line', 'dtm-card-main',
+    'createLocalTheme', 'data-local-theme-open', 'data-local-theme-create', '仅本地',
+    'data-local-theme-image-file', 'data-local-icon-file', 'data-local-theme-icons-file',
+    'dtm-icon-form', 'dtm-icon-field', 'dtm-icon-preview', 'localJsonIcons',
+    'imageBase64', 'iconsJsonText', 'iconOverrides', '--dtm-surface'
   )) {
     if (-not $managerSource.Contains($requiredManagerBehavior)) {
       throw "Independent theme manager behavior is missing: $requiredManagerBehavior"
@@ -605,19 +644,43 @@ try {
   }
   $guardSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'scripts\guard-dream-skin.ps1')
   foreach ($requiredGuardBehavior in @(
-    'Get-DreamSkinCodexInstall', 'Test-RecordedInjectorHealthy', '-RestartExisting -PreservePause', 'guard.enabled'
+    'Get-DreamSkinCodexInstall', 'Test-RecordedInjectorHealthy', '-PreservePause',
+    'MaxConsecutiveFailures', 'guard.failed.json', 'Automatic restart is disabled', 'guard.enabled'
   )) {
     if (-not $guardSource.Contains($requiredGuardBehavior)) {
       throw "Update auto-heal behavior is missing: $requiredGuardBehavior"
     }
   }
-  if (-not $css.Contains('dream-xuanniao-orbit') -or
+  if ($guardSource.Contains('-RestartExisting')) {
+    throw 'The auto-heal guard must never authorize restarting an open Codex process.'
+  }
+  $injectorSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'scripts\injector.mjs')
+  foreach ($requiredRuntimeBehavior in @(
+    'RUNTIME_PROTOCOL_VERSION', '__CODEX_DREAM_SKIN_RUNTIME__',
+    'result.protocolVersion === result.expectedProtocolVersion'
+  )) {
+    if (-not $injectorSource.Contains($requiredRuntimeBehavior)) {
+      throw "Framework-owned runtime verification is missing: $requiredRuntimeBehavior"
+    }
+  }
+  if ($injectorSource.Contains('result.version === result.expectedVersion')) {
+    throw 'Runtime verification must not couple a theme renderer version to the injector version.'
+  }
+  if (-not $css.Contains('dream-theme-orbit') -or
     -not $css.Contains('top: -1px') -or
+    -not $css.Contains('.dream-theme-spinner-source:not(.dream-theme-spinner)') -or
+    -not $css.Contains('.dream-theme-spinner-source.dream-theme-spinner > :not(.dream-theme-spinner-mark)') -or
     -not $rendererSource.Contains('document.querySelectorAll(SPINNER_SELECTOR)') -or
     -not $rendererSource.Contains('aside.app-shell-left-panel svg')) {
-    throw 'The global Xuanniao orbit spinner is missing or still scoped to the sidebar.'
+    throw 'The shared global theme orbit spinner is missing or still scoped to the sidebar.'
   }
-  $bundledPet = Join-Path $Root 'pets\yangyang-xuanling-official-drum-r3'
+  $remielCss = Read-DreamSkinUtf8File -Path (Join-Path $Root 'themes\绝区零 蕾米埃尔\theme.css')
+  if (-not $remielCss.Contains('--dream-brand-suffix: " · 蕾米埃尔"') -or
+    $remielCss.Contains('.dream-remiel-spinner') -or
+    $remielCss.Contains('body:has(nav[aria-label="设置"], nav[aria-label="Settings"])')) {
+    throw 'The Remiel package must contain only its palette/brand overrides, not copied framework behavior.'
+  }
+  $bundledPet = Join-Path (Split-Path -Parent $Root) 'pets\yangyang-xuanling-official-drum-r3'
   $bundledPetManifestPath = Join-Path $bundledPet 'pet.json'
   if (-not (Test-Path -LiteralPath $bundledPetManifestPath -PathType Leaf)) {
     throw 'The Xuanling package no longer carries its selected v2 pet package in the independent pets folder.'
@@ -641,6 +704,12 @@ try {
     "Join-Path `$stateRoot 'runtime'",
     'Stop-PreviousThemeHelpers',
     "Join-Path `$sourceWindows '*'",
+    'Remove-Item -LiteralPath $fullRuntimeWindows -Recurse -Force',
+    "Join-Path `$packageRoot 'pets'",
+    "Join-Path `$runtimeRoot 'pets'",
+    'Remove-Item -LiteralPath $fullRuntimePets -Recurse -Force',
+    "Join-Path `$runtimeWindows 'pets'",
+    'Remove-Item -LiteralPath $fullLegacyPets -Recurse -Force',
     "'Codex 主题.lnk'",
     '现在重启并继续安装',
     '& $installer -Port $Port -ManagerOnly',
@@ -692,6 +761,8 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'Injector one-shot Browser ID regression test failed.' }
   & $node.Path (Join-Path $PSScriptRoot 'image-metadata.test.mjs')
   if ($LASTEXITCODE -ne 0) { throw 'Image metadata regression test failed.' }
+  & $node.Path (Join-Path $PSScriptRoot 'local-theme.test.mjs')
+  if ($LASTEXITCODE -ne 0) { throw 'Local-only theme regression test failed.' }
 
   Write-Host 'PASS: config transactions, theme manager, update auto-heal, state safety, and loopback CDP validation.'
 } finally {

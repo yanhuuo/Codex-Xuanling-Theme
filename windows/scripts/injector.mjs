@@ -11,11 +11,13 @@ import { readImageMetadata } from "./image-metadata.mjs";
 const scriptPath = fileURLToPath(import.meta.url);
 const here = path.dirname(scriptPath);
 const root = path.resolve(here, "..");
-const DEFAULT_THEME_DIR = path.join(root, "themes", "鸣潮 秧秧·玄翎");
+const DEFAULT_THEME_DIR = path.join(root, "themes");
 const SKIN_VERSION = "1.4.0";
+const RUNTIME_PROTOCOL_VERSION = 1;
 const MAX_ART_BYTES = 16 * 1024 * 1024;
 const MAX_THEME_CSS_BYTES = 512 * 1024;
 const MAX_THEME_SCRIPT_BYTES = 768 * 1024;
+const MAX_THEME_ICONS_BYTES = 256 * 1024;
 const MAX_LIBRARY_INDEX_BYTES = 1024 * 1024;
 const MAX_PET_MANIFEST_BYTES = 128 * 1024;
 const MAX_PET_SPRITESHEET_BYTES = 20 * 1024 * 1024;
@@ -319,6 +321,99 @@ function normalizedText(value, name, fallback, maxLength = 120) {
   return value;
 }
 
+function normalizeThemeIcons(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Theme icons must be an object");
+  const icons = {};
+  for (const [name, svg] of Object.entries(raw)) {
+    if (!/^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(name) || typeof svg !== "string" ||
+        svg.length > 16384 || !/^<svg\b[\s\S]*<\/svg>$/i.test(svg.trim()) ||
+        /<script\b|on[a-z]+\s*=|javascript:/i.test(svg)) {
+      throw new Error(`Theme icon is invalid: ${name}`);
+    }
+    icons[name] = svg;
+  }
+  if (Object.keys(icons).length > 128) throw new Error("Theme icons exceed the 128 item limit");
+  return icons;
+}
+
+function decodeBoundedBase64(value, name, maxBytes) {
+  if (typeof value !== "string" || !value || value.length > Math.ceil(maxBytes * 4 / 3) + 8 ||
+      !/^[A-Za-z0-9+/]+={0,2}$/.test(value)) {
+    throw new Error(`${name}不是有效的文件内容`);
+  }
+  const bytes = Buffer.from(value, "base64");
+  if (bytes.length < 1 || bytes.length > maxBytes ||
+      bytes.toString("base64").replace(/=+$/, "") !== value.replace(/=+$/, "")) {
+    throw new Error(`${name}为空、过大或编码无效`);
+  }
+  return bytes;
+}
+
+async function resolveThemePackageDirectory(themeDir) {
+  const requested = await fs.realpath(themeDir);
+  try {
+    const themeStat = await fs.stat(path.join(requested, "theme.json"));
+    if (themeStat.isFile()) return requested;
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  const candidates = [];
+  for (const entry of await fs.readdir(requested, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const directory = path.join(requested, entry.name);
+    try {
+      const installText = await fs.readFile(path.join(directory, "install.json"), "utf8");
+      const install = JSON.parse(installText);
+      if (Number(install?.schemaVersion) === 1 && install?.manifest === "theme.json") {
+        candidates.push({ directory, isDefault: install.default === true });
+      }
+    } catch {
+      // A theme collection may contain unrelated folders.
+    }
+  }
+  const selected = candidates.find((candidate) => candidate.isDefault) ?? candidates[0];
+  if (!selected) throw new Error(`No installable theme package was found in ${requested}`);
+  return fs.realpath(selected.directory);
+}
+
+async function loadThemeInstallManifest(realThemeDir) {
+  const installPath = path.join(realThemeDir, "install.json");
+  let installText;
+  try {
+    installText = await fs.readFile(installPath, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+  if (Buffer.byteLength(installText, "utf8") > 64 * 1024) throw new Error("install.json is too large");
+  const raw = JSON.parse(installText);
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) ||
+      Number(raw.schemaVersion) !== 1 || raw.manifest !== "theme.json" || !Array.isArray(raw.files)) {
+    throw new Error("install.json must be a schemaVersion 1 theme package manifest");
+  }
+  const files = [];
+  for (const item of raw.files) {
+    if (typeof item !== "string" || !item || path.isAbsolute(item)) throw new Error("install.json files must be relative paths");
+    const candidate = path.resolve(realThemeDir, item);
+    if (!isPathInside(candidate, realThemeDir)) throw new Error("install.json file escaped the theme package");
+    const realCandidate = await fs.realpath(candidate);
+    if (!isPathInside(realCandidate, realThemeDir) || !(await fs.stat(realCandidate)).isFile()) {
+      throw new Error("install.json files must be regular files inside the theme package");
+    }
+    files.push(item.replaceAll("\\", "/"));
+  }
+  if (!files.includes("theme.json")) throw new Error("install.json must include theme.json");
+  return {
+    schemaVersion: 1,
+    default: raw.default === true,
+    manifest: "theme.json",
+    files: [...new Set(files)],
+    pets: Array.isArray(raw.pets) ? raw.pets.filter((id) => typeof id === "string" && PET_ID_PATTERN.test(id)) : [],
+    path: installPath,
+    text: installText,
+  };
+}
+
 function normalizePetManifest(raw, expectedId = null) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("宠物 pet.json 必须是对象");
   const id = String(raw.id || "").trim();
@@ -419,7 +514,8 @@ async function loadThemePetBundle(realThemeDir, rawPet) {
 }
 
 async function loadTheme(themeDir) {
-  const realThemeDir = await fs.realpath(themeDir);
+  const realThemeDir = await resolveThemePackageDirectory(themeDir);
+  const install = await loadThemeInstallManifest(realThemeDir);
   const themePath = path.join(realThemeDir, "theme.json");
   const themeText = await fs.readFile(themePath, "utf8");
   const raw = JSON.parse(themeText);
@@ -444,8 +540,15 @@ async function loadTheme(themeDir) {
   }
   const entrypoints = raw.entrypoints && typeof raw.entrypoints === "object" && !Array.isArray(raw.entrypoints)
     ? raw.entrypoints : {};
+  const framework = raw.framework && typeof raw.framework === "object" && !Array.isArray(raw.framework)
+    ? raw.framework : null;
+  const usesSharedFramework = framework?.id === "dream-skin" && Number(framework?.version) === 1;
+  if (raw.framework !== undefined && !usesSharedFramework) {
+    throw new Error("Theme framework must be dream-skin version 1");
+  }
   const cssEntry = normalizedText(entrypoints.css, "entrypoints.css", "", 240);
   const rendererEntry = normalizedText(entrypoints.renderer, "entrypoints.renderer", "", 240);
+  const iconsEntry = normalizedText(entrypoints.icons, "entrypoints.icons", "", 240);
   const loadThemeCode = async (relativeEntry, fallbackPath, field, expectedExtension, maximumBytes) => {
     const candidate = relativeEntry ? path.resolve(realThemeDir, relativeEntry) : fallbackPath;
     if (relativeEntry) {
@@ -469,11 +572,35 @@ async function loadTheme(themeDir) {
     if (bytes.length < 1 || bytes.length > maximumBytes) throw new Error(`${field} is empty or too large`);
     return { path: realCandidate, text: bytes.toString("utf8"), bytes };
   };
-  const [cssBundle, rendererBundle] = await Promise.all([
-    loadThemeCode(cssEntry, path.join(DEFAULT_THEME_DIR, "theme.css"), "entrypoints.css", ".css", MAX_THEME_CSS_BYTES),
-    loadThemeCode(rendererEntry, path.join(DEFAULT_THEME_DIR, "theme.js"), "entrypoints.renderer", ".js", MAX_THEME_SCRIPT_BYTES),
-  ]);
-  for (const placeholder of ["__DREAM_CSS_JSON__", "__DREAM_ART_JSON__", "__DREAM_THEME_JSON__"]) {
+  let cssBundle;
+  let rendererBundle;
+  if (usesSharedFramework) {
+    const [frameworkCss, themeCss, frameworkRenderer] = await Promise.all([
+      loadThemeCode("", path.join(root, "engine", "theme-base.css"), "framework.css", ".css", MAX_THEME_CSS_BYTES),
+      loadThemeCode(cssEntry, path.join(realThemeDir, "theme.css"), "entrypoints.css", ".css", MAX_THEME_CSS_BYTES),
+      loadThemeCode("", path.join(root, "engine", "theme-runtime.js"), "framework.renderer", ".js", MAX_THEME_SCRIPT_BYTES),
+    ]);
+    const combinedCssText = `${frameworkCss.text.trimEnd()}\n\n${themeCss.text.trim()}\n`;
+    const combinedCssBytes = Buffer.from(combinedCssText, "utf8");
+    if (combinedCssBytes.length > MAX_THEME_CSS_BYTES) throw new Error("Combined framework and theme CSS is too large");
+    cssBundle = { path: themeCss.path, text: combinedCssText, bytes: combinedCssBytes };
+    rendererBundle = frameworkRenderer;
+  } else {
+    [cssBundle, rendererBundle] = await Promise.all([
+      loadThemeCode(cssEntry, path.join(realThemeDir, "theme.css"), "entrypoints.css", ".css", MAX_THEME_CSS_BYTES),
+      loadThemeCode(rendererEntry, path.join(realThemeDir, "theme.js"), "entrypoints.renderer", ".js", MAX_THEME_SCRIPT_BYTES),
+    ]);
+  }
+  const iconsBundle = iconsEntry
+    ? await loadThemeCode(iconsEntry, null, "entrypoints.icons", ".json", MAX_THEME_ICONS_BYTES)
+    : null;
+  const icons = iconsBundle ? normalizeThemeIcons(JSON.parse(iconsBundle.text)) : {};
+  const brandIcon = normalizedText(raw.brandIcon, "brandIcon", "", 40);
+  if (brandIcon && !/^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(brandIcon)) throw new Error("brandIcon is invalid");
+  if (brandIcon && iconsBundle && !icons[brandIcon]) throw new Error(`brandIcon is missing from icons.json: ${brandIcon}`);
+  const requiredPlaceholders = ["__DREAM_CSS_JSON__", "__DREAM_ART_JSON__", "__DREAM_THEME_JSON__"];
+  if (iconsBundle || Number(raw.schemaVersion) >= 3) requiredPlaceholders.push("__DREAM_ICONS_JSON__");
+  for (const placeholder of requiredPlaceholders) {
     if (!rendererBundle.text.includes(placeholder)) throw new Error(`Theme renderer is missing required placeholder: ${placeholder}`);
   }
   const art = raw.art && typeof raw.art === "object" && !Array.isArray(raw.art) ? raw.art : {};
@@ -481,13 +608,16 @@ async function loadTheme(themeDir) {
     ? raw.palette : {};
   const { petBundle, normalizedPet } = await loadThemePetBundle(realThemeDir, raw.pet);
   const theme = {
-    schemaVersion: Number(raw.schemaVersion) === 2 ? 2 : 1,
+    schemaVersion: Number(raw.schemaVersion) >= 3 ? 3 : Number(raw.schemaVersion) === 2 ? 2 : 1,
     id: normalizedText(raw.id, "id", "custom", 80),
     name: normalizedText(raw.name, "name", "Codex Dream Skin", 120),
     description: normalizedText(raw.description, "description", "", 240),
     author: normalizedText(raw.author, "author", "", 120),
     version: normalizedText(raw.version, "version", "1.0.0", 40),
-    entrypoints: { css: "theme.css", renderer: "theme.js" },
+    localOnly: raw.localOnly === true,
+    ...(usesSharedFramework ? { framework: { id: "dream-skin", version: 1 } } : {}),
+    entrypoints: { css: "theme.css", renderer: "theme.js", ...(iconsBundle ? { icons: "icons.json" } : {}) },
+    brandIcon,
     brandSubtitle: normalizedText(raw.brandSubtitle, "brandSubtitle", "", 100),
     tagline: normalizedText(raw.tagline, "tagline", "", 120),
     statusText: normalizedText(raw.statusText, "statusText", "", 80),
@@ -509,8 +639,9 @@ async function loadTheme(themeDir) {
     }
     theme.palette.accent = accent;
   }
-  const [themeStat, imageStat, cssStat, rendererStat] = await Promise.all([
+  const [themeStat, imageStat, cssStat, rendererStat, iconsStat] = await Promise.all([
     fs.stat(themePath), fs.stat(realImagePath), fs.stat(cssBundle.path), fs.stat(rendererBundle.path),
+    iconsBundle ? fs.stat(iconsBundle.path) : null,
   ]);
   if (!imageStat.isFile()) throw new Error("Theme image is not a file");
   if (imageStat.size < 1) throw new Error("Theme image cannot be empty");
@@ -534,6 +665,8 @@ async function loadTheme(themeDir) {
     .update(cssBundle.bytes)
     .update("\0")
     .update(rendererBundle.bytes);
+  if (iconsBundle) fingerprintBuilder.update("\0icons\0").update(iconsBundle.bytes);
+  if (install) fingerprintBuilder.update("\0install\0").update(install.text, "utf8");
   if (petBundle) fingerprintBuilder.update("\0pet\0").update(petBundle.manifestBytes).update("\0").update(petBundle.spritesheetBytes);
   const fingerprint = fingerprintBuilder.digest("hex");
   let petStamp = "";
@@ -552,9 +685,13 @@ async function loadTheme(themeDir) {
     cssText: cssBundle.text,
     rendererPath: rendererBundle.path,
     rendererText: rendererBundle.text,
+    iconsPath: iconsBundle?.path ?? null,
+    iconsText: iconsBundle?.text ?? null,
+    icons,
+    install,
     petBundle,
     fingerprint,
-    sourceStamp: `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:${cssStat.size}:${cssStat.mtimeMs}:${rendererStat.size}:${rendererStat.mtimeMs}${petStamp}`,
+    sourceStamp: `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:${cssStat.size}:${cssStat.mtimeMs}:${rendererStat.size}:${rendererStat.mtimeMs}:${iconsStat?.size ?? 0}:${iconsStat?.mtimeMs ?? 0}${petStamp}`,
   };
 }
 
@@ -566,10 +703,18 @@ async function loadPayload(themeDir = DEFAULT_THEME_DIR, candidateTheme = null) 
   const mime = extension === ".jpg" || extension === ".jpeg" ? "image/jpeg"
     : extension === ".webp" ? "image/webp" : "image/png";
   const artDataUrl = `data:${mime};base64,${loadedTheme.imageBytes.toString("base64")}`;
-  const payload = template
+  const themePayload = template
     .replace("__DREAM_CSS_JSON__", JSON.stringify(css))
     .replace("__DREAM_ART_JSON__", JSON.stringify(artDataUrl))
-    .replace("__DREAM_THEME_JSON__", JSON.stringify(loadedTheme.theme));
+    .replace("__DREAM_THEME_JSON__", JSON.stringify(loadedTheme.theme))
+    .replace("__DREAM_ICONS_JSON__", JSON.stringify(loadedTheme.icons ?? {}));
+  const payload = `${themePayload}
+;window.__CODEX_DREAM_SKIN_RUNTIME__ = Object.freeze({
+  protocolVersion: ${JSON.stringify(RUNTIME_PROTOCOL_VERSION)},
+  injectorVersion: ${JSON.stringify(SKIN_VERSION)},
+  themeId: ${JSON.stringify(loadedTheme.theme.id)},
+  themeVersion: ${JSON.stringify(loadedTheme.theme.version)}
+});`;
   const { imageBytes: _imageBytes, ...themeState } = loadedTheme;
   return { ...themeState, payload };
 }
@@ -589,11 +734,15 @@ function safeThemeId(value, fallback = "theme") {
 }
 
 function themeForDisk(loaded, imageName) {
-  const { artMetadata: _metadata, ...theme } = loaded.theme;
+  const { artMetadata: _metadata, framework: _framework, ...theme } = loaded.theme;
   const diskTheme = {
     ...theme,
-    schemaVersion: 2,
-    entrypoints: { css: "theme.css", renderer: "theme.js" },
+    schemaVersion: loaded.iconsText ? 3 : 2,
+    entrypoints: {
+      css: "theme.css",
+      renderer: "theme.js",
+      ...(loaded.iconsText ? { icons: "icons.json" } : {}),
+    },
     image: imageName,
   };
   if (loaded.petBundle) diskTheme.pet = { id: loaded.petBundle.id };
@@ -630,6 +779,7 @@ async function writeThemeDirectory(destination, loaded) {
   const imagePath = path.join(resolvedDestination, imageName);
   const cssPath = path.join(resolvedDestination, "theme.css");
   const rendererPath = path.join(resolvedDestination, "theme.js");
+  const iconsPath = path.join(resolvedDestination, "icons.json");
   const imageTemp = path.join(resolvedDestination, `.dream-image-${Date.now()}-${Math.random().toString(16).slice(2)}.tmp`);
   const jsonTemp = path.join(resolvedDestination, `.dream-theme-${Date.now()}-${Math.random().toString(16).slice(2)}.tmp`);
   try {
@@ -637,10 +787,20 @@ async function writeThemeDirectory(destination, loaded) {
     await fs.copyFile(imageTemp, imagePath);
     await fs.writeFile(cssPath, loaded.cssText, "utf8");
     await fs.writeFile(rendererPath, loaded.rendererText, "utf8");
+    if (loaded.iconsText) await fs.writeFile(iconsPath, loaded.iconsText, "utf8");
+    else await fs.rm(iconsPath, { force: true });
     await fs.rm(path.join(resolvedDestination, "pets"), { recursive: true, force: true });
     await writePetBundleToStore(stateRootFromThemeDestination(resolvedDestination), loaded.petBundle);
     await fs.writeFile(jsonTemp, `${JSON.stringify(themeForDisk(loaded, imageName), null, 2)}\n`, { flag: "wx" });
     await fs.copyFile(jsonTemp, path.join(resolvedDestination, "theme.json"));
+    const packageFiles = ["theme.json", "theme.css", "theme.js", ...(loaded.iconsText ? ["icons.json"] : []), imageName];
+    await fs.writeFile(path.join(resolvedDestination, "install.json"), `${JSON.stringify({
+      schemaVersion: 1,
+      default: false,
+      manifest: "theme.json",
+      files: packageFiles,
+      pets: loaded.petBundle ? [loaded.petBundle.id] : [],
+    }, null, 2)}\n`, "utf8");
   } finally {
     await fs.rm(imageTemp, { force: true }).catch(() => {});
     await fs.rm(jsonTemp, { force: true }).catch(() => {});
@@ -816,7 +976,11 @@ async function listInstalledThemes(options) {
         description: loaded.theme.description,
         author: loaded.theme.author,
         version: loaded.theme.version,
+        localOnly: loaded.theme.localOnly === true,
+        localPath: loaded.theme.localOnly === true ? directory : null,
         appearance: loaded.theme.appearance,
+        brandIcon: loaded.theme.brandIcon,
+        icons: loaded.icons,
         accent: loaded.theme.palette?.accent ?? "#6edaf2",
         preview: await previewDataUrl(loaded),
       });
@@ -841,6 +1005,8 @@ async function listBundledThemes() {
         description: loaded.theme.description,
         author: loaded.theme.author,
         version: loaded.theme.version,
+        brandIcon: loaded.theme.brandIcon,
+        icons: loaded.icons,
         accent: loaded.theme.palette?.accent ?? "#6edaf2",
         preview: await previewDataUrl(loaded),
       });
@@ -980,6 +1146,12 @@ async function fetchRemoteTheme(themeUrl) {
   const palette = rawTheme.palette && typeof rawTheme.palette === "object" && !Array.isArray(rawTheme.palette) ? rawTheme.palette : {};
   const entrypoints = rawTheme.entrypoints && typeof rawTheme.entrypoints === "object" && !Array.isArray(rawTheme.entrypoints)
     ? rawTheme.entrypoints : {};
+  const remoteFramework = rawTheme.framework && typeof rawTheme.framework === "object" && !Array.isArray(rawTheme.framework)
+    ? rawTheme.framework : null;
+  const usesSharedFramework = remoteFramework?.id === "dream-skin" && Number(remoteFramework?.version) === 1;
+  if (rawTheme.framework !== undefined && !usesSharedFramework) {
+    throw new Error("远程主题 framework 必须是 dream-skin version 1");
+  }
   const fetchThemeCode = async (entry, field, extensionName, maximumBytes) => {
     if (typeof entry !== "string" || !entry.trim() || path.isAbsolute(entry)) {
       throw new Error(`远程主题 ${field} 必须是相对路径`);
@@ -996,12 +1168,32 @@ async function fetchRemoteTheme(themeUrl) {
     }
     return code;
   };
-  const [cssText, rendererText] = await Promise.all([
+  const iconsEntry = typeof entrypoints.icons === "string" ? entrypoints.icons : "";
+  const [themeCssText, remoteRendererText, iconsText] = await Promise.all([
     fetchThemeCode(entrypoints.css, "entrypoints.css", ".css", MAX_THEME_CSS_BYTES),
-    fetchThemeCode(entrypoints.renderer, "entrypoints.renderer", ".js", MAX_THEME_SCRIPT_BYTES),
+    usesSharedFramework ? null : fetchThemeCode(entrypoints.renderer, "entrypoints.renderer", ".js", MAX_THEME_SCRIPT_BYTES),
+    iconsEntry ? fetchThemeCode(iconsEntry, "entrypoints.icons", ".json", MAX_THEME_ICONS_BYTES) : null,
   ]);
-  for (const placeholder of ["__DREAM_CSS_JSON__", "__DREAM_ART_JSON__", "__DREAM_THEME_JSON__"]) {
+  let cssText = themeCssText;
+  let rendererText = remoteRendererText;
+  if (usesSharedFramework) {
+    const [frameworkCssText, frameworkRendererText] = await Promise.all([
+      fs.readFile(path.join(root, "engine", "theme-base.css"), "utf8"),
+      fs.readFile(path.join(root, "engine", "theme-runtime.js"), "utf8"),
+    ]);
+    cssText = `${frameworkCssText.trimEnd()}\n\n${themeCssText.trim()}\n`;
+    rendererText = frameworkRendererText;
+    if (Buffer.byteLength(cssText, "utf8") > MAX_THEME_CSS_BYTES) throw new Error("远程主题与公共框架合并后的 CSS 过大");
+  }
+  const requiredPlaceholders = ["__DREAM_CSS_JSON__", "__DREAM_ART_JSON__", "__DREAM_THEME_JSON__"];
+  if (iconsText || Number(rawTheme.schemaVersion) >= 3) requiredPlaceholders.push("__DREAM_ICONS_JSON__");
+  for (const placeholder of requiredPlaceholders) {
     if (!rendererText.includes(placeholder)) throw new Error(`远程主题脚本缺少占位符：${placeholder}`);
+  }
+  const icons = iconsText ? normalizeThemeIcons(JSON.parse(iconsText)) : {};
+  const brandIcon = normalizedText(rawTheme.brandIcon, "brandIcon", "", 40);
+  if (brandIcon && (!/^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(brandIcon) || (iconsText && !icons[brandIcon]))) {
+    throw new Error("远程主题 brandIcon 无效或不在 icons.json 中");
   }
   let petBundle = null;
   let normalizedPet = null;
@@ -1009,7 +1201,7 @@ async function fetchRemoteTheme(themeUrl) {
     if (typeof rawTheme.pet !== "object" || Array.isArray(rawTheme.pet)) throw new Error("远程主题 pet 必须是对象");
     const petId = normalizedText(rawTheme.pet.id, "pet.id", "", 80);
     if (!PET_ID_PATTERN.test(petId)) throw new Error("远程主题 pet.id 无效");
-    const petDirectory = normalizedText(rawTheme.pet.directory, "pet.directory", `../../pets/${petId}`, 240);
+    const petDirectory = normalizedText(rawTheme.pet.directory, "pet.directory", `../../../pets/${petId}`, 240);
     if (!petDirectory || path.isAbsolute(petDirectory)) throw new Error("远程主题 pet.directory 必须是相对路径");
     const manifestUrl = new URL(`${petDirectory.replace(/\/$/, "")}/pet.json`, url);
     if (manifestUrl.protocol !== "https:") throw new Error("远程宠物只允许 HTTPS 地址");
@@ -1030,13 +1222,14 @@ async function fetchRemoteTheme(themeUrl) {
     normalizedPet = { id: petId };
   }
   const theme = {
-    schemaVersion: 2,
+    schemaVersion: iconsText ? 3 : 2,
     id: normalizedText(rawTheme.id, "id", "remote-theme", 80),
     name: normalizedText(rawTheme.name, "name", "远程主题", 120),
     description: normalizedText(rawTheme.description, "description", "", 240),
     author: normalizedText(rawTheme.author, "author", "", 120),
     version: normalizedText(rawTheme.version, "version", "1.0.0", 40),
-    entrypoints: { css: "theme.css", renderer: "theme.js" },
+    brandIcon,
+    entrypoints: { css: "theme.css", renderer: "theme.js", ...(iconsText ? { icons: "icons.json" } : {}) },
     brandSubtitle: normalizedText(rawTheme.brandSubtitle, "brandSubtitle", "", 100),
     tagline: normalizedText(rawTheme.tagline, "tagline", "", 120),
     statusText: normalizedText(rawTheme.statusText, "statusText", "", 80),
@@ -1062,8 +1255,104 @@ async function fetchRemoteTheme(themeUrl) {
   return {
     theme, imageBytes: bytes, imagePath: `remote${extension}`, petBundle,
     cssPath: "remote.css", cssText, rendererPath: "remote.js", rendererText,
+    iconsPath: iconsText ? "remote-icons.json" : null, iconsText, icons,
     themePath: "remote", sourceStamp: "remote", fingerprint: "remote",
   };
+}
+
+export async function createLocalThemePackage({
+  bundledRoot = path.join(root, "themes"),
+  savedRoot,
+  name: requestedName,
+  baseKey: requestedBaseKey,
+  imagePath: requestedImagePathValue,
+  imageName: requestedImageNameValue = "",
+  imageBase64: requestedImageBase64Value = "",
+  iconsPath: requestedIconsPathValue = "",
+  iconsJsonText: requestedIconsJsonTextValue = "",
+  iconOverrides: requestedIconOverridesValue = null,
+}) {
+  const name = normalizedText(requestedName, "本地主题名称", "", 80).trim();
+  if (!name) throw new Error("请输入本地主题名称");
+  const baseKey = normalizedText(requestedBaseKey, "基础主题标识", "", 120);
+  if (!baseKey || /[\\/:*?"<>]|\.\./.test(baseKey)) throw new Error("请选择有效的基础主题");
+  const realBundledRoot = await fs.realpath(bundledRoot);
+  const baseDirectory = await fs.realpath(path.resolve(realBundledRoot, baseKey));
+  if (!isPathInside(baseDirectory, realBundledRoot)) throw new Error("基础主题路径越界");
+  const base = await loadTheme(baseDirectory);
+
+  const uploadedImageBase64 = typeof requestedImageBase64Value === "string" ? requestedImageBase64Value.trim() : "";
+  let imagePath;
+  let imageBytes;
+  let imageSource;
+  if (uploadedImageBase64) {
+    const imageName = normalizedText(requestedImageNameValue, "背景图片名称", "background.png", 180);
+    const imageExtension = path.extname(imageName).toLowerCase();
+    if (![".png", ".jpg", ".jpeg", ".webp"].includes(imageExtension)) throw new Error("背景图片格式必须是 PNG、JPG 或 WebP");
+    imageBytes = decodeBoundedBase64(uploadedImageBase64, "背景图片", MAX_ART_BYTES);
+    imagePath = `uploaded${imageExtension}`;
+    imageSource = `upload:${imageName}:${createHash("sha256").update(imageBytes).digest("hex")}`;
+  } else {
+    const requestedImagePath = normalizedText(requestedImagePathValue, "背景图片路径", "", 1024).trim();
+    if (!requestedImagePath || !path.isAbsolute(requestedImagePath)) throw new Error("请选择一张本机背景图片");
+    imagePath = await fs.realpath(requestedImagePath);
+    imageBytes = await fs.readFile(imagePath);
+    imageSource = imagePath;
+  }
+  const imageExtension = path.extname(imagePath).toLowerCase();
+  if (![".png", ".jpg", ".jpeg", ".webp"].includes(imageExtension)) throw new Error("背景图片格式必须是 PNG、JPG 或 WebP");
+  if (imageBytes.length < 1 || imageBytes.length > MAX_ART_BYTES ||
+      !readImageMetadata(imageBytes, imageExtension)) {
+    throw new Error("背景图片为空、过大或尺寸无效");
+  }
+
+  let icons = base.icons ?? {};
+  const requestedIconsPath = normalizedText(requestedIconsPathValue, "图标 JSON 路径", "", 1024).trim();
+  let iconsPath = base.iconsPath;
+  const iconsJsonText = typeof requestedIconsJsonTextValue === "string" ? requestedIconsJsonTextValue.trim() : "";
+  if (iconsJsonText) {
+    if (Buffer.byteLength(iconsJsonText, "utf8") > MAX_THEME_ICONS_BYTES) throw new Error("图标 JSON 为空或过大");
+    const rawIcons = JSON.parse(iconsJsonText);
+    icons = { ...icons, ...normalizeThemeIcons(rawIcons?.icons ?? rawIcons) };
+    iconsPath = "uploaded-icons.json";
+  } else if (requestedIconsPath) {
+    if (!path.isAbsolute(requestedIconsPath) || path.extname(requestedIconsPath).toLowerCase() !== ".json") {
+      throw new Error("图标文件必须是本机绝对路径的 JSON 文件");
+    }
+    iconsPath = await fs.realpath(requestedIconsPath);
+    const iconsBytes = await fs.readFile(iconsPath);
+    if (iconsBytes.length < 1 || iconsBytes.length > MAX_THEME_ICONS_BYTES) throw new Error("图标 JSON 为空或过大");
+    icons = { ...icons, ...normalizeThemeIcons(JSON.parse(iconsBytes.toString("utf8"))) };
+  }
+  if (requestedIconOverridesValue && typeof requestedIconOverridesValue === "object" &&
+      !Array.isArray(requestedIconOverridesValue) && Object.keys(requestedIconOverridesValue).length) {
+    icons = { ...icons, ...normalizeThemeIcons(requestedIconOverridesValue) };
+    iconsPath = "custom-icons.json";
+  }
+  const iconsText = Object.keys(icons).length ? `${JSON.stringify(icons, null, 2)}\n` : null;
+  const idSeed = `${name}\0${imageSource}\0${Date.now()}\0${Math.random()}`;
+  const localId = `local-${safeThemeId(name, "theme")}-${createHash("sha256").update(idSeed).digest("hex").slice(0, 10)}`;
+  const localTheme = {
+    ...base,
+    theme: {
+      ...base.theme,
+      id: localId,
+      name,
+      description: "仅保存在本机的自定义背景与图标主题。",
+      author: "本地用户",
+      version: "1.0.0",
+      localOnly: true,
+    },
+    imagePath,
+    imageBytes,
+    iconsPath: iconsText ? iconsPath : null,
+    iconsText,
+    icons,
+  };
+  await fs.mkdir(savedRoot, { recursive: true });
+  const destination = path.join(savedRoot, localId);
+  await writeThemeDirectory(destination, localTheme);
+  return { id: localId, directory: destination };
 }
 
 async function handleThemeControl(options, request) {
@@ -1101,14 +1390,28 @@ async function handleThemeControl(options, request) {
     return themeControlState(options);
   }
   if (request.command === "installBundledTheme") {
-    const key = safeThemeId(payload.key, "");
-    if (!key || key !== String(payload.key)) throw new Error("无效的内置主题标识");
+    const key = normalizedText(payload.key, "内置主题标识", "", 120);
+    if (!key || /[\\/:*?"<>]|\.\./.test(key)) throw new Error("无效的内置主题标识");
     const bundledRoot = await fs.realpath(path.join(root, "themes"));
     const directory = await fs.realpath(path.resolve(bundledRoot, key));
     if (!isPathInside(directory, bundledRoot)) throw new Error("内置主题路径越界");
     const loaded = await loadTheme(directory);
     await fs.mkdir(savedRoot, { recursive: true });
     await writeThemeDirectory(path.join(savedRoot, `bundled-${safeThemeId(loaded.theme.id)}`), loaded);
+    return themeControlState(options);
+  }
+  if (request.command === "createLocalTheme") {
+    await createLocalThemePackage({
+      savedRoot,
+      name: payload.name,
+      baseKey: payload.baseKey,
+      imagePath: payload.imagePath,
+      imageName: payload.imageName,
+      imageBase64: payload.imageBase64,
+      iconsPath: payload.iconsPath,
+      iconsJsonText: payload.iconsJsonText,
+      iconOverrides: payload.iconOverrides,
+    });
     return themeControlState(options);
   }
   if (request.command === "selectPet" || request.command === "associatePet") {
@@ -1265,11 +1568,12 @@ async function fileExists(filePath) {
 }
 
 async function readThemeSourceStamp(loadedTheme) {
-  const [themeStat, imageStat, cssStat, rendererStat] = await Promise.all([
+  const [themeStat, imageStat, cssStat, rendererStat, iconsStat] = await Promise.all([
     fs.stat(loadedTheme.themePath),
     fs.stat(loadedTheme.imagePath),
     fs.stat(loadedTheme.cssPath),
     fs.stat(loadedTheme.rendererPath),
+    loadedTheme.iconsPath ? fs.stat(loadedTheme.iconsPath) : null,
   ]);
   let petStamp = "";
   if (loadedTheme.petBundle) {
@@ -1278,7 +1582,7 @@ async function readThemeSourceStamp(loadedTheme) {
     ]);
     petStamp = `:${manifestStat.size}:${manifestStat.mtimeMs}:${spritesheetStat.size}:${spritesheetStat.mtimeMs}`;
   }
-  return `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:${cssStat.size}:${cssStat.mtimeMs}:${rendererStat.size}:${rendererStat.mtimeMs}${petStamp}`;
+  return `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:${cssStat.size}:${cssStat.mtimeMs}:${rendererStat.size}:${rendererStat.mtimeMs}:${iconsStat?.size ?? 0}:${iconsStat?.mtimeMs ?? 0}${petStamp}`;
 }
 
 async function probeSession(session) {
@@ -1354,6 +1658,7 @@ async function applyToSession(session, payload) {
       document.getElementById('codex-dream-skin-chrome')?.remove();
       delete window.__CODEX_DREAM_SKIN_STATE__;
     }
+    delete window.__CODEX_DREAM_SKIN_RUNTIME__;
     return true;
   })()`);
   return session.evaluate(payload);
@@ -1430,6 +1735,7 @@ async function removeFromSession(session) {
     document.getElementById('codex-dream-skin-style')?.remove();
     document.getElementById('codex-dream-skin-chrome')?.remove();
     delete window.__CODEX_DREAM_SKIN_STATE__;
+    delete window.__CODEX_DREAM_SKIN_RUNTIME__;
     return true;
   })()`);
 }
@@ -1443,7 +1749,8 @@ async function verifyRemovedSession(session) {
     !document.querySelector('.dream-home-shell') &&
     !document.getElementById('codex-dream-skin-style') &&
     !document.getElementById('codex-dream-skin-chrome') &&
-    !window.__CODEX_DREAM_SKIN_STATE__
+    !window.__CODEX_DREAM_SKIN_STATE__ &&
+    !window.__CODEX_DREAM_SKIN_RUNTIME__
   )()`);
 }
 
@@ -1460,7 +1767,10 @@ async function verifySession(session) {
     const result = {
       installed: document.documentElement.classList.contains('codex-dream-skin'),
       version: window.__CODEX_DREAM_SKIN_STATE__?.version ?? null,
-      expectedVersion: ${JSON.stringify(SKIN_VERSION)},
+      themeVersion: window.__CODEX_DREAM_SKIN_RUNTIME__?.themeVersion ?? null,
+      injectorVersion: window.__CODEX_DREAM_SKIN_RUNTIME__?.injectorVersion ?? null,
+      protocolVersion: window.__CODEX_DREAM_SKIN_RUNTIME__?.protocolVersion ?? null,
+      expectedProtocolVersion: ${JSON.stringify(RUNTIME_PROTOCOL_VERSION)},
       stylePresent: Boolean(document.getElementById('codex-dream-skin-style')),
       chromePresent: Boolean(document.getElementById('codex-dream-skin-chrome')),
       chromePointerEvents: getComputedStyle(document.getElementById('codex-dream-skin-chrome') || document.body).pointerEvents,
@@ -1476,7 +1786,7 @@ async function verifySession(session) {
         y: document.documentElement.scrollHeight > document.documentElement.clientHeight,
       },
     };
-    result.pass = result.installed && result.version === result.expectedVersion &&
+    result.pass = result.installed && result.protocolVersion === result.expectedProtocolVersion &&
       result.stylePresent && result.chromePresent &&
       result.chromePointerEvents === 'none' && Boolean(result.composer) && Boolean(result.sidebar) &&
       (!result.homePresent || (Boolean(result.hero) &&
@@ -1948,7 +2258,7 @@ if (path.resolve(process.argv[1] || "") === path.resolve(scriptPath)) {
   console.log(JSON.stringify({ pass: true, version: SKIN_VERSION, test: "loopback-cdp-validation" }));
   } else if (options.mode === "check-payload") {
     const loaded = await loadPayload(options.themeDir);
-    const unresolved = ["__DREAM_CSS_JSON__", "__DREAM_ART_JSON__", "__DREAM_THEME_JSON__"]
+    const unresolved = ["__DREAM_CSS_JSON__", "__DREAM_ART_JSON__", "__DREAM_THEME_JSON__", "__DREAM_ICONS_JSON__"]
       .some((placeholder) => loaded.payload.includes(placeholder));
     if (unresolved) {
       throw new Error("Payload placeholders were not fully replaced");
