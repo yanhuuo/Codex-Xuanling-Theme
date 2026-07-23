@@ -82,6 +82,7 @@
   let windowDragHeader = null;
   let windowDragStart = null;
   let windowDragEnd = null;
+  let windowDragTimer = null;
   window.__CODEX_DREAM_SKIN_DISABLED__ = false;
 
   const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, Number(value)));
@@ -663,7 +664,11 @@
     permissionButtons.clear();
     windowDragHeader?.removeEventListener?.("mousedown", windowDragStart, true);
     window.removeEventListener?.("mouseup", windowDragEnd, true);
+    window.removeEventListener?.("pointerup", windowDragEnd, true);
+    window.removeEventListener?.("pointercancel", windowDragEnd, true);
     window.removeEventListener?.("blur", windowDragEnd, true);
+    if (windowDragTimer) clearTimeout(windowDragTimer);
+    document.documentElement?.classList.remove("dream-window-dragging");
     windowDragHeader = null;
     if (state?.artUrl) URL.revokeObjectURL(state.artUrl);
     delete window[STATE_KEY];
@@ -735,13 +740,21 @@
   windowDragStart = (event) => {
     if (event.button !== 0 || event.target?.closest?.("button, a, input, textarea, select, [role='button']")) return;
     document.documentElement?.classList.add("dream-window-dragging");
+    if (windowDragTimer) clearTimeout(windowDragTimer);
+    windowDragTimer = setTimeout(windowDragEnd, 4000);
   };
-  windowDragEnd = () => document.documentElement?.classList.remove("dream-window-dragging");
+  windowDragEnd = () => {
+    document.documentElement?.classList.remove("dream-window-dragging");
+    if (windowDragTimer) clearTimeout(windowDragTimer);
+    windowDragTimer = null;
+  };
   window.addEventListener?.("mouseup", windowDragEnd, true);
+  window.addEventListener?.("pointerup", windowDragEnd, true);
+  window.addEventListener?.("pointercancel", windowDragEnd, true);
   window.addEventListener?.("blur", windowDragEnd, true);
   const timer = setInterval(() => { spinnerDirty = true; ensure(); }, 30000);
   window[STATE_KEY] = {
-    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.4.0",
+    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.4.1",
   };
   ensure();
   analyzeArt().then((result) => {
@@ -751,5 +764,5 @@
     state.profile = result;
     ensure();
   });
-  return { installed: true, version: "1.4.0", adaptive: true };
+  return { installed: true, version: "1.4.1", adaptive: true };
 })(__DREAM_CSS_JSON__, __DREAM_ART_JSON__, __DREAM_THEME_JSON__)

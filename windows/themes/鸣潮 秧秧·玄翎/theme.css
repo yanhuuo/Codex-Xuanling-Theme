@@ -614,6 +614,19 @@ html.codex-dream-skin .dream-xuanniao-spinner-mark {
   will-change: transform;
 }
 
+html.codex-dream-skin .dream-xuanniao-spinner-mark::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  right: 1px;
+  top: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: color-mix(in srgb, #effcff 82%, var(--dream-accent));
+  box-shadow: 0 0 4px var(--dream-accent), 0 0 8px color-mix(in srgb, var(--dream-accent) 72%, transparent);
+}
+
 html.codex-dream-skin .dream-xuanniao-spinner-mark::after {
   content: "";
   position: absolute;
@@ -743,6 +756,10 @@ html.codex-dream-skin.dream-window-dragging *::before,
 html.codex-dream-skin.dream-window-dragging *::after {
   animation-play-state: paused !important;
   transition-duration: 0s !important;
+}
+
+html.codex-dream-skin.dream-window-dragging .dream-xuanniao-spinner-mark {
+  animation-play-state: running !important;
 }
 
 html.codex-dream-skin.dream-window-dragging main.main-surface > header.app-header-tint,
