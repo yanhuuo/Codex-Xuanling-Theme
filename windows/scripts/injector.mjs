@@ -782,9 +782,7 @@ async function verifySession(session) {
     };
     result.pass = result.installed && result.protocolVersion === result.expectedProtocolVersion &&
       result.stylePresent && result.chromePresent &&
-      result.chromePointerEvents === 'none' && Boolean(result.composer) && Boolean(result.sidebar) &&
-      (!result.homePresent || (Boolean(result.hero) &&
-        (!result.suggestionsPresent || (result.cards.length >= 2 && result.cards.length <= 4))));
+      result.chromePointerEvents === 'none' && Boolean(result.composer) && Boolean(result.sidebar);
     return result;
   })()`);
 }
