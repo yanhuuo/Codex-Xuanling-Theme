@@ -665,7 +665,7 @@ try {
   }
   $managerSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'engine\theme-manager.js')
   foreach ($requiredManagerBehavior in @(
-    'data-settings-panel-slug', 'dream-theme-manager', '还原官方外观',
+    'codex-dream-theme-manager-trigger', 'aria-expanded', '还原官方外观',
     '主题宠物', 'selectPet', '已绑定', '热重载已开启', 'data-manager-close',
     'installBundledTheme', '安装主题', 'dtm-preview', 'data-dtm-theme-preview-key',
     'dtm-tabs', 'data-manager-tab="themes"', 'data-manager-tab="pets"',
@@ -680,7 +680,7 @@ try {
     'getThemePreview', 'themePreviewCache', 'applyThemePreviewImages',
     'getPetPreview', 'petPreviewCache', 'data-dtm-pet-preview-pet',
     'dtm-loading-card', 'showSequence', 'dtm-file-actions', 'dtm-close-hit', 'onPanelKeydown',
-    'closeButton', 'data-dtm-close',
+    'closeButton', 'data-dtm-close', 'inset:0', 'showing ? hide() : show()',
     '执行中动图', '加载转圈',
     'data-theme-pet-edit', 'data-theme-pet-pick', 'updateThemePet'
   )) {
@@ -694,6 +694,11 @@ try {
   foreach ($removedCloseWorkaround in @('closeButtonFromPoint', 'onPanelPointerMove', 'onPanelPointerLeave', 'dtm-close-hover')) {
     if ($managerSource.Contains($removedCloseWorkaround)) {
       throw "Theme manager restored fragile close-button pointer workaround: $removedCloseWorkaround"
+    }
+  }
+  foreach ($removedSettingsEntry in @('appearance.cloneNode', 'button.dataset.settingsPanelSlug = NAV_SLUG', 'insertAdjacentElement("afterend", button)')) {
+    if ($managerSource.Contains($removedSettingsEntry)) {
+      throw "Theme manager restored the settings-page navigation entry: $removedSettingsEntry"
     }
   }
   foreach ($removedManagerBehavior in @('addLibrary', 'addRepository', 'getCatalog', 'installLibraryTheme', 'data-library-add', 'data-repository-add', 'GitHub 仓库安装')) {

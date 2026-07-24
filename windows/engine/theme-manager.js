@@ -1,11 +1,12 @@
 "use strict";
 (() => {
     const KEY = "__CODEX_DREAM_THEME_MANAGER__";
-    const VERSION = "1.9.3";
+    const VERSION = "1.9.4";
     const BINDING = "__codexDreamThemeControl";
     const RESPONSE = "__codexDreamThemeResponse";
     const STYLE_ID = "codex-dream-theme-manager-style";
     const PANEL_ID = "codex-dream-theme-manager-panel";
+    const TRIGGER_ID = "codex-dream-theme-manager-trigger";
     const NAV_SLUG = "dream-theme-manager";
     const prior = window[KEY];
     if (prior?.version === VERSION && prior?.ensure) {
@@ -18,8 +19,12 @@
     const gear = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M9.6 3.2h4.8l.5 2.2c.7.2 1.3.5 1.9.8l2-1.2 3.4 3.4-1.2 2c.3.6.6 1.2.8 1.9l2.2.5v4.8l-2.2.5c-.2.7-.5 1.3-.8 1.9l1.2 2-3.4 3.4-2-1.2c-.6.3-1.2.6-1.9.8l-.5 2.2H9.6l-.5-2.2c-.7-.2-1.3-.5-1.9-.8l-2 1.2-3.4-3.4 1.2-2c-.3-.6-.6-1.2-.8-1.9L0 17.6v-4.8l2.2-.5c.2-.7.5-1.3.8-1.9l-1.2-2 3.4-3.4 2 1.2c.6-.3 1.2-.6 1.9-.8l.5-2.2Z" fill="currentColor" opacity=".22"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 1.7v3.1M12 19.2v3.1M1.7 12h3.1M19.2 12h3.1M4.7 4.7l2.2 2.2M17.1 17.1l2.2 2.2M19.3 4.7l-2.2 2.2M6.9 17.1l-2.2 2.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`;
     const closeSvg = `<svg class="dtm-close-icon" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M6.2 6.2 12 12m5.8 5.8L12 12m0 0 5.8-5.8M12 12l-5.8 5.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>`;
     const css = `
-    #${PANEL_ID}{--dream-manager-accent:var(--dream-accent,#6edaf2);--dtm-surface:var(--dream-surface,var(--main-surface-primary,#0d151f));--dtm-raised:var(--dream-surface-raised,var(--main-surface-secondary,#13212c));--dtm-text:var(--dream-text,var(--text-primary,#edf7fb));--dtm-muted:var(--dream-text-muted,var(--text-secondary,#9bb0bc));--dtm-line:var(--dream-line,var(--border-light,#263642));position:fixed;z-index:29;overflow:auto;background:color-mix(in oklab,var(--dtm-surface) 94%,transparent);color:var(--dtm-text);padding:28px 34px 48px;box-sizing:border-box;font-family:inherit;backdrop-filter:blur(18px)}
-    #${PANEL_ID} *{box-sizing:border-box} #${PANEL_ID} .dtm-wrap{max-width:1040px;margin:0 auto}
+    #${TRIGGER_ID}{position:fixed;right:116px;top:7px;z-index:10000;display:grid;place-items:center;width:28px;height:28px;margin:0;padding:0;border:1px solid color-mix(in srgb,var(--dream-accent,#6edaf2) 34%,transparent);border-radius:8px;background:color-mix(in oklab,var(--dream-surface-raised,#13212c) 58%,transparent);color:var(--dream-text,#edf7fb);box-shadow:0 8px 22px #0006,inset 0 0 0 1px #ffffff12;backdrop-filter:blur(10px);cursor:pointer;pointer-events:auto!important;-webkit-app-region:no-drag}
+    #${TRIGGER_ID}:hover,#${TRIGGER_ID}[aria-expanded="true"]{border-color:var(--dream-accent,#6edaf2);background:color-mix(in srgb,var(--dream-accent,#6edaf2) 18%,var(--dream-surface-raised,#13212c));box-shadow:0 0 0 3px color-mix(in srgb,var(--dream-accent,#6edaf2) 12%,transparent),0 10px 26px #0008}
+    #${TRIGGER_ID} svg{display:block;width:17px;height:17px}
+    #${PANEL_ID}{--dream-manager-accent:var(--dream-accent,#6edaf2);--dtm-surface:var(--dream-surface,var(--main-surface-primary,#0d151f));--dtm-raised:var(--dream-surface-raised,var(--main-surface-secondary,#13212c));--dtm-text:var(--dream-text,var(--text-primary,#edf7fb));--dtm-muted:var(--dream-text-muted,var(--text-secondary,#9bb0bc));--dtm-line:var(--dream-line,var(--border-light,#263642));position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow:auto;background:#02070d99;color:var(--dtm-text);padding:58px 24px 28px;box-sizing:border-box;font-family:inherit;backdrop-filter:blur(10px)}
+    #${PANEL_ID}[hidden]{display:none!important}
+    #${PANEL_ID} *{box-sizing:border-box} #${PANEL_ID} .dtm-wrap{width:min(1080px,calc(100vw - 48px));max-height:calc(100vh - 86px);overflow:auto;margin:0 auto;padding:28px 34px 42px;border:1px solid var(--dtm-line);border-radius:20px;background:color-mix(in oklab,var(--dtm-surface) 96%,transparent);box-shadow:0 24px 90px #000c;backdrop-filter:blur(18px)}
     #${PANEL_ID} .dtm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}
     #${PANEL_ID} h1{font-size:26px;line-height:1.2;margin:0 0 8px;font-weight:650} #${PANEL_ID} h2{font-size:17px;margin:0 0 12px}
     #${PANEL_ID} p{margin:0;color:var(--dtm-muted);font-size:13px;line-height:1.55}
@@ -95,9 +100,9 @@
     #${PANEL_ID} .dtm-dialog-head>div:first-child{min-width:0;flex:1;pointer-events:auto}
     #${PANEL_ID} .dtm-dialog-head h2{margin:0 0 6px}
     #${PANEL_ID} .dtm-dialog-close{width:32px;height:32px;padding:0;font-size:19px;line-height:1}
-    #${PANEL_ID} .dtm-close-hit{appearance:none;position:relative;display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;min-width:42px;min-height:42px;margin:0;padding:0;border:1px solid var(--dtm-line);border-radius:14px;background:color-mix(in oklab,var(--dtm-raised) 90%,transparent);color:var(--dtm-text);cursor:pointer;user-select:none;touch-action:manipulation;z-index:20;pointer-events:auto!important}
-    #${PANEL_ID} .dtm-close-icon{display:block;width:22px;height:22px}
-    #${PANEL_ID} .dtm-close-hit:empty::before{content:"";display:block;width:22px;height:22px;background:linear-gradient(45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px)),linear-gradient(-45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px))}
+    #${PANEL_ID} .dtm-close-hit{appearance:none;position:relative;display:grid;place-items:center;flex:0 0 52px;width:52px;height:52px;min-width:52px;min-height:52px;margin:-5px;padding:0;border:1px solid var(--dtm-line);border-radius:16px;background:color-mix(in oklab,var(--dtm-raised) 90%,transparent);color:var(--dtm-text);cursor:pointer;user-select:none;touch-action:manipulation;z-index:1000;pointer-events:auto!important}
+    #${PANEL_ID} .dtm-close-icon{display:block;width:24px;height:24px;pointer-events:none}
+    #${PANEL_ID} .dtm-close-hit:empty::before{content:"";display:block;width:24px;height:24px;background:linear-gradient(45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px)),linear-gradient(-45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px));pointer-events:none}
     #${PANEL_ID} .dtm-close-hit:hover{border-color:var(--dream-manager-accent,#6edaf2);background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 16%,var(--dtm-raised));box-shadow:0 0 0 3px color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 12%,transparent),0 10px 24px #0005}
     #${PANEL_ID} .dtm-close-hit:active{transform:translateY(1px);background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 24%,var(--dtm-raised))}
     #${PANEL_ID} .dtm-close-hit:focus-visible{outline:2px solid var(--dream-manager-accent,#6edaf2);outline-offset:2px}
@@ -498,23 +503,10 @@
         }
         return style;
     };
-    const navIcon = `<span class="flex w-4 shrink-0 items-center justify-center" data-dream-theme-icon style="width:16px;height:16px">${palette}</span>`;
-    const setSelected = (button) => {
-        document.querySelectorAll('button[data-settings-panel-slug]').forEach((candidate) => {
-            candidate.removeAttribute("aria-current");
-            candidate.classList.remove("bg-token-list-hover-background");
-            candidate.querySelector("[class*='text-token-list-active-selection']")?.classList.remove("text-token-list-active-selection-foreground");
-        });
-        button.setAttribute("aria-current", "page");
-        button.classList.add("bg-token-list-hover-background");
-    };
-    const positionPanel = (panel, nav) => {
-        const aside = nav.closest("aside");
-        const bounds = aside?.getBoundingClientRect();
-        panel.style.left = `${Math.max(0, Math.round(bounds?.right ?? 270))}px`;
-        panel.style.top = `${Math.max(36, Math.round(bounds?.top ?? 36))}px`;
-        panel.style.right = "0";
-        panel.style.bottom = "0";
+    const setTriggerExpanded = (expanded) => {
+        const trigger = document.getElementById(TRIGGER_ID);
+        if (trigger)
+            trigger.setAttribute("aria-expanded", expanded ? "true" : "false");
     };
     const themePreviewUrl = (theme) => {
         const cardPreview = safePreview(theme.cardPreview);
@@ -773,7 +765,7 @@
         const baseOptions = (state.bundledThemes || []).map((theme) => `<option value="${escapeHtml(theme.key)}" ${theme.key === localBaseKey ? "selected" : ""}>${escapeHtml(theme.name)}</option>`).join("");
         const themePane = `<section class="dtm-section"><h2>主题</h2><div class="dtm-grid">${themes}</div></section>`;
         const petPane = `<section class="dtm-section"><h2>主题宠物</h2><p style="margin-bottom:12px">宠物独立保存在本机。选择后只把宠物 ID 绑定到当前主题；主题卡片会直接显示绑定宠物的样子。</p>${pets ? `<div class="dtm-grid">${pets}</div><div class="dtm-row" style="margin-top:12px"><button class="dtm-button ${state.selectedPet ? "dtm-button-danger" : ""}" data-pet-clear ${state.selectedPet ? "" : "disabled"}>解除主题宠物绑定</button></div>` : '<div class="dtm-empty">没有发现有效的 Codex v2 宠物包。</div>'}</section>`;
-        panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1><p>主题管理工具独立安装；主题、背景图片和可选宠物都在本页安装与启用。</p></div><div class="dtm-row"><div class="dtm-status"><span class="dtm-dot"></span>${state.paused ? "官方外观" : `当前：${escapeHtml(state.active?.name || "主题")}`} · ${state.hotReload ? "热重载已开启" : "自动刷新"}</div><button class="dtm-close-hit" type="button" data-manager-close aria-label="关闭"></button></div></div><div class="dtm-row"><button class="dtm-button ${state.paused ? "dtm-button-primary" : "dtm-button-danger"}" data-official ${state.paused && !state.canEnableActive ? "disabled" : ""}>${state.paused ? (state.canEnableActive ? "启用当前主题" : "请先安装主题") : "还原官方外观"}</button><button class="dtm-button" data-refresh>立即刷新</button><p>新安装的管理工具默认保持官方外观；还原不会删除已安装主题、宠物或自定义配置。</p></div><div class="dtm-tabs" role="tablist" aria-label="主题内容"><button class="dtm-tab" role="tab" aria-selected="${activeTab === "themes"}" data-manager-tab="themes">主题</button><button class="dtm-tab" role="tab" aria-selected="${activeTab === "pets"}" data-manager-tab="pets">宠物</button></div>${activeTab === "pets" ? petPane : themePane}${message ? `<div class="dtm-message">${escapeHtml(message)}</div>` : ""}</div>${localCreatorDialogHtml(baseOptions)}${petPickerDialogHtml()}${imageSettingsDialogHtml()}`;
+        panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1><p>主题管理工具独立安装；主题、背景图片和可选宠物都在本页安装与启用。</p></div><div class="dtm-row"><div class="dtm-status"><span class="dtm-dot"></span>${state.paused ? "官方外观" : `当前：${escapeHtml(state.active?.name || "主题")}`} · ${state.hotReload ? "热重载已开启" : "自动刷新"}</div>${closeButton("manager")}</div></div><div class="dtm-row"><button class="dtm-button ${state.paused ? "dtm-button-primary" : "dtm-button-danger"}" data-official ${state.paused && !state.canEnableActive ? "disabled" : ""}>${state.paused ? (state.canEnableActive ? "启用当前主题" : "请先安装主题") : "还原官方外观"}</button><button class="dtm-button" data-refresh>立即刷新</button><p>新安装的管理工具默认保持官方外观；还原不会删除已安装主题、宠物或自定义配置。</p></div><div class="dtm-tabs" role="tablist" aria-label="主题内容"><button class="dtm-tab" role="tab" aria-selected="${activeTab === "themes"}" data-manager-tab="themes">主题</button><button class="dtm-tab" role="tab" aria-selected="${activeTab === "pets"}" data-manager-tab="pets">宠物</button></div>${activeTab === "pets" ? petPane : themePane}${message ? `<div class="dtm-message">${escapeHtml(message)}</div>` : ""}</div>${localCreatorDialogHtml(baseOptions)}${petPickerDialogHtml()}${imageSettingsDialogHtml()}`;
         enhanceImageSettingsDialog(panel);
         applyThemePreviewImages(panel);
         applyPetPreviewStyles(panel);
@@ -821,6 +813,10 @@
     };
     const onPanelClick = (event) => {
         const element = event.target;
+        if (element?.id === PANEL_ID) {
+            hide();
+            return;
+        }
         const closeTarget = element?.closest("[data-dtm-close],[data-manager-close],[data-local-theme-close],[data-theme-pet-close],[data-theme-images-close]");
         if (closeTarget && runCloseAction(closeTarget))
             return;
@@ -1165,12 +1161,12 @@
                 field.value = input.value;
         }
     };
-    const show = async (button, nav) => {
+    const show = async () => {
         const token = ++showSequence;
         showing = true;
         message = "";
         getStyle();
-        setSelected(button);
+        setTriggerExpanded(true);
         let panel = document.getElementById(PANEL_ID);
         if (!panel) {
             panel = document.createElement("section");
@@ -1182,7 +1178,6 @@
             panel.addEventListener("input", onPanelInput);
             document.body.appendChild(panel);
         }
-        positionPanel(panel, nav);
         panel.hidden = false;
         panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-loading-card"><div class="dtm-loading-copy"><span class="dtm-loading-spinner" aria-hidden="true"></span><span>正在读取主题…</span></div>${closeButton("manager")}</div></div>`;
         try {
@@ -1198,42 +1193,43 @@
             panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1></div>${closeButton("manager")}</div><div class="dtm-empty">${escapeHtml(error.message || error)}</div></div>`;
         }
     };
-    const hide = () => { showSequence += 1; showing = false; localModalOpen = false; resetLocalDraft(); const panel = document.getElementById(PANEL_ID); if (panel)
+    const hide = () => { showSequence += 1; showing = false; localModalOpen = false; resetLocalDraft(); setTriggerExpanded(false); const panel = document.getElementById(PANEL_ID); if (panel)
         panel.hidden = true; };
     const ensure = () => {
-        const nav = document.querySelector('nav[aria-label="设置"],nav[aria-label="Settings"]');
-        if (!nav) {
-            hide();
-            return false;
-        }
-        let button = nav.querySelector(`button[data-settings-panel-slug="${NAV_SLUG}"]`);
+        document.querySelectorAll(`button[data-settings-panel-slug="${NAV_SLUG}"]`).forEach((button) => button.remove());
+        let button = document.getElementById(TRIGGER_ID);
         if (button && button.dataset.dreamThemeManagerVersion !== VERSION) {
             button.remove();
             button = null;
         }
         if (!button) {
-            const appearance = nav.querySelector('button[data-settings-panel-slug="appearance"],button[aria-label="外观"],button[aria-label="Appearance"]');
-            if (!appearance)
-                return false;
-            button = appearance.cloneNode(true);
-            button.removeAttribute("aria-current");
-            button.dataset.settingsPanelSlug = NAV_SLUG;
-            button.setAttribute("aria-label", "主题");
+            button = document.createElement("button");
+            button.id = TRIGGER_ID;
+            button.type = "button";
+            button.setAttribute("aria-label", "打开主题");
+            button.setAttribute("aria-expanded", showing ? "true" : "false");
             button.dataset.dreamThemeManagerVersion = VERSION;
-            const content = button.firstElementChild || button;
-            content.innerHTML = `${navIcon}<span>主题</span>`;
-            button.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); show(button, nav); });
-            appearance.insertAdjacentElement("afterend", button);
-        }
-        if (showing) {
-            const panel = document.getElementById(PANEL_ID);
-            if (panel)
-                positionPanel(panel, nav);
+            button.innerHTML = palette;
+            button.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                showing ? hide() : show();
+            }, true);
+            document.body.appendChild(button);
         }
         return true;
     };
     const onDocumentClick = (event) => {
-        const settingsButton = event.target?.closest?.('button[data-settings-panel-slug]');
+        const element = event.target;
+        const closeTarget = element?.closest?.("[data-dtm-close],[data-manager-close],[data-local-theme-close],[data-theme-pet-close],[data-theme-images-close]");
+        const panel = document.getElementById(PANEL_ID);
+        if (closeTarget && panel?.contains(closeTarget)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            runCloseAction(closeTarget);
+            return;
+        }
+        const settingsButton = element?.closest?.('button[data-settings-panel-slug]');
         if (settingsButton && settingsButton.dataset.settingsPanelSlug !== NAV_SLUG)
             hide();
     };
@@ -1251,7 +1247,7 @@
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
     const timer = setInterval(ensure, 4000);
-    const cleanup = () => { observer.disconnect(); clearInterval(timer); clearTimeout(scheduled); window.removeEventListener(RESPONSE, onResponse); document.removeEventListener("click", onDocumentClick, true); document.getElementById(PANEL_ID)?.remove(); document.getElementById(STYLE_ID)?.remove(); delete window[KEY]; };
+    const cleanup = () => { observer.disconnect(); clearInterval(timer); clearTimeout(scheduled); window.removeEventListener(RESPONSE, onResponse); document.removeEventListener("click", onDocumentClick, true); document.getElementById(PANEL_ID)?.remove(); document.getElementById(TRIGGER_ID)?.remove(); document.getElementById(STYLE_ID)?.remove(); delete window[KEY]; };
     window[KEY] = { ensure, cleanup, observer, timer, version: VERSION };
     ensure();
     return true;
