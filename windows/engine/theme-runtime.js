@@ -381,6 +381,7 @@
   };
 
   const clearSkinDom = () => {
+    appliedProfileSignature = "";
     const root = document.documentElement;
     root?.classList.remove(...ROOT_CLASSES);
     for (const property of ROOT_PROPERTIES) root?.style.removeProperty(property);
@@ -498,7 +499,7 @@
 
     const shellMain = document.querySelector("main.main-surface");
     const shellSidebar = document.querySelector("aside.app-shell-left-panel");
-    if (!shellMain || !shellSidebar) {
+    if (!shellMain) {
       clearSkinDom();
       return;
     }
@@ -642,7 +643,7 @@
     };
 
     const now = Date.now();
-    if (sidebarDirty && now >= sidebarReadyAt) {
+    if (shellSidebar && sidebarDirty && now >= sidebarReadyAt) {
       sidebarDirty = false;
     const sidebarButtons = [...(shellSidebar.querySelectorAll?.("button") || [])];
     const exactText = (node) => (node.getAttribute("aria-label") || node.textContent || "").trim();

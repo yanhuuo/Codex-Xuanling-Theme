@@ -791,6 +791,12 @@ try {
     -not $rendererSource.Contains('--dream-sidebar-text-lift')) {
     throw 'Shared sidebar contrast still uses a compounding filter instead of non-stacking color adjustment.'
   }
+  if ($rendererSource.Contains('if (!shellMain || !shellSidebar)') -or
+    -not $rendererSource.Contains('if (!shellMain)') -or
+    -not $rendererSource.Contains('if (shellSidebar && sidebarDirty && now >= sidebarReadyAt)') -or
+    -not $rendererSource.Contains('appliedProfileSignature = "";')) {
+    throw 'Shared renderer still clears or partially restores the theme when the native sidebar is collapsed.'
+  }
   $bundledPet = Join-Path (Split-Path -Parent $Root) 'pets\yangyang-xuanling-official-drum-r3'
   $bundledPetManifestPath = Join-Path $bundledPet 'pet.json'
   if (-not (Test-Path -LiteralPath $bundledPetManifestPath -PathType Leaf)) {
