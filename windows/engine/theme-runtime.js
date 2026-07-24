@@ -27,6 +27,9 @@
   const ROOT_PROPERTIES = [
     "--dream-art",
     "--dream-art-position",
+    "--dream-art-fit",
+    "--dream-art-size",
+    "--dream-art-repeat",
     "--dream-focus-x",
     "--dream-focus-y",
     "--dream-accent",
@@ -104,6 +107,9 @@
         ? candidate.trim()
         : "";
     const metadataRatio = Number(config?.artMetadata?.ratio);
+    const display = config.display && typeof config.display === "object" ? config.display : {};
+    const rotation = display.rotation && typeof display.rotation === "object" ? display.rotation : {};
+    const intervalSeconds = Number(rotation.intervalSeconds || 45);
     return {
       appearance,
       safeArea,
@@ -121,23 +127,41 @@
       focusY: hasNumber(art.focusY) ? clamp(art.focusY) : null,
       accent: safeAccent,
       initialAspect: Number.isFinite(metadataRatio) && metadataRatio > 0 ? metadataRatio : null,
+      imageFit: ["cover", "contain", "stretch", "auto"].includes(display.fit) ? display.fit : "cover",
+      imagePosition: ["auto", "center", "left", "right", "top", "bottom", "left top", "left center", "left bottom", "right top", "right center", "right bottom", "center top", "center bottom"].includes(display.position) ? display.position : "auto",
+      imageRepeat: ["no-repeat", "repeat", "repeat-x", "repeat-y"].includes(display.repeat) ? display.repeat : "no-repeat",
+      rotationEnabled: rotation.enabled === true,
+      rotationIntervalMs: Number.isFinite(intervalSeconds) ? Math.max(5000, Math.min(3600000, Math.round(intervalSeconds) * 1000)) : 45000,
     };
   };
 
   const previous = window[STATE_KEY];
   if (previous?.observer) previous.observer.disconnect();
   if (previous?.timer) clearInterval(previous.timer);
+  if (previous?.rotationTimer) clearInterval(previous.rotationTimer);
   if (previous?.scheduler?.timeout) clearTimeout(previous.scheduler.timeout);
-  if (previous?.artUrl) URL.revokeObjectURL(previous.artUrl);
-  const artUrl = (() => {
-    const comma = artDataUrl.indexOf(",");
-    const binary = atob(artDataUrl.slice(comma + 1));
+  if (Array.isArray(previous?.artUrls)) {
+    for (const url of new Set(previous.artUrls)) URL.revokeObjectURL(url);
+  } else if (previous?.artUrl) {
+    URL.revokeObjectURL(previous.artUrl);
+  }
+  const toObjectUrl = (dataUrl) => {
+    const comma = String(dataUrl || "").indexOf(",");
+    if (comma < 1) return "";
+    const binary = atob(String(dataUrl).slice(comma + 1));
     const bytes = new Uint8Array(binary.length);
     for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-    const mime = /^data:([^;,]+)/.exec(artDataUrl)?.[1] || "image/png";
+    const mime = /^data:([^;,]+)/.exec(String(dataUrl))?.[1] || "image/png";
     return URL.createObjectURL(new Blob([bytes], { type: mime }));
-  })();
+  };
   const config = normalizeConfig(rawConfig);
+  const runtimeImages = Array.isArray(rawConfig?.runtimeImages)
+    ? rawConfig.runtimeImages.filter((entry) => entry && typeof entry.src === "string" && /^data:image\//i.test(entry.src)).slice(0, 12)
+    : [];
+  const artDataUrls = runtimeImages.length ? runtimeImages.map((entry) => entry.src) : [artDataUrl];
+  const artUrls = artDataUrls.map(toObjectUrl).filter(Boolean);
+  let currentArtIndex = 0;
+  let artUrl = artUrls[0] || toObjectUrl(artDataUrl);
   const brandIcon = THEME_ICON_SVGS[config.brandIcon]
     ? config.brandIcon
     : (THEME_ICON_SVGS.bird ? "bird" : (THEME_ICON_SVGS.seraph ? "seraph" : Object.keys(THEME_ICON_SVGS)[0]));
@@ -358,8 +382,12 @@
       : config.taskMode;
     const accent = config.accent || `rgb(${profile.accent.join(" ")})`;
     const accentInk = luminance(...profile.accent) > .42 ? "rgb(26 24 28)" : "rgb(250 248 251)";
+    const imagePosition = config.imagePosition === "auto"
+      ? `${Math.round(focusX * 100)}% ${Math.round(focusY * 100)}%`
+      : config.imagePosition;
+    const imageSize = config.imageFit === "stretch" ? "100% 100%" : config.imageFit === "auto" ? "auto" : config.imageFit;
     const signature = [appearance, focus, safeArea, taskMode, accent, accentInk, focusX, focusY,
-      profile.aspect, profile.luma].join("|");
+      profile.aspect, profile.luma, artUrl, imagePosition, imageSize, config.imageRepeat].join("|");
     if (signature === appliedProfileSignature) return;
     appliedProfileSignature = signature;
     root.classList.toggle("dream-theme-light", appearance === "light");
@@ -376,7 +404,10 @@
       root.classList.toggle(`dream-task-${value}`, taskMode === value);
     }
     root.style.setProperty("--dream-art", `url("${artUrl}")`);
-    root.style.setProperty("--dream-art-position", `${Math.round(focusX * 100)}% ${Math.round(focusY * 100)}%`);
+    root.style.setProperty("--dream-art-position", imagePosition);
+    root.style.setProperty("--dream-art-fit", imageSize);
+    root.style.setProperty("--dream-art-size", imageSize);
+    root.style.setProperty("--dream-art-repeat", config.imageRepeat);
     root.style.setProperty("--dream-focus-x", String(focusX));
     root.style.setProperty("--dream-focus-y", String(focusY));
     root.style.setProperty("--dream-accent", accent);
@@ -755,8 +786,25 @@
   window.addEventListener?.("pointercancel", windowDragEnd, true);
   window.addEventListener?.("blur", windowDragEnd, true);
   const timer = setInterval(() => { spinnerDirty = true; ensure(); }, 30000);
+  const rotateArt = () => {
+    if (artUrls.length < 2) return;
+    currentArtIndex = (currentArtIndex + 1) % artUrls.length;
+    artUrl = artUrls[currentArtIndex];
+    appliedProfileSignature = "";
+    analyzeArt().then((result) => {
+      const state = window[STATE_KEY];
+      if (state?.installToken !== installToken || window.__CODEX_DREAM_SKIN_DISABLED__) return;
+      profile = result;
+      state.profile = result;
+      state.artUrl = artUrl;
+      ensure();
+    });
+  };
+  const rotationTimer = config.rotationEnabled && artUrls.length > 1
+    ? setInterval(rotateArt, config.rotationIntervalMs)
+    : null;
   window[STATE_KEY] = {
-    ensure, cleanup, observer, timer, scheduler, artUrl, profile, config, installToken, version: "1.4.1",
+    ensure, cleanup, observer, timer, rotationTimer, scheduler, artUrl, artUrls, profile, config, installToken, version: "1.4.1",
   };
   ensure();
   analyzeArt().then((result) => {

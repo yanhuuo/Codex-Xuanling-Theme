@@ -37,12 +37,31 @@ my-theme/
   "processingIcon": "processing",
   "spinnerIcon": "spinner",
   "image": "background.jpg",
+  "previewImage": "preview.jpg",
+  "defaultImage": "default",
+  "images": [
+    {
+      "id": "default",
+      "label": "默认图",
+      "path": "background.jpg",
+      "previewPath": "preview.jpg"
+    }
+  ],
+  "display": {
+    "fit": "cover",
+    "position": "auto",
+    "repeat": "no-repeat",
+    "rotation": {
+      "enabled": false,
+      "intervalSeconds": 45
+    }
+  },
   "pet": {
     "id": "my-pet"
   },
   "install": {
     "default": false,
-    "files": ["theme.json", "theme.css", "background.jpg"],
+    "files": ["theme.json", "theme.css", "background.jpg", "preview.jpg"],
     "pets": ["my-pet"]
   },
   "icons": {
@@ -60,6 +79,12 @@ my-theme/
   }
 }
 ```
+
+`image` 是实际应用到 Codex 主界面的默认背景图。`previewImage` 是可选字段，只用于主题页卡片预览；未设置时主题页会回退展示 `image`。
+
+`images` 是主题图片列表。单图主题也应放一项，方便主题页统一显示；多图主题可以追加多项，并用 `defaultImage` 指定当前默认项。每项的 `path` 是实际背景，`previewPath` 是可选缩略/半身预览。`display.fit` 支持 `cover`、`contain`、`stretch`、`auto`；`display.position` 支持 `auto`、`center`、`left`、`right`、`top`、`bottom` 与组合位置；`display.repeat` 支持 `no-repeat`、`repeat`、`repeat-x`、`repeat-y`；`display.rotation.enabled` 开启后会按 `intervalSeconds` 定时轮换 `images`。
+
+`files` 是主题包的静态资源列表。加载器和安装器会自动把 `image`、`previewImage`、`images[].path`、`images[].previewPath` 与 `icons/*.svg` 合并进实际复制清单。`install.files` 仍兼容旧包，但新主题优先维护顶层 `files`。
 
 `install` 是主题自己的声明式安装信息。公共安装器只复制 `install.files` 里列出的受控文件，不执行主题目录中的 PowerShell。内置主题集合用 `install.default: true` 选择默认主题。
 

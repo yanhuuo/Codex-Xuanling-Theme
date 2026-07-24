@@ -29,6 +29,9 @@ const THEME_CHOICES = {
   safeArea: new Set(["auto", "left", "right", "center", "none"]),
   taskMode: new Set(["auto", "ambient", "banner", "off"]),
   homeMode: new Set(["themed", "native"]),
+  imageFit: new Set(["cover", "contain", "stretch", "auto"]),
+  imageRepeat: new Set(["no-repeat", "repeat", "repeat-x", "repeat-y"]),
+  imagePosition: new Set(["auto", "center", "left", "right", "top", "bottom", "left top", "left center", "left bottom", "right top", "right center", "right bottom", "center top", "center bottom"]),
 };
 
 function normalizedUnit(value, name) {
@@ -44,6 +47,60 @@ function normalizedChoice(value, name, choices, fallback) {
   if (value === null || value === undefined || value === "") return fallback;
   if (!choices.has(value)) throw new Error(`${name} has an unsupported value: ${value}`);
   return value;
+}
+
+function normalizeImageDisplay(rawDisplay) {
+  const display = rawDisplay && typeof rawDisplay === "object" && !Array.isArray(rawDisplay) ? rawDisplay : {};
+  const rotation = display.rotation && typeof display.rotation === "object" && !Array.isArray(display.rotation)
+    ? display.rotation : {};
+  const intervalSeconds = Number(rotation.intervalSeconds ?? display.rotationIntervalSeconds ?? 45);
+  return {
+    fit: normalizedChoice(display.fit, "display.fit", THEME_CHOICES.imageFit, "cover"),
+    position: normalizedChoice(display.position, "display.position", THEME_CHOICES.imagePosition, "auto"),
+    repeat: normalizedChoice(display.repeat, "display.repeat", THEME_CHOICES.imageRepeat, "no-repeat"),
+    rotation: {
+      enabled: rotation.enabled === true,
+      intervalSeconds: Number.isFinite(intervalSeconds) ? Math.min(3600, Math.max(5, Math.round(intervalSeconds))) : 45,
+    },
+  };
+}
+
+function normalizeThemeImageEntries(raw, fallbackImage, fallbackPreviewImage) {
+  const entries = [];
+  const addEntry = (candidate, index) => {
+    const item = candidate && typeof candidate === "object" && !Array.isArray(candidate) ? candidate : {};
+    const filePath = normalizedText(item.path, `images[${index}].path`, "", 240);
+    if (!filePath || path.isAbsolute(filePath)) throw new Error(`images[${index}].path must be a relative path`);
+    const idSeed = normalizedText(item.id, `images[${index}].id`, "", 80) ||
+      safeThemeId(path.basename(filePath, path.extname(filePath)) || `image-${index + 1}`, `image-${index + 1}`);
+    const id = idSeed.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
+    if (!id) throw new Error(`images[${index}].id is invalid`);
+    const previewPath = normalizedText(item.previewPath ?? item.previewImage, `images[${index}].previewPath`, "", 240);
+    if (previewPath && path.isAbsolute(previewPath)) throw new Error(`images[${index}].previewPath must be a relative path`);
+    entries.push({
+      id,
+      label: normalizedText(item.label, `images[${index}].label`, id, 80),
+      path: filePath.replaceAll("\\", "/"),
+      ...(previewPath ? { previewPath: previewPath.replaceAll("\\", "/") } : {}),
+    });
+  };
+  if (Array.isArray(raw.images)) {
+    raw.images.slice(0, 12).forEach(addEntry);
+  }
+  if (!entries.some((entry) => entry.path === fallbackImage)) {
+    entries.unshift({
+      id: "default",
+      label: normalizedText(raw.imageLabel, "imageLabel", "默认图", 80),
+      path: fallbackImage,
+      ...(fallbackPreviewImage ? { previewPath: fallbackPreviewImage } : {}),
+    });
+  }
+  const seen = new Set();
+  return entries.filter((entry) => {
+    if (seen.has(entry.id)) return false;
+    seen.add(entry.id);
+    return true;
+  }).slice(0, 12);
 }
 
 function isSupportedCssColor(value) {
@@ -159,9 +216,13 @@ async function loadThemeInstallManifest(realThemeDir) {
   };
 }
 
-async function normalizeInlineInstallManifest(rawInstall, realThemeDir, rawPet) {
+async function normalizeInlineInstallManifest(rawInstall, realThemeDir, rawPet, rawTheme = null) {
   const install = rawInstall && typeof rawInstall === "object" && !Array.isArray(rawInstall) ? rawInstall : null;
-  const filesSource = Array.isArray(install?.files) ? install.files : ["theme.json"];
+  const filesSource = [
+    ...(Array.isArray(rawTheme?.files) ? rawTheme.files : []),
+    ...(Array.isArray(install?.files) ? install.files : []),
+    "theme.json",
+  ];
   const files = [];
   for (const item of filesSource) {
     if (typeof item !== "string" || !item || path.isAbsolute(item)) throw new Error("theme.install.files must be relative paths");
@@ -297,8 +358,8 @@ export async function loadTheme(themeDir) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error("Theme root must be an object");
   }
-  const install = raw.install
-    ? await normalizeInlineInstallManifest(raw.install, realThemeDir, raw.pet)
+  let install = raw.install || raw.files
+    ? await normalizeInlineInstallManifest(raw.install, realThemeDir, raw.pet, raw)
     : await loadThemeInstallManifest(realThemeDir);
   const image = normalizedText(raw.image, "image", null, 240);
   if (!image || path.isAbsolute(image)) throw new Error("Theme image must be a relative path");
@@ -316,6 +377,32 @@ export async function loadTheme(themeDir) {
   if (!realRelativeImage || realRelativeImage.startsWith("..") || path.isAbsolute(realRelativeImage)) {
     throw new Error("Theme image cannot escape through a link or junction");
   }
+  const previewImage = normalizedText(raw.previewImage, "previewImage", "", 240);
+  let realPreviewImagePath = null;
+  let previewExtension = "";
+  if (previewImage) {
+    if (path.isAbsolute(previewImage)) throw new Error("Theme previewImage must be a relative path");
+    const previewPath = path.resolve(realThemeDir, previewImage);
+    const relativePreviewImage = path.relative(realThemeDir, previewPath);
+    if (!relativePreviewImage || relativePreviewImage.startsWith("..") || path.isAbsolute(relativePreviewImage)) {
+      throw new Error("Theme previewImage must remain inside the selected theme directory");
+    }
+    previewExtension = path.extname(previewPath).toLowerCase();
+    if (!SUPPORTED_ART_EXTENSIONS.includes(previewExtension)) {
+      throw new Error(`Unsupported theme previewImage format: ${previewExtension || "missing"}`);
+    }
+    realPreviewImagePath = await fs.realpath(previewPath);
+    const realRelativePreviewImage = path.relative(realThemeDir, realPreviewImagePath);
+    if (!realRelativePreviewImage || realRelativePreviewImage.startsWith("..") || path.isAbsolute(realRelativePreviewImage)) {
+      throw new Error("Theme previewImage cannot escape through a link or junction");
+    }
+  }
+  const imageEntries = normalizeThemeImageEntries(raw, image, previewImage);
+  const requestedDefaultImage = normalizedText(raw.defaultImage, "defaultImage", imageEntries[0]?.id ?? "default", 80);
+  const defaultImage = imageEntries.some((entry) => entry.id === requestedDefaultImage)
+    ? requestedDefaultImage
+    : imageEntries[0]?.id ?? "default";
+  const display = normalizeImageDisplay(raw.display);
   const entrypoints = raw.entrypoints && typeof raw.entrypoints === "object" && !Array.isArray(raw.entrypoints)
     ? raw.entrypoints : {};
   const framework = raw.framework && typeof raw.framework === "object" && !Array.isArray(raw.framework)
@@ -419,6 +506,10 @@ export async function loadTheme(themeDir) {
     statusText: normalizedText(raw.statusText, "statusText", "", 80),
     quote: normalizedText(raw.quote, "quote", "", 100),
     image,
+    ...(previewImage ? { previewImage } : {}),
+    defaultImage,
+    images: imageEntries,
+    display,
     appearance: normalizedChoice(raw.appearance, "appearance", THEME_CHOICES.appearance, "auto"),
     art: {
       focusX: normalizedUnit(art.focusX, "art.focusX"),
@@ -436,8 +527,9 @@ export async function loadTheme(themeDir) {
     }
     theme.palette.accent = accent;
   }
-  const [themeStat, imageStat, cssStat, rendererStat, iconsStat] = await Promise.all([
-    fs.stat(themePath), fs.stat(realImagePath), fs.stat(cssBundle.path), fs.stat(rendererBundle.path),
+  const [themeStat, imageStat, previewImageStat, cssStat, rendererStat, iconsStat] = await Promise.all([
+    fs.stat(themePath), fs.stat(realImagePath), realPreviewImagePath ? fs.stat(realPreviewImagePath) : null,
+    fs.stat(cssBundle.path), fs.stat(rendererBundle.path),
     iconsBundle && !iconsBundle.inline ? fs.stat(iconsBundle.path) : null,
   ]);
   if (!imageStat.isFile()) throw new Error("Theme image is not a file");
@@ -453,6 +545,74 @@ export async function loadTheme(themeDir) {
   if (!artMetadata) {
     throw new Error("Theme image metadata is invalid or exceeds the 16384px / 50MP safety limit");
   }
+  let previewImageBytes = null;
+  if (realPreviewImagePath) {
+    if (!previewImageStat?.isFile()) throw new Error("Theme previewImage is not a file");
+    if (previewImageStat.size < 1) throw new Error("Theme previewImage cannot be empty");
+    if (previewImageStat.size > MAX_ART_BYTES) {
+      throw new Error(`Theme previewImage exceeds the ${MAX_ART_BYTES / 1024 / 1024} MB limit`);
+    }
+    previewImageBytes = await fs.readFile(realPreviewImagePath);
+    if (previewImageBytes.length < 1 || previewImageBytes.length > MAX_ART_BYTES ||
+        !readImageMetadata(previewImageBytes, previewExtension)) {
+      throw new Error("Theme previewImage metadata is invalid or exceeds the 16384px / 50MP safety limit");
+    }
+  }
+  const readThemeImageAsset = async (relativePath, field) => {
+    if (!relativePath || path.isAbsolute(relativePath)) throw new Error(`${field} must be a relative path`);
+    if (relativePath === image) return { path: realImagePath, bytes: imageBytes, metadata: artMetadata, stat: imageStat };
+    if (previewImageBytes && relativePath === previewImage) {
+      return { path: realPreviewImagePath, bytes: previewImageBytes, metadata: readImageMetadata(previewImageBytes, previewExtension), stat: previewImageStat };
+    }
+    const candidate = path.resolve(realThemeDir, relativePath);
+    const relative = path.relative(realThemeDir, candidate);
+    if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
+      throw new Error(`${field} must remain inside the selected theme directory`);
+    }
+    const extension = path.extname(candidate).toLowerCase();
+    if (!SUPPORTED_ART_EXTENSIONS.includes(extension)) throw new Error(`Unsupported ${field} format: ${extension || "missing"}`);
+    const realCandidate = await fs.realpath(candidate);
+    const realRelative = path.relative(realThemeDir, realCandidate);
+    if (!realRelative || realRelative.startsWith("..") || path.isAbsolute(realRelative)) {
+      throw new Error(`${field} cannot escape through a link or junction`);
+    }
+    const stat = await fs.stat(realCandidate);
+    if (!stat.isFile() || stat.size < 1 || stat.size > MAX_ART_BYTES) {
+      throw new Error(`${field} must be a regular image file between 1 byte and ${MAX_ART_BYTES / 1024 / 1024} MB`);
+    }
+    const bytes = await fs.readFile(realCandidate);
+    const metadata = readImageMetadata(bytes, extension);
+    if (!metadata) throw new Error(`${field} metadata is invalid or exceeds the 16384px / 50MP safety limit`);
+    return { path: realCandidate, bytes, metadata, stat };
+  };
+  const runtimeImages = [];
+  const imageAssetCache = new Map();
+  for (const entry of imageEntries) {
+    const asset = imageAssetCache.get(entry.path) ?? await readThemeImageAsset(entry.path, `images.${entry.id}.path`);
+    imageAssetCache.set(entry.path, asset);
+    const previewAsset = entry.previewPath
+      ? imageAssetCache.get(entry.previewPath) ?? await readThemeImageAsset(entry.previewPath, `images.${entry.id}.previewPath`)
+      : null;
+    if (entry.previewPath && previewAsset) imageAssetCache.set(entry.previewPath, previewAsset);
+    runtimeImages.push({ ...entry, filePath: asset.path, bytes: asset.bytes, metadata: asset.metadata, previewFilePath: previewAsset?.path ?? null, previewBytes: previewAsset?.bytes ?? null });
+  }
+  const packageFiles = new Set(install?.files ?? []);
+  packageFiles.add("theme.json");
+  packageFiles.add(cssEntry || "theme.css");
+  if (!usesSharedFramework) packageFiles.add(rendererEntry || "theme.js");
+  packageFiles.add(image);
+  if (previewImage) packageFiles.add(previewImage);
+  for (const entry of imageEntries) {
+    packageFiles.add(entry.path);
+    if (entry.previewPath) packageFiles.add(entry.previewPath);
+  }
+  for (const file of themeIconSourceFiles(icons)) packageFiles.add(file);
+  const normalizedPackageFiles = [...packageFiles].filter(Boolean).map((file) => file.replaceAll("\\", "/"));
+  install = {
+    ...(install ?? { schemaVersion: 2, default: false, manifest: "theme.json", pets: [], path: path.join(realThemeDir, "theme.json"), text: "", inline: true }),
+    files: [...new Set(normalizedPackageFiles)],
+  };
+  theme.files = install.files;
   theme.artMetadata = artMetadata;
   const fingerprintBuilder = createHash("sha256")
     .update(themeText, "utf8")
@@ -462,6 +622,8 @@ export async function loadTheme(themeDir) {
     .update(cssBundle.bytes)
     .update("\0")
     .update(rendererBundle.bytes);
+  if (previewImageBytes) fingerprintBuilder.update("\0preview\0").update(previewImageBytes);
+  for (const entry of runtimeImages) fingerprintBuilder.update("\0image-entry\0").update(entry.id).update("\0").update(entry.bytes);
   if (iconsBundle) fingerprintBuilder.update("\0icons\0").update(iconsBundle.bytes);
   if (install) fingerprintBuilder.update("\0install\0").update(install.text, "utf8");
   if (petBundle) fingerprintBuilder.update("\0pet\0").update(petBundle.manifestBytes).update("\0").update(petBundle.spritesheetBytes);
@@ -478,6 +640,9 @@ export async function loadTheme(themeDir) {
     themePath,
     imagePath: realImagePath,
     imageBytes,
+    previewImagePath: realPreviewImagePath,
+    previewImageBytes,
+    images: runtimeImages,
     cssPath: cssBundle.path,
     cssText: cssBundle.text,
     rendererPath: rendererBundle.path,
@@ -488,7 +653,7 @@ export async function loadTheme(themeDir) {
     install,
     petBundle,
     fingerprint,
-    sourceStamp: `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:${cssStat.size}:${cssStat.mtimeMs}:${rendererStat.size}:${rendererStat.mtimeMs}:${iconsStat?.size ?? 0}:${iconsStat?.mtimeMs ?? 0}${petStamp}`,
+    sourceStamp: `${themeStat.size}:${themeStat.mtimeMs}:${imageStat.size}:${imageStat.mtimeMs}:${previewImageStat?.size ?? 0}:${previewImageStat?.mtimeMs ?? 0}:${cssStat.size}:${cssStat.mtimeMs}:${rendererStat.size}:${rendererStat.mtimeMs}:${iconsStat?.size ?? 0}:${iconsStat?.mtimeMs ?? 0}${petStamp}`,
   };
 }
 
@@ -500,10 +665,26 @@ export async function loadPayload(themeDir = DEFAULT_THEME_DIR, candidateTheme =
   const mime = extension === ".jpg" || extension === ".jpeg" ? "image/jpeg"
     : extension === ".webp" ? "image/webp" : extension === ".gif" ? "image/gif" : "image/png";
   const artDataUrl = `data:${mime};base64,${loadedTheme.imageBytes.toString("base64")}`;
+  const runtimeImages = (loadedTheme.images?.length ? loadedTheme.images : [{
+    id: loadedTheme.theme.defaultImage || "default",
+    label: "默认图",
+    path: loadedTheme.theme.image,
+    bytes: loadedTheme.imageBytes,
+    filePath: loadedTheme.imagePath,
+  }]).map((entry) => ({
+    id: entry.id,
+    label: entry.label,
+    path: entry.path,
+    previewPath: entry.previewPath,
+    src: imageDataUrl(entry.bytes, entry.filePath, MAX_ART_BYTES),
+    preview: entry.previewBytes ? imageDataUrl(entry.previewBytes, entry.previewFilePath, 4 * 1024 * 1024) : null,
+    metadata: entry.metadata,
+  })).filter((entry) => entry.src);
+  const runtimeTheme = { ...loadedTheme.theme, runtimeImages };
   const themePayload = template
     .replace("__DREAM_CSS_JSON__", JSON.stringify(css))
     .replace("__DREAM_ART_JSON__", JSON.stringify(artDataUrl))
-    .replace("__DREAM_THEME_JSON__", JSON.stringify(loadedTheme.theme))
+    .replace("__DREAM_THEME_JSON__", JSON.stringify(runtimeTheme))
     .replace("__DREAM_ICONS_JSON__", JSON.stringify(loadedTheme.icons ?? {}));
   const payload = `${themePayload}
 ;window.__CODEX_DREAM_SKIN_RUNTIME__ = Object.freeze({
@@ -512,7 +693,7 @@ export async function loadPayload(themeDir = DEFAULT_THEME_DIR, candidateTheme =
   themeId: ${JSON.stringify(loadedTheme.theme.id)},
   themeVersion: ${JSON.stringify(loadedTheme.theme.version)}
 });`;
-  const { imageBytes: _imageBytes, ...themeState } = loadedTheme;
+  const { imageBytes: _imageBytes, previewImageBytes: _previewImageBytes, ...themeState } = loadedTheme;
   return { ...themeState, payload };
 }
 
@@ -530,8 +711,34 @@ export function safeThemeId(value, fallback = "theme") {
   return (cleaned || fallback).slice(0, 72);
 }
 
-function themeForDisk(loaded, imageName) {
-  const { artMetadata: _metadata, framework: _framework, ...theme } = loaded.theme;
+function themeIconSourceFiles(icons) {
+  return Object.keys(icons ?? {}).sort().map((name) => `icons/${name}.svg`);
+}
+
+async function writeThemeIconSources(destination, icons) {
+  const iconsDirectory = path.join(destination, "icons");
+  await fs.rm(iconsDirectory, { recursive: true, force: true });
+  const entries = Object.entries(icons ?? {}).sort(([left], [right]) => left.localeCompare(right));
+  if (!entries.length) return;
+  await fs.mkdir(iconsDirectory, { recursive: true });
+  for (const [name, svg] of entries) {
+    if (!/^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(name)) throw new Error(`Theme icon name is invalid: ${name}`);
+    const iconPath = path.join(iconsDirectory, `${name}.svg`);
+    if (!isPathInside(iconPath, iconsDirectory)) throw new Error(`Theme icon path escaped its directory: ${name}`);
+    await fs.writeFile(iconPath, `${svg.trim()}\n`, "utf8");
+  }
+}
+
+function themeForDisk(loaded, imageName, previewImageName = null, imageEntries = null) {
+  const { artMetadata: _metadata, framework: _framework, previewImage: _previewImage, ...theme } = loaded.theme;
+  const iconFiles = themeIconSourceFiles(loaded.icons);
+  const diskImages = imageEntries?.length ? imageEntries : [{
+    id: "default",
+    label: "默认图",
+    path: imageName,
+    ...(previewImageName ? { previewPath: previewImageName } : {}),
+  }];
+  const diskDefault = diskImages.find((entry) => entry.sourceDefault)?.id ?? diskImages[0]?.id ?? "default";
   const diskTheme = {
     ...theme,
     schemaVersion: 4,
@@ -540,16 +747,20 @@ function themeForDisk(loaded, imageName) {
       renderer: "theme.js",
     },
     image: imageName,
+    defaultImage: diskDefault,
+    images: diskImages.map(({ sourceDefault: _sourceDefault, ...entry }) => entry),
   };
+  if (previewImageName) diskTheme.previewImage = previewImageName;
   if (loaded.icons && Object.keys(loaded.icons).length > 0) diskTheme.icons = loaded.icons;
   else delete diskTheme.icons;
   if (loaded.petBundle) diskTheme.pet = { id: loaded.petBundle.id };
   else delete diskTheme.pet;
   diskTheme.install = {
     default: false,
-    files: ["theme.json", "theme.css", "theme.js", imageName],
+    files: ["theme.json", "theme.css", "theme.js", ...diskImages.flatMap((entry) => [entry.path, entry.previewPath].filter(Boolean)), imageName, ...(previewImageName ? [previewImageName] : []), ...iconFiles],
     pets: loaded.petBundle ? [loaded.petBundle.id] : [],
   };
+  diskTheme.files = diskTheme.install.files;
   return diskTheme;
 }
 
@@ -582,7 +793,12 @@ export async function writeThemeDirectory(destination, loaded) {
   if (!isPathInside(resolvedDestination, realParent)) throw new Error("Theme destination escaped its managed folder");
   const extension = path.extname(loaded.imagePath).toLowerCase();
   const imageName = `art${extension}`;
+  const previewExtension = loaded.previewImageBytes && loaded.previewImagePath
+    ? path.extname(loaded.previewImagePath).toLowerCase()
+    : "";
+  const previewImageName = previewExtension ? `preview${previewExtension}` : null;
   const imagePath = path.join(resolvedDestination, imageName);
+  const previewImagePath = previewImageName ? path.join(resolvedDestination, previewImageName) : null;
   const cssPath = path.join(resolvedDestination, "theme.css");
   const rendererPath = path.join(resolvedDestination, "theme.js");
   const imageTemp = path.join(resolvedDestination, `.dream-image-${Date.now()}-${Math.random().toString(16).slice(2)}.tmp`);
@@ -590,13 +806,49 @@ export async function writeThemeDirectory(destination, loaded) {
   try {
     await fs.writeFile(imageTemp, loaded.imageBytes, { flag: "wx" });
     await fs.copyFile(imageTemp, imagePath);
+    if (previewImagePath) await fs.writeFile(previewImagePath, loaded.previewImageBytes);
+    const diskImageEntries = [];
+    const sourceImages = loaded.images?.length ? loaded.images : [{
+      id: loaded.theme.defaultImage || "default",
+      label: "默认图",
+      path: loaded.theme.image,
+      bytes: loaded.imageBytes,
+      filePath: loaded.imagePath,
+      previewPath: loaded.theme.previewImage,
+      previewBytes: loaded.previewImageBytes,
+      previewFilePath: loaded.previewImagePath,
+    }];
+    for (const entry of sourceImages) {
+      const isDefaultSource = entry.id === loaded.theme.defaultImage;
+      const sourceExtension = path.extname(entry.filePath || loaded.imagePath).toLowerCase() || extension;
+      const diskPath = isDefaultSource ? imageName : `images/${safeThemeId(entry.id, "image")}${sourceExtension}`;
+      const targetPath = path.join(resolvedDestination, diskPath);
+      await fs.mkdir(path.dirname(targetPath), { recursive: true });
+      await fs.writeFile(targetPath, entry.bytes ?? loaded.imageBytes);
+      let diskPreviewPath = null;
+      if (entry.previewBytes) {
+        const sourcePreviewExtension = path.extname(entry.previewFilePath || loaded.previewImagePath || "").toLowerCase() || ".png";
+        diskPreviewPath = isDefaultSource && previewImageName ? previewImageName : `images/${safeThemeId(entry.id, "image")}-preview${sourcePreviewExtension}`;
+        const targetPreviewPath = path.join(resolvedDestination, diskPreviewPath);
+        await fs.mkdir(path.dirname(targetPreviewPath), { recursive: true });
+        await fs.writeFile(targetPreviewPath, entry.previewBytes);
+      }
+      diskImageEntries.push({
+        id: entry.id,
+        label: entry.label,
+        path: diskPath,
+        ...(diskPreviewPath ? { previewPath: diskPreviewPath } : {}),
+        ...(isDefaultSource ? { sourceDefault: true } : {}),
+      });
+    }
     await fs.writeFile(cssPath, loaded.cssText, "utf8");
     await fs.writeFile(rendererPath, loaded.rendererText, "utf8");
     await fs.rm(path.join(resolvedDestination, "icons.json"), { force: true });
     await fs.rm(path.join(resolvedDestination, "install.json"), { force: true });
     await fs.rm(path.join(resolvedDestination, "pets"), { recursive: true, force: true });
+    await writeThemeIconSources(resolvedDestination, loaded.icons);
     await writePetBundleToStore(stateRootFromThemeDestination(resolvedDestination), loaded.petBundle);
-    await fs.writeFile(jsonTemp, `${JSON.stringify(themeForDisk(loaded, imageName), null, 2)}\n`, { flag: "wx" });
+    await fs.writeFile(jsonTemp, `${JSON.stringify(themeForDisk(loaded, imageName, previewImageName, diskImageEntries), null, 2)}\n`, { flag: "wx" });
     await fs.copyFile(jsonTemp, path.join(resolvedDestination, "theme.json"));
   } finally {
     await fs.rm(imageTemp, { force: true }).catch(() => {});
@@ -749,8 +1001,59 @@ export async function writePetAssociations(options, associations) {
   }
 }
 
+export async function updateThemeImageSettings(themeDirectory, settings = {}) {
+  const loaded = await loadTheme(themeDirectory);
+  const directory = path.dirname(loaded.themePath);
+  const theme = { ...loaded.theme };
+  const images = Array.isArray(theme.images) ? theme.images.map((entry) => ({ ...entry })) : [];
+  const addedImages = Array.isArray(settings.addedImages) ? settings.addedImages.slice(0, 8) : [];
+  if (addedImages.length) await fs.mkdir(path.join(directory, "images"), { recursive: true });
+  for (const added of addedImages) {
+    const name = normalizedText(added?.name, "addedImages.name", "image.png", 180);
+    const extension = path.extname(name).toLowerCase();
+    if (!SUPPORTED_ART_EXTENSIONS.includes(extension)) throw new Error("新增图片格式必须是 PNG、JPG、WebP 或 GIF");
+    const bytes = decodeBoundedBase64(String(added?.base64 || ""), "新增图片", MAX_ART_BYTES);
+    if (!readImageMetadata(bytes, extension)) throw new Error("新增图片尺寸无效或超过安全限制");
+    const label = normalizedText(added?.label, "addedImages.label", path.basename(name, extension), 80);
+    const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 10);
+    const id = safeThemeId(`${label}-${hash}`, `image-${hash}`);
+    const relativePath = `images/${id}${extension}`;
+    const destination = path.join(directory, relativePath);
+    if (!isPathInside(destination, directory)) throw new Error("新增图片路径越界");
+    await fs.writeFile(destination, bytes);
+    images.push({ id, label, path: relativePath });
+  }
+  const display = normalizeImageDisplay(settings.display ?? theme.display);
+  const requestedDefault = normalizedText(settings.defaultImage, "defaultImage", theme.defaultImage || images[0]?.id || "default", 80);
+  const defaultEntry = images.find((entry) => entry.id === requestedDefault) ?? images[0];
+  if (!defaultEntry) throw new Error("主题至少需要一张图片");
+  theme.defaultImage = defaultEntry.id;
+  theme.image = defaultEntry.path;
+  if (defaultEntry.previewPath) theme.previewImage = defaultEntry.previewPath;
+  theme.images = images;
+  theme.display = display;
+  const files = new Set(["theme.json"]);
+  for (const file of loaded.install?.files ?? []) files.add(file);
+  files.add(theme.image);
+  if (theme.previewImage) files.add(theme.previewImage);
+  for (const entry of images) {
+    files.add(entry.path);
+    if (entry.previewPath) files.add(entry.previewPath);
+  }
+  for (const file of themeIconSourceFiles(loaded.icons)) files.add(file);
+  theme.files = [...files].filter(Boolean).map((file) => String(file).replaceAll("\\", "/"));
+  theme.install = {
+    ...(theme.install ?? {}),
+    default: theme.install?.default === true,
+    files: theme.files,
+    pets: loaded.install?.pets ?? (theme.pet?.id ? [theme.pet.id] : []),
+  };
+  await fs.writeFile(loaded.themePath, `${JSON.stringify(theme, null, 2)}\n`, "utf8");
+  return loadTheme(directory);
+}
+
 async function previewDataUrl(loaded) {
-  return imageDataUrl(loaded.imageBytes, loaded.imagePath, 4 * 1024 * 1024);
+  return imageDataUrl(loaded.previewImageBytes ?? loaded.imageBytes, loaded.previewImagePath ?? loaded.imagePath, 4 * 1024 * 1024);
 }
 
 function imageDataUrl(bytes, filePath, maxBytes) {
@@ -846,6 +1149,10 @@ export async function listInstalledThemes(options) {
         appearance: loaded.theme.appearance,
         brandIcon: loaded.theme.brandIcon,
         icons: loaded.icons,
+        defaultImage: loaded.theme.defaultImage,
+        images: loaded.theme.images,
+        display: loaded.theme.display,
+        files: loaded.theme.files,
         ...themePetSummary(loaded),
         accent: loaded.theme.palette?.accent ?? "#6edaf2",
       });
@@ -872,6 +1179,10 @@ export async function listBundledThemes() {
         version: loaded.theme.version,
         brandIcon: loaded.theme.brandIcon,
         icons: loaded.icons,
+        defaultImage: loaded.theme.defaultImage,
+        images: loaded.theme.images,
+        display: loaded.theme.display,
+        files: loaded.theme.files,
         ...themePetSummary(loaded),
         accent: loaded.theme.palette?.accent ?? "#6edaf2",
       });
@@ -1007,16 +1318,27 @@ export async function fetchRemoteTheme(themeUrl) {
     typeof rawTheme.image !== "string" || path.isAbsolute(rawTheme.image)) {
     throw new Error("远程主题 image 必须是相对路径");
   }
-  const imageUrl = new URL(rawTheme.image, url);
-  if (imageUrl.protocol !== "https:") throw new Error("远程主题图片只允许 HTTPS 地址");
-  const imageResponse = await fetch(imageUrl, { redirect: "error", signal: AbortSignal.timeout(15000) });
-  if (!imageResponse.ok) throw new Error(`主题图片请求失败：HTTP ${imageResponse.status}`);
-  const bytes = Buffer.from(await imageResponse.arrayBuffer());
-  if (bytes.length < 1 || bytes.length > MAX_ART_BYTES) throw new Error("主题图片大小不在允许范围内");
-  const extension = path.extname(imageUrl.pathname).toLowerCase();
-  if (!SUPPORTED_ART_EXTENSIONS.includes(extension) || !readImageMetadata(bytes, extension)) {
-    throw new Error("远程主题图片格式或尺寸无效");
-  }
+  const fetchRemoteImage = async (relativePath, label) => {
+    if (typeof relativePath !== "string" || !relativePath.trim() || path.isAbsolute(relativePath)) {
+      throw new Error(`远程主题 ${label} 必须是相对路径`);
+    }
+    const imageUrl = new URL(relativePath, url);
+    if (imageUrl.protocol !== "https:") throw new Error(`远程主题 ${label} 只允许 HTTPS 地址`);
+    const imageResponse = await fetch(imageUrl, { redirect: "error", signal: AbortSignal.timeout(15000) });
+    if (!imageResponse.ok) throw new Error(`${label} 请求失败：HTTP ${imageResponse.status}`);
+    const bytes = Buffer.from(await imageResponse.arrayBuffer());
+    if (bytes.length < 1 || bytes.length > MAX_ART_BYTES) throw new Error(`${label} 大小不在允许范围内`);
+    const extension = path.extname(imageUrl.pathname).toLowerCase();
+    if (!SUPPORTED_ART_EXTENSIONS.includes(extension) || !readImageMetadata(bytes, extension)) {
+      throw new Error(`${label} 格式或尺寸无效`);
+    }
+    return { bytes, extension };
+  };
+  const { bytes, extension } = await fetchRemoteImage(rawTheme.image, "主题图片");
+  const remotePreviewImage = normalizedText(rawTheme.previewImage, "previewImage", "", 240);
+  const remotePreview = remotePreviewImage
+    ? await fetchRemoteImage(remotePreviewImage, "主题预览图")
+    : null;
   const art = rawTheme.art && typeof rawTheme.art === "object" && !Array.isArray(rawTheme.art) ? rawTheme.art : {};
   const palette = rawTheme.palette && typeof rawTheme.palette === "object" && !Array.isArray(rawTheme.palette) ? rawTheme.palette : {};
   const entrypoints = rawTheme.entrypoints && typeof rawTheme.entrypoints === "object" && !Array.isArray(rawTheme.entrypoints)
@@ -1110,6 +1432,7 @@ export async function fetchRemoteTheme(themeUrl) {
     statusText: normalizedText(rawTheme.statusText, "statusText", "", 80),
     quote: normalizedText(rawTheme.quote, "quote", "", 100),
     image: `art${extension}`,
+    ...(remotePreview ? { previewImage: `preview${remotePreview.extension}` } : {}),
     appearance: normalizedChoice(rawTheme.appearance, "appearance", THEME_CHOICES.appearance, "auto"),
     art: {
       focusX: normalizedUnit(art.focusX, "art.focusX"),
@@ -1129,7 +1452,10 @@ export async function fetchRemoteTheme(themeUrl) {
     theme.palette.accent = accent;
   }
   return {
-    theme, imageBytes: bytes, imagePath: `remote${extension}`, petBundle,
+    theme, imageBytes: bytes, imagePath: `remote${extension}`,
+    previewImageBytes: remotePreview?.bytes ?? null,
+    previewImagePath: remotePreview ? `remote-preview${remotePreview.extension}` : null,
+    petBundle,
     cssPath: "remote.css", cssText, rendererPath: "remote.js", rendererText,
     iconsPath: iconsText ? "remote-icons.json" : null, iconsText, icons,
     themePath: "remote", sourceStamp: "remote", fingerprint: "remote",
@@ -1247,6 +1573,8 @@ export async function createLocalThemePackage({
     },
     imagePath,
     imageBytes,
+    previewImagePath: null,
+    previewImageBytes: null,
     cssText,
     iconsPath: iconsText ? iconsPath : null,
     iconsText,

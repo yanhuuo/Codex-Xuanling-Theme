@@ -30,6 +30,7 @@ import {
   setBaseThemeEnabled,
   stateRootFor,
   themeControlState,
+  updateThemeImageSettings,
   writeLibraries,
   writeThemeDirectory,
 } from "./theme-package.mjs";
@@ -445,6 +446,22 @@ async function handleThemeControl(options, request) {
     if (active.theme.id === targetTheme.theme.id) {
       await writeThemeDirectory(options.themeDir, withSelection);
       if (selectedBundle) await installAndSelectBundledPet(options, withSelection);
+    }
+    return themeControlState(options);
+  }
+  if (request.command === "updateThemeImages") {
+    const key = safeThemeId(payload.key, "");
+    if (!key || key !== String(payload.key)) throw new Error("无效的主题标识");
+    const directory = path.resolve(savedRoot, key);
+    if (!isPathInside(directory, path.resolve(savedRoot))) throw new Error("主题路径越界");
+    const updated = await updateThemeImageSettings(directory, {
+      defaultImage: payload.defaultImage,
+      display: payload.display,
+      addedImages: payload.addedImages,
+    });
+    const active = await loadTheme(options.themeDir);
+    if (active.theme.id === updated.theme.id) {
+      await writeThemeDirectory(options.themeDir, updated);
     }
     return themeControlState(options);
   }

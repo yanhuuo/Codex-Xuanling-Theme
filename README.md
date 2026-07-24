@@ -124,7 +124,11 @@ pets/<pet-id>/
    - `name`
    - `author`
    - `version`
-   - `image`
+   - `image`（实际应用背景）
+   - `previewImage`（可选，主题页卡片预览）
+   - `defaultImage` / `images`（单图也放进列表；多图可定时轮换）
+   - `display`（背景适配、位置、平铺和轮换）
+   - `files`（主题包静态资源；不再手写长串 `install.files`）
   - `palette.accent`
   - `icons`，并同步维护 `icons/*.svg` 源文件
   - `sendIcon` / `processingIcon` / `spinnerIcon`（可选）
