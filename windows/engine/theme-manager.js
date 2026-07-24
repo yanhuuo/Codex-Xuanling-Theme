@@ -1,7 +1,7 @@
 "use strict";
 (() => {
     const KEY = "__CODEX_DREAM_THEME_MANAGER__";
-    const VERSION = "1.10.0";
+    const VERSION = "1.10.1";
     const BINDING = "__codexDreamThemeControl";
     const RESPONSE = "__codexDreamThemeResponse";
     const STYLE_ID = "codex-dream-theme-manager-style";
@@ -943,6 +943,11 @@
         else if (target.dataset.themeSettingsInit) {
             const key = target.dataset.themeSettingsInit;
             const theme = imageSettingsTheme;
+            imageSettingsTheme = null;
+            imageSettingsLoading = false;
+            imageSettingsFiles = [];
+            imageSettingsError = "";
+            render();
             act(async () => call("updateThemeImages", {
                 key,
                 defaultImage: theme?.defaultImage || "",
@@ -976,13 +981,19 @@
             const composerWidth = panel.querySelector("[data-theme-composer-width]")?.value || "default";
             const composerHeight = panel.querySelector("[data-theme-composer-height]")?.value || "default";
             const composerFontSize = panel.querySelector("[data-theme-composer-font-size]")?.value || "default";
+            const filesToAdd = imageSettingsFiles;
+            imageSettingsTheme = null;
+            imageSettingsLoading = false;
+            imageSettingsFiles = [];
+            imageSettingsError = "";
+            render();
             act(async () => {
-                const addedImages = await Promise.all(imageSettingsFiles.map(async (file) => ({
+                const addedImages = await Promise.all(filesToAdd.map(async (file) => ({
                     name: file.name,
                     label: file.name.replace(/\.[^.]+$/, ""),
                     base64: await fileToBase64(file),
                 })));
-                const result = await call("updateThemeImages", {
+                return call("updateThemeImages", {
                     key: target.dataset.themeImagesSave,
                     defaultImage,
                     addedImages,
@@ -990,11 +1001,6 @@
                     sidebar: { background: sidebarBackground, fontFamily: sidebarFontFamily, textColor: sidebarTextColor, iconColor: sidebarIconColor, fontSize: sidebarFontSize, fontWeight: sidebarFontWeight, textBrightness: sidebarTextBrightness },
                     composer: { width: composerWidth, height: composerHeight, fontSize: composerFontSize },
                 });
-                imageSettingsTheme = null;
-                imageSettingsLoading = false;
-                imageSettingsFiles = [];
-                imageSettingsError = "";
-                return result;
             }, "主题图片设置已保存");
         }
         else if (target.hasAttribute("data-local-theme-create")) {
