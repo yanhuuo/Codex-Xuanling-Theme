@@ -43,6 +43,14 @@
   --dream-home-copy: color-mix(in oklab, var(--dream-text) 92%, #000);
   --dream-home-copy-shadow: 0 1px 3px color-mix(in oklab, white 90%, transparent),
     0 0 14px color-mix(in oklab, white 62%, transparent);
+  --dream-sidebar-text-dim: 0%;
+  --dream-sidebar-text-lift: 0%;
+  --dream-sidebar-text-adjusted: color-mix(in srgb,
+    color-mix(in srgb, var(--dream-sidebar-text, var(--dream-text)), black var(--dream-sidebar-text-dim)),
+    white var(--dream-sidebar-text-lift));
+  --dream-sidebar-icon-adjusted: color-mix(in srgb,
+    color-mix(in srgb, var(--dream-sidebar-icon, var(--dream-text)), black var(--dream-sidebar-text-dim)),
+    white var(--dream-sidebar-text-lift));
 }
 
 :root.codex-dream-skin.dream-theme-dark {
@@ -88,7 +96,7 @@ html.codex-dream-skin body {
 }
 
 html.codex-dream-skin aside.app-shell-left-panel {
-  color: var(--dream-sidebar-text, var(--dream-text)) !important;
+  color: var(--dream-sidebar-text-adjusted) !important;
   background: var(--dream-sidebar) !important;
   font-family: var(--dream-sidebar-font-family, inherit) !important;
   font-size: var(--dream-sidebar-font-size, inherit) !important;
@@ -103,7 +111,7 @@ html.codex-dream-skin aside.app-shell-left-panel nav {
 }
 
 html.codex-dream-skin aside.app-shell-left-panel button {
-  color: var(--dream-sidebar-text, var(--dream-text)) !important;
+  color: var(--dream-sidebar-text-adjusted) !important;
   font-family: var(--dream-sidebar-font-family, inherit) !important;
   font-size: var(--dream-sidebar-font-size, inherit) !important;
   font-weight: var(--dream-sidebar-font-weight, inherit) !important;
@@ -116,21 +124,18 @@ html.codex-dream-skin aside.app-shell-left-panel button:hover {
 
 html.codex-dream-skin aside.app-shell-left-panel [class~="bg-token-list-hover-background"],
 html.codex-dream-skin aside.app-shell-left-panel [aria-current="page"] {
-  color: var(--dream-sidebar-text, var(--dream-text)) !important;
+  color: var(--dream-sidebar-text-adjusted) !important;
   background: var(--dream-accent-hover) !important;
   box-shadow: inset 0 0 0 1px var(--dream-line-soft) !important;
 }
 
-html.codex-dream-skin aside.app-shell-left-panel svg,
-html.codex-dream-skin aside.app-shell-left-panel [class*="text-token"] {
-  color: var(--dream-sidebar-icon, currentColor);
+html.codex-dream-skin aside.app-shell-left-panel svg {
+  color: var(--dream-sidebar-icon-adjusted) !important;
 }
 
-html.codex-dream-skin aside.app-shell-left-panel button,
-html.codex-dream-skin aside.app-shell-left-panel a,
-html.codex-dream-skin aside.app-shell-left-panel [role="button"],
 html.codex-dream-skin aside.app-shell-left-panel [class*="text-token"] {
-  filter: brightness(var(--dream-sidebar-text-brightness, 100%));
+  color: var(--dream-sidebar-text-adjusted) !important;
+  filter: none !important;
 }
 
 html.codex-dream-skin main.main-surface {

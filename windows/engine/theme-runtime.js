@@ -50,6 +50,8 @@
     "--dream-sidebar-text",
     "--dream-sidebar-icon",
     "--dream-sidebar-text-brightness",
+    "--dream-sidebar-text-dim",
+    "--dream-sidebar-text-lift",
   ];
   const HOME_UTILITY_CLASS = "dream-home-utility";
   const SPINNER_SELECTOR = ".animate-spin, [class~='animate-spin'], [role='progressbar'], [data-loading='true']";
@@ -459,9 +461,12 @@
     root.style.setProperty("--dream-accent-ink", accentInk);
     root.style.setProperty("--dream-image-luma", profile.luma.toFixed(3));
     root.style.setProperty("--dream-sidebar-font-family", config.sidebarFontFamily || "inherit");
+    const sidebarTextBrightness = Math.min(140, Math.max(60, Number(config.sidebarTextBrightness) || 100));
     root.style.setProperty("--dream-sidebar-text", config.sidebarTextColor || "var(--dream-text)");
-    root.style.setProperty("--dream-sidebar-icon", config.sidebarIconColor || "currentColor");
-    root.style.setProperty("--dream-sidebar-text-brightness", `${config.sidebarTextBrightness || 100}%`);
+    root.style.setProperty("--dream-sidebar-icon", config.sidebarIconColor || config.sidebarTextColor || "var(--dream-text)");
+    root.style.setProperty("--dream-sidebar-text-brightness", `${sidebarTextBrightness}%`);
+    root.style.setProperty("--dream-sidebar-text-dim", `${Math.max(0, 100 - sidebarTextBrightness)}%`);
+    root.style.setProperty("--dream-sidebar-text-lift", `${Math.max(0, sidebarTextBrightness - 100)}%`);
     root.style.setProperty("--dream-sidebar-font-size",
       config.sidebarFontSize === "small" ? "12px" :
       config.sidebarFontSize === "normal" ? "13px" :

@@ -778,6 +778,19 @@ try {
     $remielCss.Contains('body:has(nav[aria-label="设置"], nav[aria-label="Settings"])')) {
     throw 'The Remiel package must contain only its palette/brand overrides, not copied framework behavior.'
   }
+  $managerSource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'src\theme-manager.ts')
+  $imageSaveIndex = $managerSource.IndexOf('else if (target.dataset.themeImagesSave)')
+  $imageCloseIndex = $managerSource.IndexOf('imageSettingsTheme = null;', $imageSaveIndex)
+  $imageUpdateIndex = $managerSource.IndexOf('call("updateThemeImages"', $imageSaveIndex)
+  if ($imageSaveIndex -lt 0 -or $imageCloseIndex -lt $imageSaveIndex -or $imageCloseIndex -gt $imageUpdateIndex) {
+    throw 'Theme image settings must close their modal before an active-theme hot reload starts.'
+  }
+  if ($css.Contains('filter: brightness(var(--dream-sidebar-text-brightness') -or
+    -not $css.Contains('--dream-sidebar-text-adjusted: color-mix') -or
+    -not $rendererSource.Contains('--dream-sidebar-text-dim') -or
+    -not $rendererSource.Contains('--dream-sidebar-text-lift')) {
+    throw 'Shared sidebar contrast still uses a compounding filter instead of non-stacking color adjustment.'
+  }
   $bundledPet = Join-Path (Split-Path -Parent $Root) 'pets\yangyang-xuanling-official-drum-r3'
   $bundledPetManifestPath = Join-Path $bundledPet 'pet.json'
   if (-not (Test-Path -LiteralPath $bundledPetManifestPath -PathType Leaf)) {
