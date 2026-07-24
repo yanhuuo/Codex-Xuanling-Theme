@@ -4,7 +4,7 @@
   "name": "鸣潮 穗穗｜金穗潮音",
   "description": "Suisui-inspired Codex theme: official folded blue-silver fan motif, gold-ink Shanhe water-realm, dark UI-safe layout, and fan/scroll/seal/water-ripple SVG icons.",
   "author": "yanhuuo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "framework": {
     "id": "dream-skin",
     "version": 1
@@ -103,7 +103,10 @@
       "icons/shield.svg",
       "icons/sites.svg",
       "icons/spinner.svg",
-      "background.jpg"
+      "background.jpg",
+      "wallpaper-fan-ripple.png",
+      "wallpaper-golden-rain.png",
+      "wallpaper-scroll-ink.png"
     ],
     "pets": []
   },
@@ -128,6 +131,21 @@
       "label": "金穗潮音",
       "path": "background-full.png",
       "previewPath": "preview.jpg"
+    },
+    {
+      "id": "fan-ripple",
+      "label": "金扇涟漪",
+      "path": "wallpaper-fan-ripple.png"
+    },
+    {
+      "id": "golden-rain",
+      "label": "金雨扇影",
+      "path": "wallpaper-golden-rain.png"
+    },
+    {
+      "id": "scroll-ink",
+      "label": "山河墨卷",
+      "path": "wallpaper-scroll-ink.png"
     }
   ],
   "display": {
@@ -167,12 +185,19 @@
     "icons/shield.svg",
     "icons/sites.svg",
     "icons/spinner.svg",
-    "background.jpg"
+    "background.jpg",
+    "wallpaper-fan-ripple.png",
+    "wallpaper-golden-rain.png",
+    "wallpaper-scroll-ink.png"
   ],
   "sources": [
     {
       "kind": "generated",
       "process": "official folded fan correction: vertical blue-silver folded fan, gold/teal feather ornaments, water-ribbon and Mingting geometry motifs; avoids generic opened paper fan"
+    },
+    {
+      "kind": "generated",
+      "process": "additional Suisui wallpaper set: UI-safe gold fan ripple, moonlit golden rain fan, and Shanhe ink-scroll water realm variants for multi-image rotation"
     }
   ]
 }
