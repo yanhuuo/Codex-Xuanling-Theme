@@ -20,6 +20,7 @@ function createFixture({
   staleSkin = false,
   homePresent = false,
   roleMainPresent = true,
+  shellTaskPresent = false,
   utilityPresent = false,
   shellAppearance = "dark",
   computedColorScheme = "",
@@ -85,8 +86,9 @@ function createFixture({
       nodes.set(node.id, node);
     },
   };
+  const shellClasses = new Set(shellTaskPresent ? ["dream-task"] : []);
   const shellMain = {
-    classList: makeClassList(),
+    classList: makeClassList(shellClasses),
     getBoundingClientRect() {
       return { left: 290, top: 36, width: 990, height: 784 };
     },
@@ -166,7 +168,12 @@ function createFixture({
     },
     querySelectorAll(selector) {
       if (selector === '[role="main"]') return hasShell && roleMainPresent ? [routeMain] : [];
-      if (selector === ".dream-task") return routeClasses.has("dream-task") ? [routeMain] : [];
+      if (selector === ".dream-task") {
+        return [
+          ...(routeClasses.has("dream-task") ? [routeMain] : []),
+          ...(shellClasses.has("dream-task") ? [shellMain] : []),
+        ];
+      }
       if (selector === ".dream-home-utility") {
         return utilityClasses.has("dream-home-utility") ? [utilityNode] : [];
       }
@@ -235,6 +242,7 @@ function createFixture({
     rootStyles,
     revokedUrls,
     routeClasses,
+    shellClasses,
     homeContentClasses,
     utilityClasses,
     setShellPresent(value) { hasShell = value; },
@@ -315,12 +323,15 @@ assert.equal(configured.utilityClasses.has("dream-home-utility"), false);
 const nativeHome = createFixture({
   shellPresent: true,
   homePresent: true,
+  shellTaskPresent: true,
 });
 vm.runInNewContext(buildPayload({
   art: { homeMode: "native" },
 }), nativeHome.context);
 assert.equal(nativeHome.rootClasses.has("dream-route-home"), true);
 assert.equal(nativeHome.routeClasses.has("dream-home"), false);
+assert.equal(nativeHome.routeClasses.has("dream-task"), false);
+assert.equal(nativeHome.shellClasses.has("dream-task"), false);
 assert.equal(nativeHome.homeContentClasses.has("dream-home-content"), false);
 
 const nativeHomeWithoutRole = createFixture({

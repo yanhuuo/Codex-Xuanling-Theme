@@ -4,7 +4,7 @@
   "name": "蕾米埃尔｜星芒圣翼",
   "description": "绝区零蕾米埃尔风格的粉紫机械圣翼主题，包含独立星芒按钮图标与轻量环绕加载动画。",
   "author": "mizunagare",
-  "version": "1.1.3",
+  "version": "1.1.6",
   "framework": {
     "id": "dream-skin",
     "version": 1
@@ -24,6 +24,11 @@
   "statusText": "SERAPH LINK · ONLINE",
   "quote": "A WISH, DELIVERED IN LIGHT",
   "appearance": "auto",
+  "display": {
+    "fit": "cover",
+    "position": "center",
+    "repeat": "no-repeat"
+  },
   "art": {
     "focusX": 0.5,
     "focusY": 0.5,

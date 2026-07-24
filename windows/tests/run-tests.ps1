@@ -555,8 +555,8 @@ try {
   }
 
   $remielCss = Read-DreamSkinUtf8File -Path (Join-Path $Root 'themes\绝区零 蕾米埃尔\theme.css')
-  if (-not $remielCss.Contains('--dream-art-fit: contain')) {
-    throw 'Remiel must preserve the complete 16:9 artwork instead of cropping it.'
+  if (-not $remielCss.Contains('--dream-art-fit: cover')) {
+    throw 'Remiel must fill the Codex viewport without aspect-ratio gutters.'
   }
   if ($css.Contains('.dream-home > div:first-child')) {
     throw 'Shared home layout still depends on the first child and can hide the composer after a Codex DOM upgrade.'

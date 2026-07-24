@@ -1,9 +1,8 @@
 /* Theme-only palette configuration. Shared layout and behavior live in
    windows/engine/theme-base.css and theme-runtime.js. */
 :root.codex-dream-skin {
-  /* Preserve the complete 2560x1440 composition instead of cropping it to
-     the app viewport. The canvas color fills any aspect-ratio gutter. */
-  --dream-art-fit: contain;
+  /* Fill every supported Codex window without stretching the artwork. */
+  --dream-art-fit: cover;
   --dream-brand-suffix: " · 蕾米埃尔";
   --dream-detail: #c7a9ff;
   --dream-send-base: #3a233f;
@@ -32,12 +31,30 @@
 
 /* Remiel keeps Codex's native home composition. The artwork belongs to the
    window background, never to the native welcome/heading container. */
-html.codex-dream-skin.dream-route-home body {
+html.codex-dream-skin:is(.dream-route-home, .dream-route-task) body {
   background-color: var(--dream-canvas) !important;
   background-image: var(--dream-art) !important;
   background-position: var(--dream-art-position) !important;
   background-size: var(--dream-art-fit) !important;
   background-repeat: no-repeat !important;
+}
+
+html.codex-dream-skin:is(.dream-route-home, .dream-route-task)
+  main.main-surface > header.app-header-tint {
+  background: transparent !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+html.codex-dream-skin:is(.dream-route-home, .dream-route-task)
+  main.main-surface .app-shell-main-content-frame {
+  border-top: 0 !important;
+}
+
+html.codex-dream-skin:is(.dream-route-home, .dream-route-task)
+  main.main-surface .app-shell-main-content-top-fade {
+  display: none !important;
+  background: transparent !important;
 }
 
 html.codex-dream-skin.dream-route-home aside.app-shell-left-panel {
@@ -59,4 +76,18 @@ html.codex-dream-skin.dream-route-home main.main-surface.dream-home-shell {
 
 html.codex-dream-skin.dream-route-home main.main-surface.dream-home-shell [role="main"] {
   background: transparent !important;
+}
+
+html.codex-dream-skin.dream-route-task main.main-surface:not(.dream-home-shell) {
+  background: color-mix(in oklab, var(--dream-surface) 78%, transparent) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+html.codex-dream-skin.dream-route-task .dream-task {
+  background: transparent !important;
+}
+
+html.codex-dream-skin.dream-route-task .dream-task::before {
+  content: none !important;
 }

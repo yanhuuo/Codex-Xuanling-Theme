@@ -461,6 +461,12 @@
     homeContent?.classList.toggle("dream-home-content", decorateHome);
     const routeMains = [...document.querySelectorAll('[role="main"]')];
     if (routeMains.length === 0) routeMains.push(shellMain);
+    const activeRouteMains = new Set(routeMains);
+    for (const className of ["dream-home", "dream-task"]) {
+      for (const candidate of document.querySelectorAll(`.${className}`)) {
+        if (!activeRouteMains.has(candidate)) candidate.classList.remove(className);
+      }
+    }
     for (const candidate of routeMains) {
       candidate.classList.toggle("dream-home", decorateHome && candidate === home);
       candidate.classList.toggle("dream-task", candidate !== home);
