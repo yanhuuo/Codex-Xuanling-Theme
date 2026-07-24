@@ -130,3 +130,13 @@ html.codex-dream-skin:is(.dream-route-home, .dream-route-task)
   background: transparent !important;
   box-shadow: none !important;
 }
+
+/* Remove Codex's native bottom fade siblings; the composer already owns the
+   only readability surface required over artwork. */
+html.codex-dream-skin:is(.dream-route-home, .dream-route-task)
+  main.main-surface .sticky.bottom-0:has(.composer-surface-chrome)
+  [class*="bg-gradient-to-t"][class*="from-token-main-surface-primary"] {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
