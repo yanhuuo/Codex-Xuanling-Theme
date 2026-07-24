@@ -664,9 +664,10 @@ html.codex-dream-skin .dream-theme-spinner-mark {
   z-index: 2;
   left: 50%;
   top: 50%;
-  width: 24px;
-  height: 24px;
-  margin: -12px 0 0 -12px;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  overflow: visible !important;
   pointer-events: none;
   animation: dream-theme-orbit 1080ms linear infinite;
   transform-origin: 50% 50%;
@@ -677,8 +678,8 @@ html.codex-dream-skin .dream-theme-spinner-mark::before {
   content: "";
   position: absolute;
   z-index: 2;
-  right: 1px;
-  top: 3px;
+  right: 3px;
+  top: 5px;
   width: 4px;
   height: 4px;
   border-radius: 50%;
@@ -689,7 +690,7 @@ html.codex-dream-skin .dream-theme-spinner-mark::before {
 html.codex-dream-skin .dream-theme-spinner-mark::after {
   content: "";
   position: absolute;
-  inset: 5px;
+  inset: 7px;
   border: 1px solid color-mix(in srgb, var(--dream-accent) 42%, transparent);
   border-radius: 50%;
 }
@@ -697,9 +698,9 @@ html.codex-dream-skin .dream-theme-spinner-mark::after {
 html.codex-dream-skin .dream-theme-spinner-mark > svg {
   position: absolute;
   left: 50%;
-  top: -1px;
-  width: 11px;
-  height: 11px;
+  top: 1px;
+  width: 9px;
+  height: 9px;
   transform: translateX(-50%) rotate(18deg);
 }
 
@@ -1114,9 +1115,11 @@ html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing 
 html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-brand,
 html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-processing {
   position: relative;
-  width: 24px;
-  height: 24px;
-  flex-basis: 24px;
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+  margin: -4px;
+  overflow: visible !important;
   animation: dream-theme-orbit 1080ms linear infinite;
   transform-origin: 50% 50%;
   will-change: transform;
@@ -1126,7 +1129,7 @@ html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing 
 html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-processing::after {
   content: "";
   position: absolute;
-  inset: 5px;
+  inset: 7px;
   border: 1px solid color-mix(in srgb, var(--dream-accent) 45%, transparent);
   border-radius: 50%;
 }
@@ -1135,9 +1138,9 @@ html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing 
 html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing .dream-theme-icon-processing > svg {
   position: absolute;
   left: 50%;
-  top: -1px;
-  width: 11px;
-  height: 11px;
+  top: 1px;
+  width: 9px;
+  height: 9px;
   transform: translateX(-50%) rotate(18deg);
 }
 

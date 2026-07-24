@@ -742,7 +742,9 @@ try {
     }
   }
   if (-not $css.Contains('dream-theme-orbit') -or
-    -not $css.Contains('top: -1px') -or
+    -not $css.Contains('width: 28px') -or
+    -not $css.Contains('overflow: visible !important') -or
+    -not $css.Contains('top: 1px') -or
     -not $css.Contains('.dream-theme-spinner-source:not(.dream-theme-spinner)') -or
     -not $css.Contains('.dream-theme-spinner-source.dream-theme-spinner > :not(.dream-theme-spinner-mark)') -or
     -not $rendererSource.Contains('document.querySelectorAll(SPINNER_SELECTOR)') -or
