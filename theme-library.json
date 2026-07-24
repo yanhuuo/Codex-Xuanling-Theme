@@ -4,21 +4,21 @@
   "themes": [
     {
       "id": "yangyang-xuanling-azure-plume",
-      "name": "秧秧·玄翎｜苍羽夜",
+      "name": "鸣潮 秧秧·玄翎｜苍羽夜",
       "themeUrl": "windows/themes/鸣潮 秧秧·玄翎/theme.json",
       "previewUrl": "windows/themes/鸣潮 秧秧·玄翎/background.jpg"
     },
     {
       "id": "remiel-seraph-system",
-      "name": "蕾米埃尔｜星芒圣翼",
+      "name": "绝区零 蕾米埃尔｜星芒圣翎",
       "themeUrl": "windows/themes/绝区零 蕾米埃尔/theme.json",
       "previewUrl": "windows/themes/绝区零 蕾米埃尔/background.jpg"
     },
     {
       "id": "wuthering-waves-suisui-golden-ripple",
-      "name": "鸣潮 穗穗｜金穗水庭",
+      "name": "鸣潮 穗穗｜官方3.5主视觉",
       "themeUrl": "windows/themes/鸣潮 穗穗/theme.json",
-      "previewUrl": "windows/themes/鸣潮 穗穗/background.png"
+      "previewUrl": "windows/themes/鸣潮 穗穗/background.jpg"
     }
   ]
 }

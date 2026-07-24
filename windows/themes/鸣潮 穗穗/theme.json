@@ -1,8 +1,8 @@
 {
   "schemaVersion": 4,
   "id": "wuthering-waves-suisui-golden-ripple",
-  "name": "鸣潮 穗穗｜金穗水庭",
-  "description": "鸣潮穗穗暖金水庭主题背景，保留内联主题图标与热重载兼容结构。",
+  "name": "鸣潮 穗穗｜官方3.5主视觉",
+  "description": "采用《鸣潮》官方 3.5「遗音扶剑，荡梦而歌」1920×1080 主视觉作为背景；不使用 AI 生成或二创扩图。",
   "author": "yanhuuo",
   "version": "1.0.0",
   "framework": {
@@ -13,18 +13,18 @@
     "css": "theme.css"
   },
   "brandIcon": "bird",
-  "image": "background.png",
-  "brandSubtitle": "WUTHERING WAVES · SUISUI",
-  "tagline": "金穗临水，月照扇影。",
+  "image": "background.jpg",
+  "brandSubtitle": "WUTHERING WAVES · SUISUI · OFFICIAL 3.5",
+  "tagline": "遗音扶剑，荡梦而歌。",
   "projectPrefix": "选择项目 · ",
   "projectLabel": "◇  选择项目",
   "statusText": "共鸣终端 · ONLINE",
-  "quote": "GOLDEN RIPPLES UNDER MOONLIGHT",
+  "quote": "OFFICIAL 3.5 KEY VISUAL",
   "appearance": "dark",
   "art": {
-    "focusX": 0.78,
-    "focusY": 0.46,
-    "safeArea": "left",
+    "focusX": 0.52,
+    "focusY": 0.48,
+    "safeArea": "center",
     "taskMode": "ambient"
   },
   "palette": {
@@ -58,7 +58,7 @@
     "files": [
       "theme.json",
       "theme.css",
-      "background.png",
+      "background.jpg",
       "icons/add.svg",
       "icons/archive.svg",
       "icons/bird.svg",
@@ -82,5 +82,11 @@
       "icons/sites.svg"
     ],
     "pets": []
+  },
+  "source": {
+    "type": "official",
+    "title": "《鸣潮》3.5「遗音扶剑，荡梦而歌」版本内容说明官方主视觉",
+    "page": "https://wutheringwaves.kurogames.com/zh-cn/main/news/detail/5110",
+    "asset": "https://media-cdn-mingchao.kurogame.com/object/1783526400000/h8habjlm2p6k4wpkk9-1783606522680.jpg"
   }
 }
