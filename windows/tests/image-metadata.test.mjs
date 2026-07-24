@@ -17,10 +17,10 @@ const featured = await fs.readFile(featuredPath);
 const helper = path.join(windowsRoot, "scripts", "image-metadata.mjs");
 
 assert.deepEqual(readImageMetadata(featured, ".jpg"), {
-  width: 2560,
-  height: 1440,
-  ratio: 2560 / 1440,
-  wide: true,
+  width: 6240,
+  height: 3664,
+  ratio: 6240 / 3664,
+  wide: false,
   aspect: "wide",
   taskMode: "ambient",
 });

@@ -1,6 +1,9 @@
 /* Theme-only palette configuration. Shared layout and behavior live in
    windows/engine/theme-base.css and theme-runtime.js. */
 :root.codex-dream-skin {
+  /* Preserve the complete 2560x1440 composition instead of cropping it to
+     the app viewport. The canvas color fills any aspect-ratio gutter. */
+  --dream-art-fit: contain;
   --dream-brand-suffix: " · 蕾米埃尔";
   --dream-detail: #c7a9ff;
   --dream-send-base: #3a233f;
@@ -25,4 +28,35 @@
   --dream-text-muted: oklch(0.72 0.02 325);
   --dream-line: color-mix(in oklab, oklch(0.44 0.035 315) 76%, var(--dream-accent));
   --dream-shadow: 0 18px 48px color-mix(in oklab, oklch(0.055 0.025 315) 72%, transparent);
+}
+
+/* Remiel keeps Codex's native home composition. The artwork belongs to the
+   window background, never to the native welcome/heading container. */
+html.codex-dream-skin.dream-route-home body {
+  background-color: var(--dream-canvas) !important;
+  background-image: var(--dream-art) !important;
+  background-position: var(--dream-art-position) !important;
+  background-size: var(--dream-art-fit) !important;
+  background-repeat: no-repeat !important;
+}
+
+html.codex-dream-skin.dream-route-home aside.app-shell-left-panel {
+  background: linear-gradient(90deg,
+    var(--dream-immersive-sidebar),
+    var(--dream-immersive-edge)) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+html.codex-dream-skin.dream-route-home main.main-surface.dream-home-shell {
+  background: linear-gradient(90deg,
+    var(--dream-immersive-edge),
+    var(--dream-immersive-mid) 64%,
+    var(--dream-immersive-far)) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+html.codex-dream-skin.dream-route-home main.main-surface.dream-home-shell [role="main"] {
+  background: transparent !important;
 }

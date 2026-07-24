@@ -19,6 +19,7 @@ function createFixture({
   shellPresent,
   staleSkin = false,
   homePresent = false,
+  roleMainPresent = true,
   utilityPresent = false,
   shellAppearance = "dark",
   computedColorScheme = "",
@@ -89,6 +90,10 @@ function createFixture({
     getBoundingClientRect() {
       return { left: 290, top: 36, width: 990, height: 784 };
     },
+    querySelectorAll(selector) {
+      if (selector === '[class*="_homeUtilityBar_"]' && utilityPresent) return [utilityNode];
+      return [];
+    },
   };
   const routeClasses = new Set();
   const homeContentClasses = new Set();
@@ -100,7 +105,7 @@ function createFixture({
   };
   const homeIcon = {
     parentElement: homeContent,
-    closest: () => routeMain,
+    closest: () => roleMainPresent ? routeMain : null,
   };
   const routeMain = {
     classList: makeClassList(routeClasses),
@@ -160,7 +165,7 @@ function createFixture({
       return null;
     },
     querySelectorAll(selector) {
-      if (selector === '[role="main"]') return hasShell ? [routeMain] : [];
+      if (selector === '[role="main"]') return hasShell && roleMainPresent ? [routeMain] : [];
       if (selector === ".dream-task") return routeClasses.has("dream-task") ? [routeMain] : [];
       if (selector === ".dream-home-utility") {
         return utilityClasses.has("dream-home-utility") ? [utilityNode] : [];
@@ -306,6 +311,27 @@ assert.equal(configured.utilityClasses.has("dream-home-utility"), true);
 assert.equal(configured.context.window.__CODEX_DREAM_SKIN_STATE__.cleanup(), true);
 assert.equal(configured.homeContentClasses.has("dream-home-content"), false);
 assert.equal(configured.utilityClasses.has("dream-home-utility"), false);
+
+const nativeHome = createFixture({
+  shellPresent: true,
+  homePresent: true,
+});
+vm.runInNewContext(buildPayload({
+  art: { homeMode: "native" },
+}), nativeHome.context);
+assert.equal(nativeHome.rootClasses.has("dream-route-home"), true);
+assert.equal(nativeHome.routeClasses.has("dream-home"), false);
+assert.equal(nativeHome.homeContentClasses.has("dream-home-content"), false);
+
+const nativeHomeWithoutRole = createFixture({
+  shellPresent: true,
+  homePresent: true,
+  roleMainPresent: false,
+});
+vm.runInNewContext(buildPayload({
+  art: { homeMode: "native" },
+}), nativeHomeWithoutRole.context);
+assert.equal(nativeHomeWithoutRole.rootClasses.has("dream-route-home"), true);
 
 const analysisPixels = new Uint8ClampedArray(48 * 12 * 4);
 for (let index = 0; index < 48 * 12; index += 1) {

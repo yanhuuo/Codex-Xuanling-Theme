@@ -28,6 +28,7 @@ const THEME_CHOICES = {
   appearance: new Set(["auto", "light", "dark"]),
   safeArea: new Set(["auto", "left", "right", "center", "none"]),
   taskMode: new Set(["auto", "ambient", "banner", "off"]),
+  homeMode: new Set(["themed", "native"]),
 };
 
 function normalizedUnit(value, name) {
@@ -424,6 +425,7 @@ export async function loadTheme(themeDir) {
       focusY: normalizedUnit(art.focusY, "art.focusY"),
       safeArea: normalizedChoice(art.safeArea, "art.safeArea", THEME_CHOICES.safeArea, "auto"),
       taskMode: normalizedChoice(art.taskMode, "art.taskMode", THEME_CHOICES.taskMode, "auto"),
+      homeMode: normalizedChoice(art.homeMode, "art.homeMode", THEME_CHOICES.homeMode, "themed"),
     },
     palette: {},
   };
@@ -530,7 +532,6 @@ export function safeThemeId(value, fallback = "theme") {
 
 function themeForDisk(loaded, imageName) {
   const { artMetadata: _metadata, framework: _framework, ...theme } = loaded.theme;
-  const iconFiles = themeIconSourceFiles(loaded.icons);
   const diskTheme = {
     ...theme,
     schemaVersion: 4,
@@ -546,28 +547,10 @@ function themeForDisk(loaded, imageName) {
   else delete diskTheme.pet;
   diskTheme.install = {
     default: false,
-    files: ["theme.json", "theme.css", "theme.js", imageName, ...iconFiles],
+    files: ["theme.json", "theme.css", "theme.js", imageName],
     pets: loaded.petBundle ? [loaded.petBundle.id] : [],
   };
   return diskTheme;
-}
-
-function themeIconSourceFiles(icons) {
-  return Object.keys(icons ?? {}).sort().map((name) => `icons/${name}.svg`);
-}
-
-async function writeThemeIconSources(destination, icons) {
-  const iconsDirectory = path.join(destination, "icons");
-  await fs.rm(iconsDirectory, { recursive: true, force: true });
-  const entries = Object.entries(icons ?? {}).sort(([left], [right]) => left.localeCompare(right));
-  if (!entries.length) return;
-  await fs.mkdir(iconsDirectory, { recursive: true });
-  for (const [name, svg] of entries) {
-    if (!/^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(name)) throw new Error(`Theme icon name is invalid: ${name}`);
-    const iconPath = path.join(iconsDirectory, `${name}.svg`);
-    if (!isPathInside(iconPath, iconsDirectory)) throw new Error(`Theme icon path escaped its directory: ${name}`);
-    await fs.writeFile(iconPath, `${svg.trim()}\n`, "utf8");
-  }
 }
 
 function stateRootFromThemeDestination(destination) {
@@ -612,7 +595,6 @@ export async function writeThemeDirectory(destination, loaded) {
     await fs.rm(path.join(resolvedDestination, "icons.json"), { force: true });
     await fs.rm(path.join(resolvedDestination, "install.json"), { force: true });
     await fs.rm(path.join(resolvedDestination, "pets"), { recursive: true, force: true });
-    await writeThemeIconSources(resolvedDestination, loaded.icons);
     await writePetBundleToStore(stateRootFromThemeDestination(resolvedDestination), loaded.petBundle);
     await fs.writeFile(jsonTemp, `${JSON.stringify(themeForDisk(loaded, imageName), null, 2)}\n`, { flag: "wx" });
     await fs.copyFile(jsonTemp, path.join(resolvedDestination, "theme.json"));
@@ -1134,6 +1116,7 @@ export async function fetchRemoteTheme(themeUrl) {
       focusY: normalizedUnit(art.focusY, "art.focusY"),
       safeArea: normalizedChoice(art.safeArea, "art.safeArea", THEME_CHOICES.safeArea, "auto"),
       taskMode: normalizedChoice(art.taskMode, "art.taskMode", THEME_CHOICES.taskMode, "auto"),
+      homeMode: normalizedChoice(art.homeMode, "art.homeMode", THEME_CHOICES.homeMode, "themed"),
     },
     palette: {},
   };

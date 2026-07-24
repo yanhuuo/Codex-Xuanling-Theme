@@ -382,8 +382,6 @@ try {
     @($initialTheme.Theme.icons.PSObject.Properties).Count -lt 1 -or
     (Test-Path -LiteralPath (Join-Path $themePaths.Active 'install.json')) -or
     (Test-Path -LiteralPath (Join-Path $themePaths.Active 'icons.json')) -or
-    -not (Test-Path -LiteralPath (Join-Path $themePaths.Active 'icons\bird.svg') -PathType Leaf) -or
-    -not (@($initialTheme.Theme.install.files) -contains 'icons/bird.svg') -or
     $initialTheme.Theme.appearance -cne 'dark' -or
     $initialTheme.Theme.art.safeArea -cne 'left' -or
     $initialTheme.Theme.art.taskMode -cne 'ambient' -or
@@ -427,8 +425,7 @@ try {
   $null = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $officialUpgradeStateRoot
   $upgradedOfficialTheme = Read-DreamSkinTheme -ThemeDirectory $officialUpgradePaths.Active
   if ($upgradedOfficialTheme.Theme.brandIcon -cne 'bird' -or
-    @($upgradedOfficialTheme.Theme.icons.PSObject.Properties).Count -lt 1 -or
-    -not (Test-Path -LiteralPath (Join-Path $officialUpgradePaths.Active 'icons\bird.svg') -PathType Leaf)) {
+    @($upgradedOfficialTheme.Theme.icons.PSObject.Properties).Count -lt 1) {
     throw 'Bundled theme framework upgrade did not restore official icon metadata.'
   }
   $savedTheme = Save-DreamSkinCurrentTheme -Name '已保存主题' -StateRoot $themeStateRoot
@@ -518,20 +515,10 @@ try {
     }
     $manifest = (Read-DreamSkinUtf8File -Path $themePath) | ConvertFrom-Json
     if ($manifest.install.default) { $defaultPackageCount += 1 }
-    $manifestIconProperties = @($manifest.icons.PSObject.Properties)
-    $missingIconSource = $false
-    foreach ($iconProperty in $manifestIconProperties) {
-      $iconSource = Join-Path $themeDirectory.FullName ("icons\$($iconProperty.Name).svg")
-      if (-not (Test-Path -LiteralPath $iconSource -PathType Leaf) -or
-        -not (@($manifest.install.files) -contains "icons/$($iconProperty.Name).svg")) {
-        $missingIconSource = $true
-        break
-      }
-    }
     if ([int]$manifest.schemaVersion -ne 4 -or $manifest.entrypoints.icons -or
       "$($manifest.framework.id)" -cne 'dream-skin' -or [int]$manifest.framework.version -ne 1 -or
       $manifest.entrypoints.renderer -or @($manifest.install.files) -contains 'theme.js' -or
-      $manifestIconProperties.Count -lt 1 -or $missingIconSource -or
+      @($manifest.icons.PSObject.Properties).Count -lt 1 -or
       -not $themeRenderer.Contains('__DREAM_ICONS_JSON__') -or
       $themeRenderer -match ':\s*(?:xuanSvg|remielSvg)\s*\(') {
       throw "Bundled theme did not use the shared framework and inline icon configuration: $($themeDirectory.Name)"
@@ -549,6 +536,8 @@ try {
     '.app-shell-main-content-top-fade',
     '.thread-scroll-container .bg-gradient-to-t.from-token-main-surface-primary',
     '--dream-immersive-composer',
+    '--dream-art-fit: cover',
+    'background-size: var(--dream-art-fit)',
     'background-position: var(--dream-art-position)',
     '.dream-home > .dream-home-content',
     '.dream-home-utility',
@@ -563,6 +552,11 @@ try {
     'animation-play-state: paused !important'
   )) {
     if (-not $css.Contains($requiredCss)) { throw "Windows immersive CSS is missing: $requiredCss" }
+  }
+
+  $remielCss = Read-DreamSkinUtf8File -Path (Join-Path $Root 'themes\绝区零 蕾米埃尔\theme.css')
+  if (-not $remielCss.Contains('--dream-art-fit: contain')) {
+    throw 'Remiel must preserve the complete 16:9 artwork instead of cropping it.'
   }
   if ($css.Contains('.dream-home > div:first-child')) {
     throw 'Shared home layout still depends on the first child and can hide the composer after a Codex DOM upgrade.'

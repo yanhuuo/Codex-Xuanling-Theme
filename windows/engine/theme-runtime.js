@@ -96,6 +96,9 @@
     const taskMode = ["auto", "ambient", "banner", "off"].includes(art.taskMode)
       ? art.taskMode
       : "auto";
+    const homeMode = ["themed", "native"].includes(art.homeMode)
+      ? art.homeMode
+      : "themed";
     const cleanText = (candidate, maxLength) =>
       typeof candidate === "string" && candidate.length <= maxLength && !/[\u0000-\u001f]/.test(candidate)
         ? candidate.trim()
@@ -105,6 +108,7 @@
       appearance,
       safeArea,
       taskMode,
+      homeMode,
       brandSubtitle: cleanText(config.brandSubtitle, 100),
       tagline: cleanText(config.tagline, 120),
       statusText: cleanText(config.statusText, 80),
@@ -414,16 +418,20 @@
     }
 
     const homeIcon = document.querySelector('[data-testid="home-icon"]');
-    const home = homeIcon?.closest('[role="main"]') || null;
+    const roleHome = homeIcon?.closest('[role="main"]') || null;
+    const home = roleHome || (homeIcon ? shellMain : null);
     let homeContent = homeIcon;
     while (homeContent && homeContent.parentElement !== home) homeContent = homeContent.parentElement;
     if (homeContent?.parentElement !== home) homeContent = null;
     for (const candidate of document.querySelectorAll(".dream-home-content")) {
       if (candidate !== homeContent) candidate.classList.remove("dream-home-content");
     }
-    homeContent?.classList.add("dream-home-content");
-    for (const candidate of document.querySelectorAll('[role="main"]')) {
-      candidate.classList.toggle("dream-home", candidate === home);
+    const decorateHome = config.homeMode === "themed";
+    homeContent?.classList.toggle("dream-home-content", decorateHome);
+    const routeMains = [...document.querySelectorAll('[role="main"]')];
+    if (routeMains.length === 0) routeMains.push(shellMain);
+    for (const candidate of routeMains) {
+      candidate.classList.toggle("dream-home", decorateHome && candidate === home);
       candidate.classList.toggle("dream-task", candidate !== home);
     }
     const utilityBars = new Set(home ? home.querySelectorAll('[class*="_homeUtilityBar_"]') : []);
@@ -760,4 +768,3 @@
   });
   return { installed: true, version: "1.4.1", adaptive: true };
 })(__DREAM_CSS_JSON__, __DREAM_ART_JSON__, __DREAM_THEME_JSON__, __DREAM_ICONS_JSON__)
-
