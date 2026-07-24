@@ -35,7 +35,7 @@ type DreamThemeManagerState = {
 
 (() => {
   const KEY = "__CODEX_DREAM_THEME_MANAGER__";
-  const VERSION = "1.9.4";
+  const VERSION = "1.9.6";
   const BINDING = "__codexDreamThemeControl";
   const RESPONSE = "__codexDreamThemeResponse";
   const STYLE_ID = "codex-dream-theme-manager-style";
@@ -51,7 +51,7 @@ type DreamThemeManagerState = {
   const gear = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M9.6 3.2h4.8l.5 2.2c.7.2 1.3.5 1.9.8l2-1.2 3.4 3.4-1.2 2c.3.6.6 1.2.8 1.9l2.2.5v4.8l-2.2.5c-.2.7-.5 1.3-.8 1.9l1.2 2-3.4 3.4-2-1.2c-.6.3-1.2.6-1.9.8l-.5 2.2H9.6l-.5-2.2c-.7-.2-1.3-.5-1.9-.8l-2 1.2-3.4-3.4 1.2-2c-.3-.6-.6-1.2-.8-1.9L0 17.6v-4.8l2.2-.5c.2-.7.5-1.3.8-1.9l-1.2-2 3.4-3.4 2 1.2c.6-.3 1.2-.6 1.9-.8l.5-2.2Z" fill="currentColor" opacity=".22"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 1.7v3.1M12 19.2v3.1M1.7 12h3.1M19.2 12h3.1M4.7 4.7l2.2 2.2M17.1 17.1l2.2 2.2M19.3 4.7l-2.2 2.2M6.9 17.1l-2.2 2.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`;
   const closeSvg = `<svg class="dtm-close-icon" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M6.2 6.2 12 12m5.8 5.8L12 12m0 0 5.8-5.8M12 12l-5.8 5.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>`;
   const css = `
-    #${TRIGGER_ID}{position:fixed;right:116px;top:7px;z-index:10000;display:grid;place-items:center;width:28px;height:28px;margin:0;padding:0;border:1px solid color-mix(in srgb,var(--dream-accent,#6edaf2) 34%,transparent);border-radius:8px;background:color-mix(in oklab,var(--dream-surface-raised,#13212c) 58%,transparent);color:var(--dream-text,#edf7fb);box-shadow:0 8px 22px #0006,inset 0 0 0 1px #ffffff12;backdrop-filter:blur(10px);cursor:pointer;pointer-events:auto!important;-webkit-app-region:no-drag}
+    #${TRIGGER_ID}{position:fixed;right:136px;top:45px;z-index:10000;display:grid;place-items:center;width:28px;height:28px;margin:0;padding:0;border:1px solid color-mix(in srgb,var(--dream-accent,#6edaf2) 34%,transparent);border-radius:8px;background:color-mix(in oklab,var(--dream-surface-raised,#13212c) 58%,transparent);color:var(--dream-text,#edf7fb);box-shadow:0 8px 22px #0006,inset 0 0 0 1px #ffffff12;backdrop-filter:blur(10px);cursor:pointer;pointer-events:auto!important;-webkit-app-region:no-drag}
     #${TRIGGER_ID}:hover,#${TRIGGER_ID}[aria-expanded="true"]{border-color:var(--dream-accent,#6edaf2);background:color-mix(in srgb,var(--dream-accent,#6edaf2) 18%,var(--dream-surface-raised,#13212c));box-shadow:0 0 0 3px color-mix(in srgb,var(--dream-accent,#6edaf2) 12%,transparent),0 10px 26px #0008}
     #${TRIGGER_ID} svg{display:block;width:17px;height:17px}
     #${PANEL_ID}{--dream-manager-accent:var(--dream-accent,#6edaf2);--dtm-surface:var(--dream-surface,var(--main-surface-primary,#0d151f));--dtm-raised:var(--dream-surface-raised,var(--main-surface-secondary,#13212c));--dtm-text:var(--dream-text,var(--text-primary,#edf7fb));--dtm-muted:var(--dream-text-muted,var(--text-secondary,#9bb0bc));--dtm-line:var(--dream-line,var(--border-light,#263642));position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow:auto;background:#02070d99;color:var(--dtm-text);padding:58px 24px 28px;box-sizing:border-box;font-family:inherit;backdrop-filter:blur(10px)}
@@ -1068,6 +1068,12 @@ type DreamThemeManagerState = {
   };
   const hide = () => { showSequence += 1; showing = false; localModalOpen = false; resetLocalDraft(); setTriggerExpanded(false); const panel = document.getElementById(PANEL_ID); if (panel) panel.hidden = true; };
   const ensure = () => {
+    if (/avatar-overlay/i.test(location.href)) {
+      document.getElementById(TRIGGER_ID)?.remove();
+      document.getElementById(PANEL_ID)?.remove();
+      return false;
+    }
+    getStyle();
     document.querySelectorAll<HTMLButtonElement>(`button[data-settings-panel-slug="${NAV_SLUG}"]`).forEach((button) => button.remove());
     let button = document.getElementById(TRIGGER_ID) as HTMLButtonElement | null;
     if (button && button.dataset.dreamThemeManagerVersion !== VERSION) {
