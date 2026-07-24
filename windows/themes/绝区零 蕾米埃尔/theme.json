@@ -4,7 +4,7 @@
   "name": "蕾米埃尔｜星芒圣翼",
   "description": "绝区零蕾米埃尔风格的粉紫机械圣翼主题，包含独立星芒按钮图标与轻量环绕加载动画。",
   "author": "mizunagare",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "framework": {
     "id": "dream-skin",
     "version": 1
@@ -30,7 +30,7 @@
     "repeat": "no-repeat"
   },
   "sidebar": {
-    "background": "transparent",
+    "background": "tint",
     "fontFamily": "Microsoft YaHei UI, Segoe UI, sans-serif",
     "textColor": "#fff0fa",
     "iconColor": "#e84f92",
@@ -47,7 +47,8 @@
     "focusY": 0.5,
     "safeArea": "left",
     "taskMode": "ambient",
-    "homeMode": "native"
+    "homeMode": "native",
+    "immersive": true
   },
   "palette": {
     "accent": "#e84f92"

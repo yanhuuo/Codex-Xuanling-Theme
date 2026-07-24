@@ -38,6 +38,8 @@
   --dream-floating-surface-strong: color-mix(in oklab, var(--dream-surface-raised) 96%, var(--dream-accent) 4%);
   --dream-floating-line: color-mix(in oklab, var(--dream-line) 74%, var(--dream-accent) 26%);
   --dream-floating-shadow: 0 18px 48px color-mix(in oklab, var(--dream-accent) 14%, transparent), 0 6px 20px #0003;
+  --dream-composer-shadow: 0 14px 34px color-mix(in oklab, var(--dream-canvas) 22%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--dream-accent) 10%, transparent);
 }
 
 :root.codex-dream-skin.dream-theme-dark {
@@ -69,6 +71,8 @@
   --dream-floating-surface-strong: color-mix(in oklab, var(--dream-surface-raised) 94%, var(--dream-accent) 6%);
   --dream-floating-line: color-mix(in oklab, var(--dream-line) 68%, var(--dream-accent) 32%);
   --dream-floating-shadow: 0 18px 52px color-mix(in oklab, #000 58%, transparent), 0 0 0 1px color-mix(in oklab, var(--dream-accent) 9%, transparent);
+  --dream-composer-shadow: 0 14px 34px color-mix(in oklab, #000 28%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--dream-accent) 10%, transparent);
 }
 
 html.codex-dream-skin body {
@@ -429,7 +433,7 @@ html.codex-dream-skin .composer-surface-chrome {
   border: 1px solid var(--dream-line) !important;
   border-radius: 18px !important;
   background: color-mix(in oklab, var(--dream-surface-raised) 95%, transparent) !important;
-  box-shadow: 0 12px 34px color-mix(in oklab, var(--dream-accent) 8%, transparent) !important;
+  box-shadow: var(--dream-composer-shadow, 0 12px 34px color-mix(in oklab, var(--dream-accent) 8%, transparent)) !important;
   backdrop-filter: none !important;
 }
 
@@ -565,6 +569,18 @@ html.codex-dream-skin.dream-art-wide main.main-surface > header.app-header-tint 
     0 0 8px color-mix(in oklab, var(--dream-canvas) 58%, transparent) !important;
 }
 
+html.codex-dream-skin.dream-art-wide
+  :is(header.app-header-tint, [class*="app-header"], [class*="bg-token-main-surface-primary"]):is(
+    [class*="sticky"],
+    [class*="fixed"],
+    [class*="top-0"]
+  ) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
 html.codex-dream-skin.dream-art-wide main.main-surface > header.app-header-tint svg {
   filter: drop-shadow(0 1px 2px color-mix(in oklab, var(--dream-canvas) 72%, transparent));
 }
@@ -600,7 +616,7 @@ html.codex-dream-skin.dream-art-wide .composer-surface-chrome {
   color: var(--dream-text) !important;
   background: var(--dream-immersive-composer) !important;
   border: 1px solid var(--dream-line) !important;
-  box-shadow: 0 16px 42px color-mix(in oklab, var(--dream-canvas) 42%, transparent),
+  box-shadow: var(--dream-composer-shadow, 0 16px 42px color-mix(in oklab, var(--dream-canvas) 42%, transparent)),
     inset 0 1px color-mix(in oklab, white 5%, transparent) !important;
   backdrop-filter: none !important;
   isolation: isolate !important;

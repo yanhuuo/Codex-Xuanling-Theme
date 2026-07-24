@@ -554,6 +554,7 @@ export async function loadTheme(themeDir) {
       safeArea: normalizedChoice(art.safeArea, "art.safeArea", THEME_CHOICES.safeArea, "auto"),
       taskMode: normalizedChoice(art.taskMode, "art.taskMode", THEME_CHOICES.taskMode, "auto"),
       homeMode: normalizedChoice(art.homeMode, "art.homeMode", THEME_CHOICES.homeMode, "themed"),
+      immersive: art.immersive === true,
     },
     palette: {},
   };
@@ -1515,6 +1516,7 @@ export async function fetchRemoteTheme(themeUrl) {
       safeArea: normalizedChoice(art.safeArea, "art.safeArea", THEME_CHOICES.safeArea, "auto"),
       taskMode: normalizedChoice(art.taskMode, "art.taskMode", THEME_CHOICES.taskMode, "auto"),
       homeMode: normalizedChoice(art.homeMode, "art.homeMode", THEME_CHOICES.homeMode, "themed"),
+      immersive: art.immersive === true,
     },
     palette: {},
   };

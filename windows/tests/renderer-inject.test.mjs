@@ -414,4 +414,13 @@ vm.runInNewContext(buildPayload({ artMetadata: { ratio: 16 / 9 } }), metadataWid
 assert.equal(metadataWide.rootClasses.has("dream-art-wide"), true);
 assert.equal(metadataWide.rootClasses.has("dream-art-standard"), false);
 
+const immersiveStandard = createFixture({
+  shellPresent: true,
+  analysisFixture: { naturalWidth: 900, naturalHeight: 900, pixels: analysisPixels },
+});
+vm.runInNewContext(buildPayload({ art: { immersive: true } }), immersiveStandard.context);
+await Promise.resolve();
+assert.equal(immersiveStandard.rootClasses.has("dream-art-wide"), true);
+assert.equal(immersiveStandard.rootClasses.has("dream-art-standard"), false);
+
 console.log("PASS: renderer applies adaptive theme metadata and preserves transparent auxiliary windows.");

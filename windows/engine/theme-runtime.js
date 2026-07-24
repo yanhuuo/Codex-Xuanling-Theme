@@ -147,6 +147,7 @@
       spinnerIcon: /^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(config.spinnerIcon || "") ? config.spinnerIcon : "",
       focusX: hasNumber(art.focusX) ? clamp(art.focusX) : null,
       focusY: hasNumber(art.focusY) ? clamp(art.focusY) : null,
+      immersive: art.immersive === true,
       accent: safeAccent,
       initialAspect: Number.isFinite(metadataRatio) && metadataRatio > 0 ? metadataRatio : null,
       imageFit: ["cover", "contain", "stretch", "auto"].includes(display.fit) ? display.fit : "cover",
@@ -419,7 +420,7 @@
       : config.imagePosition;
     const imageSize = config.imageFit === "stretch" ? "100% 100%" : config.imageFit === "auto" ? "auto" : config.imageFit;
     const signature = [appearance, focus, safeArea, taskMode, accent, accentInk, focusX, focusY,
-      profile.aspect, profile.luma, artUrl, imagePosition, imageSize, config.imageRepeat,
+      profile.aspect, profile.luma, config.immersive, artUrl, imagePosition, imageSize, config.imageRepeat,
       config.sidebarBackground, config.sidebarFontFamily, config.sidebarTextColor, config.sidebarIconColor,
       config.sidebarFontSize, config.sidebarFontWeight,
       config.composerWidth, config.composerHeight, config.composerFontSize].join("|");
@@ -427,8 +428,9 @@
     appliedProfileSignature = signature;
     root.classList.toggle("dream-theme-light", appearance === "light");
     root.classList.toggle("dream-theme-dark", appearance === "dark");
-    root.classList.toggle("dream-art-wide", profile.aspect >= 1.75);
-    root.classList.toggle("dream-art-standard", profile.aspect < 1.75);
+    const immersiveArt = config.immersive || profile.aspect >= 1.75;
+    root.classList.toggle("dream-art-wide", immersiveArt);
+    root.classList.toggle("dream-art-standard", !immersiveArt);
     for (const value of ["left", "center", "right"]) {
       root.classList.toggle(`dream-focus-${value}`, focus === value);
     }

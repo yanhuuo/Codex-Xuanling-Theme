@@ -23,6 +23,10 @@
   --dream-surface: color-mix(in oklab, oklch(0.185 0.026 315) 95%, var(--dream-accent));
   --dream-surface-raised: color-mix(in oklab, oklch(0.225 0.028 315) 95%, var(--dream-accent));
   --dream-sidebar: color-mix(in oklab, oklch(0.135 0.03 315) 94%, var(--dream-accent));
+  --dream-task-immersive-sidebar: color-mix(in oklab, var(--dream-sidebar) 56%, transparent);
+  --dream-immersive-sidebar: color-mix(in oklab, var(--dream-sidebar) 48%, transparent);
+  --dream-composer-shadow: 0 10px 26px color-mix(in oklab, #000 18%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--dream-accent) 16%, transparent);
   --dream-text: oklch(0.94 0.012 330);
   --dream-text-muted: oklch(0.72 0.02 325);
   --dream-line: color-mix(in oklab, oklch(0.44 0.035 315) 76%, var(--dream-accent));
