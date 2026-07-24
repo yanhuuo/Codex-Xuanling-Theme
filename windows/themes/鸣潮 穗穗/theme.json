@@ -87,7 +87,7 @@
     "type": "generated-feature-adaptation",
     "title": "Suisui theme wallpaper generated from official character features",
     "referencePage": "https://wutheringwaves.kurogames.com/zh-cn/main/news/detail/5110",
-    "process": "feature extraction from official visual language: single Suisui-inspired heroine, gold wheat motifs, aqua water ripples, musical resonance elements, dark Codex UI-safe negative space; no official artwork crop used as final background",
-    "generatedAsset": "C:/Users/giveb/.codex/generated_images/019f6db1-5445-72f0-96b6-9b9a8cc8dd6f/call_YaJPBNyvIPIYk0bvAQBSLF6C.png"
+    "process": "generated with concrete Suisui reference traits: short platinum bob, gold eyes/red eyeliner, blue-gold feather ornament, folded fan/resonance instrument, black-gold collar, cream dress, aqua sleeve ribbons, dark Codex UI-safe left negative space",
+    "generatedAsset": "generated_images/call_vp0u4ZOUq1B0Rt1cJ1gWsZgg.png"
   }
 }
