@@ -49,6 +49,7 @@
     "--dream-sidebar-font-weight",
     "--dream-sidebar-text",
     "--dream-sidebar-icon",
+    "--dream-sidebar-text-brightness",
   ];
   const HOME_UTILITY_CLASS = "dream-home-utility";
   const SPINNER_SELECTOR = ".animate-spin, [class~='animate-spin'], [role='progressbar'], [data-loading='true']";
@@ -161,6 +162,7 @@
       sidebarIconColor: cleanText(sidebar.iconColor, 120),
       sidebarFontSize: ["default", "small", "normal", "large"].includes(sidebar.fontSize) ? sidebar.fontSize : "default",
       sidebarFontWeight: ["default", "normal", "medium", "semibold", "bold"].includes(sidebar.fontWeight) ? sidebar.fontWeight : "default",
+      sidebarTextBrightness: Number.isFinite(Number(sidebar.textBrightness ?? sidebar.brightness)) ? Math.min(140, Math.max(60, Math.round(Number(sidebar.textBrightness ?? sidebar.brightness)))) : 100,
       composerWidth: ["default", "compact", "comfortable", "wide", "full"].includes(composer.width) ? composer.width : "default",
       composerHeight: ["default", "compact", "comfortable", "large"].includes(composer.height) ? composer.height : "default",
       composerFontSize: ["default", "small", "normal", "large"].includes(composer.fontSize) ? composer.fontSize : "default",
@@ -422,7 +424,7 @@
     const signature = [appearance, focus, safeArea, taskMode, accent, accentInk, focusX, focusY,
       profile.aspect, profile.luma, config.immersive, artUrl, imagePosition, imageSize, config.imageRepeat,
       config.sidebarBackground, config.sidebarFontFamily, config.sidebarTextColor, config.sidebarIconColor,
-      config.sidebarFontSize, config.sidebarFontWeight,
+      config.sidebarFontSize, config.sidebarFontWeight, config.sidebarTextBrightness,
       config.composerWidth, config.composerHeight, config.composerFontSize].join("|");
     if (signature === appliedProfileSignature) return;
     appliedProfileSignature = signature;
@@ -459,6 +461,7 @@
     root.style.setProperty("--dream-sidebar-font-family", config.sidebarFontFamily || "inherit");
     root.style.setProperty("--dream-sidebar-text", config.sidebarTextColor || "var(--dream-text)");
     root.style.setProperty("--dream-sidebar-icon", config.sidebarIconColor || "currentColor");
+    root.style.setProperty("--dream-sidebar-text-brightness", `${config.sidebarTextBrightness || 100}%`);
     root.style.setProperty("--dream-sidebar-font-size",
       config.sidebarFontSize === "small" ? "12px" :
       config.sidebarFontSize === "normal" ? "13px" :

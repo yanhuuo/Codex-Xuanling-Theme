@@ -16,7 +16,7 @@ type DreamThemeSummary = {
   defaultImage?: string;
   images?: Array<{ id: string; label?: string; path: string; previewPath?: string; preview?: string | null }>;
   display?: { fit?: string; position?: string; repeat?: string; rotation?: { enabled?: boolean; intervalSeconds?: number } };
-  sidebar?: { background?: string; fontFamily?: string; textColor?: string; iconColor?: string; fontSize?: string; fontWeight?: string };
+  sidebar?: { background?: string; fontFamily?: string; textColor?: string; iconColor?: string; fontSize?: string; fontWeight?: string; textBrightness?: number };
   composer?: { width?: string; height?: string; fontSize?: string };
   files?: string[];
 };
@@ -35,7 +35,7 @@ type DreamThemeManagerState = {
 
 (() => {
   const KEY = "__CODEX_DREAM_THEME_MANAGER__";
-  const VERSION = "1.9.1";
+  const VERSION = "1.9.2";
   const BINDING = "__codexDreamThemeControl";
   const RESPONSE = "__codexDreamThemeResponse";
   const STYLE_ID = "codex-dream-theme-manager-style";
@@ -109,6 +109,11 @@ type DreamThemeManagerState = {
     #${PANEL_ID} .dtm-color-picker{position:relative;display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:1px solid var(--dtm-line);border-radius:10px;background:color-mix(in oklab,var(--dtm-raised) 92%,transparent);color:var(--dtm-text);font-size:12px;overflow:hidden}
     #${PANEL_ID} .dtm-color-picker input[type="color"]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
     #${PANEL_ID} .dtm-color-picker-dot{width:14px;height:14px;border-radius:50%;background:var(--dtm-current-color);box-shadow:inset 0 0 0 1px #ffffff55}
+    #${PANEL_ID} .dtm-color-inline-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+    #${PANEL_ID} .dtm-color-picker-compact{height:36px;white-space:nowrap}
+    #${PANEL_ID} .dtm-range-row{display:grid;grid-template-columns:minmax(0,1fr) 54px;gap:10px;align-items:center;min-height:36px}
+    #${PANEL_ID} .dtm-range-row output{font-size:12px;color:var(--dtm-text);text-align:right}
+    #${PANEL_ID} input[type="range"]{height:28px;padding:0;background:transparent;accent-color:var(--dream-manager-accent,#6edaf2)}
     #${PANEL_ID} input[type="color"]{width:40px;height:30px;padding:2px}
     #${PANEL_ID} .dtm-advanced-color{font-size:11px;color:var(--dtm-muted)}
     #${PANEL_ID} .dtm-advanced-color summary{cursor:pointer;margin-bottom:6px}
@@ -326,6 +331,11 @@ type DreamThemeManagerState = {
   let imageSettingsTheme: DreamThemeSummary | null = null;
   let imageSettingsError = "";
   let imageSettingsFiles: File[] = [];
+  let systemFontsLoaded = false;
+  let systemFonts = [
+    "Microsoft YaHei UI", "Microsoft YaHei", "SimHei", "SimSun", "KaiTi",
+    "Segoe UI", "Arial", "Calibri", "Consolas", "Cascadia Code",
+  ];
   const localIconFiles = new Map<string, File>();
   const localIconSvgs = new Map<string, string>();
   const localJsonIcons = new Map<string, string>();
@@ -408,6 +418,37 @@ type DreamThemeManagerState = {
     }).join("");
     const currentStyle = value === "transparent" ? "" : `--dtm-current-color:${escapeHtml(value)}`;
     return `<div class="dtm-color-field" style="${currentStyle}"><div class="dtm-color-head"><span class="dtm-color-current ${value === "transparent" ? "dtm-transparent-preview" : ""}" style="${currentStyle}"></span><span><span class="dtm-color-title">${escapeHtml(label)}</span><span class="dtm-color-note">${escapeHtml(notes[key] || "主题颜色")}</span></span><span class="dtm-color-value">${escapeHtml(value)}</span></div><div class="dtm-swatches">${swatches}</div><div class="dtm-color-actions"><label class="dtm-color-picker"><span class="dtm-color-picker-dot" style="${currentStyle}"></span><span>打开选色卡</span><input type="color" data-local-color-picker="${escapeHtml(key)}" value="${escapeHtml(colorPickerValue(value))}"></label><details class="dtm-advanced-color"><summary>高级 CSS 值</summary><input ${key === "accent" ? "data-local-theme-accent" : key === "detail" ? "data-local-theme-detail" : key === "sendBase" ? "data-local-theme-send-base" : "data-local-theme-processing-base"} value="${escapeHtml(value)}" placeholder="#6edaf2 / transparent / oklch(...)"></details></div></div>`;
+  };
+  const clampNumber = (value, min, max, fallback) => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return fallback;
+    return Math.min(max, Math.max(min, Math.round(number)));
+  };
+  const loadSystemFonts = async () => {
+    if (systemFontsLoaded) return;
+    systemFontsLoaded = true;
+    try {
+      const api = (window as unknown as { queryLocalFonts?: () => Promise<Array<{ family?: string; fullName?: string }>> }).queryLocalFonts;
+      if (typeof api !== "function") return;
+      const fonts = await api.call(window);
+      const names = Array.from(new Set<string>(fonts.map((font) => String(font.family || font.fullName || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+      if (names.length) {
+        systemFonts = [...new Set([...systemFonts, ...names])].slice(0, 260);
+        const select = document.querySelector<HTMLSelectElement>(`#${PANEL_ID} select[data-theme-sidebar-font-family]`);
+        if (select) select.innerHTML = fontOptionsHtml(select.value);
+      }
+    } catch {}
+  };
+  const fontOptionsHtml = (selectedValue) => {
+    const selected = String(selectedValue || "").trim();
+    const list = selected && !systemFonts.includes(selected) ? [selected, ...systemFonts] : systemFonts;
+    return `<option value="" ${selected ? "" : "selected"}>继承主题默认</option>${list.map((font) => `<option value="${escapeHtml(font)}" ${font === selected ? "selected" : ""}>${escapeHtml(font)}</option>`).join("")}`;
+  };
+  const themeColorControlHtml = (key, label, value, placeholder) => {
+    const normalized = String(value || "").trim();
+    const picker = colorPickerValue(normalized || "#6edaf2");
+    const style = normalized && normalized !== "transparent" ? `--dtm-current-color:${escapeHtml(normalized)}` : "";
+    return `<label class="dtm-field dtm-color-inline" style="${style}"><span>${escapeHtml(label)}</span><span class="dtm-color-inline-row"><input data-theme-color-field="${escapeHtml(key)}" value="${escapeHtml(normalized)}" placeholder="${escapeHtml(placeholder)}"><span class="dtm-color-picker dtm-color-picker-compact"><span class="dtm-color-picker-dot" style="${style}"></span><span>选色卡</span><input type="color" data-theme-color-picker="${escapeHtml(key)}" value="${escapeHtml(picker)}"></span></span></label>`;
   };
   const fileToBase64 = async (file: File) => {
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -638,7 +679,36 @@ type DreamThemeManagerState = {
       return `<label class="dtm-image-choice" aria-checked="${active}"><span class="dtm-image-thumb">${imageThumbHtml(preview)}</span><span class="dtm-row"><input type="radio" name="dtm-default-image" value="${escapeHtml(image.id)}" ${active ? "checked" : ""}><span><span class="dtm-title">${escapeHtml(label)}</span><p>文件：${escapeHtml(imageFileLabel(image.path))}</p></span></span></label>`;
     }).join("");
     const option = (value, label, current) => `<option value="${escapeHtml(value)}" ${current === value ? "selected" : ""}>${escapeHtml(label)}</option>`;
+    const sidebarTextBrightness = clampNumber(sidebar.textBrightness ?? 100, 60, 140, 100);
+    const sidebarFontFamily = String(sidebar.fontFamily || "").trim();
+    const sidebarTextColorControl = themeColorControlHtml("sidebarTextColor", "侧边文字颜色", sidebar.textColor || "", "#f6fbff / rgba() / oklch(...)");
+    const sidebarIconColorControl = themeColorControlHtml("sidebarIconColor", "侧边图标颜色", sidebar.iconColor || "", "#6edaf2 / currentColor / oklch(...)");
     return `<div class="dtm-modal-layer" role="presentation"><button class="dtm-modal-backdrop" type="button" data-theme-images-close aria-label="关闭弹窗"></button><section class="dtm-dialog" role="dialog" aria-modal="true" aria-labelledby="dtm-images-title"><div class="dtm-dialog-head"><div><h2 id="dtm-images-title">图片与显示设置</h2><p>${escapeHtml(imageSettingsTheme.name)} 的主题内部图片、输入框、侧边栏和轮换配置会写入这个已安装主题。</p></div><button class="dtm-close-hit" type="button" data-theme-images-close aria-label="关闭"></button></div><div class="dtm-dialog-body"><div class="dtm-local-form">${imageSettingsError ? `<div class="dtm-form-error">${escapeHtml(imageSettingsError)}</div>` : ""}<section class="dtm-form-section"><div class="dtm-form-section-head"><div><h3>主题内部图片</h3><p>这里展示主题包里的图片；选择一张作为当前背景。追加图片后可开启多图定时轮换。</p></div></div><div class="dtm-image-list">${images}</div><span class="dtm-file-box"><span class="dtm-file-name">${imageSettingsFiles.length ? imageSettingsFiles.map((file) => escapeHtml(file.name)).join("、") : "追加 PNG、JPG、WebP、GIF，可多选"}</span><span class="dtm-file-actions"><label class="dtm-button">追加图片<input hidden multiple type="file" accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif" data-theme-images-file></label></span></span></section><section class="dtm-form-section"><div class="dtm-form-section-head"><div><h3>背景显示方式</h3><p>适配方式决定图片缩放；横向和纵向对齐用于控制主体在窗口中的位置。</p></div></div><div class="dtm-form-grid"><label class="dtm-field"><span>图像拉伸</span><select data-theme-image-fit>${option("cover", imageFitLabel("cover"), display.fit || "cover")}${option("contain", imageFitLabel("contain"), display.fit || "cover")}${option("stretch", imageFitLabel("stretch"), display.fit || "cover")}${option("auto", imageFitLabel("auto"), display.fit || "cover")}</select></label><label class="dtm-field"><span>平铺模式</span><select data-theme-image-repeat>${option("no-repeat", "不平铺", display.repeat || "no-repeat")}${option("repeat", "横纵平铺", display.repeat || "no-repeat")}${option("repeat-x", "横向平铺", display.repeat || "no-repeat")}${option("repeat-y", "纵向平铺", display.repeat || "no-repeat")}</select></label><label class="dtm-field"><span>横向对齐方式</span><select data-theme-image-position-x>${["auto","left","center","right"].map((value) => option(value, imagePositionXLabel(value), position.x)).join("")}</select></label><label class="dtm-field"><span>纵向对齐方式</span><select data-theme-image-position-y>${["auto","top","center","bottom"].map((value) => option(value, imagePositionYLabel(value), position.y)).join("")}</select></label><label class="dtm-field"><span>轮换间隔（秒）</span><input data-theme-image-interval type="number" min="5" max="3600" value="${escapeHtml(String(rotation.intervalSeconds || 45))}"></label><label class="dtm-field dtm-wide"><span class="dtm-row"><input data-theme-image-rotation type="checkbox" ${rotation.enabled ? "checked" : ""}> 开启多图定时轮换</span></label></div></section><section class="dtm-form-section"><div class="dtm-form-section-head"><div><h3>输入框</h3><p>控制任务输入框的宽度、高度和文字大小。旧主题可点初始化补齐默认字段。</p></div><button class="dtm-button" type="button" data-theme-settings-init="${escapeHtml(imageSettingsTheme.key)}">一键初始化旧设置</button></div><div class="dtm-form-grid"><label class="dtm-field"><span>输入框宽度</span><select data-theme-composer-width>${["default","compact","comfortable","wide","full"].map((value) => option(value, composerWidthLabel(value), composer.width || "default")).join("")}</select></label><label class="dtm-field"><span>输入框高度</span><select data-theme-composer-height>${["default","compact","comfortable","large"].map((value) => option(value, composerHeightLabel(value), composer.height || "default")).join("")}</select></label><label class="dtm-field"><span>输入文字大小</span><select data-theme-composer-font-size>${["default","small","normal","large"].map((value) => option(value, composerFontSizeLabel(value), composer.fontSize || "default")).join("")}</select></label></div></section><section class="dtm-form-section"><div class="dtm-form-section-head"><div><h3>侧边栏</h3><p>控制侧边栏背景、字体和颜色；这些设置写入当前主题。</p></div></div><div class="dtm-form-grid"><label class="dtm-field"><span>侧边背景</span><select data-theme-sidebar-background>${["auto","transparent","tint","solid"].map((value) => option(value, sidebarBackgroundLabel(value), sidebar.background || "auto")).join("")}</select></label><label class="dtm-field"><span>侧边字体</span><input data-theme-sidebar-font-family value="${escapeHtml(sidebar.fontFamily || "")}" placeholder="例如：Microsoft YaHei UI"></label><label class="dtm-field"><span>侧边文字颜色</span><input data-theme-sidebar-text-color value="${escapeHtml(sidebar.textColor || "")}" placeholder="#f6fbff / oklch(...)"></label><label class="dtm-field"><span>侧边图标颜色</span><input data-theme-sidebar-icon-color value="${escapeHtml(sidebar.iconColor || "")}" placeholder="#6edaf2 / currentColor"></label><label class="dtm-field"><span>侧边字号</span><select data-theme-sidebar-font-size>${["default","small","normal","large"].map((value) => option(value, sidebarFontSizeLabel(value), sidebar.fontSize || "default")).join("")}</select></label><label class="dtm-field"><span>侧边字重</span><select data-theme-sidebar-font-weight>${["default","normal","medium","semibold","bold"].map((value) => option(value, sidebarFontWeightLabel(value), sidebar.fontWeight || "default")).join("")}</select></label></div></section></div></div><div class="dtm-dialog-actions"><button class="dtm-button" type="button" data-theme-images-close>取消</button><button class="dtm-button dtm-button-primary" type="button" data-theme-images-save="${escapeHtml(imageSettingsTheme.key)}">保存图片与显示设置</button></div></section></div>`;
+  };
+  const enhanceImageSettingsDialog = (panel: HTMLElement) => {
+    if (!imageSettingsTheme) return;
+    void loadSystemFonts();
+    const sidebar = imageSettingsTheme.sidebar || {};
+    const fontInput = panel.querySelector<HTMLInputElement>("[data-theme-sidebar-font-family]");
+    const fontLabel = fontInput?.closest("label");
+    if (fontLabel && fontLabel.tagName.toLowerCase() === "label") {
+      const current = String(sidebar.fontFamily || fontInput?.value || "").trim();
+      fontLabel.outerHTML = `<label class="dtm-field"><span>侧边字体（系统字体）</span><select data-theme-sidebar-font-family>${fontOptionsHtml(current)}</select></label><label class="dtm-field dtm-wide"><span>自定义字体名</span><input data-theme-sidebar-font-family-custom value="" placeholder="可选：输入下拉中没有的字体名；留空则使用上方选择"></label>`;
+    }
+    const textColorInput = panel.querySelector<HTMLInputElement>("[data-theme-sidebar-text-color]");
+    textColorInput?.closest("label")?.replaceWith(htmlFragment(themeColorControlHtml("sidebarTextColor", "侧边文字颜色", sidebar.textColor || textColorInput.value || "", "#f6fbff / rgba() / oklch(...)")));
+    const iconColorInput = panel.querySelector<HTMLInputElement>("[data-theme-sidebar-icon-color]");
+    iconColorInput?.closest("label")?.replaceWith(htmlFragment(themeColorControlHtml("sidebarIconColor", "侧边图标颜色", sidebar.iconColor || iconColorInput.value || "", "#6edaf2 / currentColor / oklch(...)")));
+    const fontWeight = panel.querySelector("[data-theme-sidebar-font-weight]")?.closest("label");
+    if (fontWeight && !panel.querySelector("[data-theme-sidebar-text-brightness]")) {
+      const value = clampNumber(sidebar.textBrightness ?? 100, 60, 140, 100);
+      fontWeight.insertAdjacentHTML("afterend", `<label class="dtm-field dtm-wide"><span>侧边字体亮度</span><span class="dtm-range-row"><input data-theme-sidebar-text-brightness type="range" min="60" max="140" step="5" value="${escapeHtml(String(value))}"><output data-theme-sidebar-text-brightness-value>${escapeHtml(String(value))}%</output></span></label>`);
+    }
+  };
+  const htmlFragment = (html: string) => {
+    const template = document.createElement("template");
+    template.innerHTML = html.trim();
+    return template.content.firstElementChild || document.createTextNode("");
   };
   const petHtml = (pet) => {
     const active = state?.selectedPet === pet.id;
@@ -667,6 +737,7 @@ type DreamThemeManagerState = {
     const themePane = `<section class="dtm-section"><h2>主题</h2><div class="dtm-grid">${themes}</div></section>`;
     const petPane = `<section class="dtm-section"><h2>主题宠物</h2><p style="margin-bottom:12px">宠物独立保存在本机。选择后只把宠物 ID 绑定到当前主题；主题卡片会直接显示绑定宠物的样子。</p>${pets ? `<div class="dtm-grid">${pets}</div><div class="dtm-row" style="margin-top:12px"><button class="dtm-button ${state.selectedPet ? "dtm-button-danger" : ""}" data-pet-clear ${state.selectedPet ? "" : "disabled"}>解除主题宠物绑定</button></div>` : '<div class="dtm-empty">没有发现有效的 Codex v2 宠物包。</div>'}</section>`;
     panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1><p>主题管理工具独立安装；主题、背景图片和可选宠物都在本页安装与启用。</p></div><div class="dtm-row"><div class="dtm-status"><span class="dtm-dot"></span>${state.paused ? "官方外观" : `当前：${escapeHtml(state.active?.name || "主题")}`} · ${state.hotReload ? "热重载已开启" : "自动刷新"}</div><button class="dtm-close-hit" type="button" data-manager-close aria-label="关闭"></button></div></div><div class="dtm-row"><button class="dtm-button ${state.paused ? "dtm-button-primary" : "dtm-button-danger"}" data-official ${state.paused && !state.canEnableActive ? "disabled" : ""}>${state.paused ? (state.canEnableActive ? "启用当前主题" : "请先安装主题") : "还原官方外观"}</button><button class="dtm-button" data-refresh>立即刷新</button><p>新安装的管理工具默认保持官方外观；还原不会删除已安装主题、宠物或自定义配置。</p></div><div class="dtm-tabs" role="tablist" aria-label="主题内容"><button class="dtm-tab" role="tab" aria-selected="${activeTab === "themes"}" data-manager-tab="themes">主题</button><button class="dtm-tab" role="tab" aria-selected="${activeTab === "pets"}" data-manager-tab="pets">宠物</button></div>${activeTab === "pets" ? petPane : themePane}${message ? `<div class="dtm-message">${escapeHtml(message)}</div>` : ""}</div>${localCreatorDialogHtml(baseOptions)}${petPickerDialogHtml()}${imageSettingsDialogHtml()}`;
+    enhanceImageSettingsDialog(panel);
     applyThemePreviewImages(panel);
     applyPetPreviewStyles(panel);
   };
@@ -790,7 +861,7 @@ type DreamThemeManagerState = {
         key,
         defaultImage: theme?.defaultImage || "",
         display: theme?.display || { fit: "cover", position: "auto", repeat: "no-repeat", rotation: { enabled: false, intervalSeconds: 45 } },
-        sidebar: theme?.sidebar || { background: "auto", fontFamily: "", textColor: "", iconColor: "", fontSize: "default", fontWeight: "default" },
+        sidebar: theme?.sidebar || { background: "auto", fontFamily: "", textColor: "", iconColor: "", fontSize: "default", fontWeight: "default", textBrightness: 100 },
         composer: theme?.composer || { width: "default", height: "default", fontSize: "default" },
         addedImages: [],
       }), "旧主题设置已初始化");
@@ -806,11 +877,16 @@ type DreamThemeManagerState = {
       const intervalSeconds = Number(panel.querySelector<HTMLInputElement>("[data-theme-image-interval]")?.value || 45);
       const rotationEnabled = Boolean(panel.querySelector<HTMLInputElement>("[data-theme-image-rotation]")?.checked);
       const sidebarBackground = panel.querySelector<HTMLSelectElement>("[data-theme-sidebar-background]")?.value || "auto";
-      const sidebarFontFamily = panel.querySelector<HTMLInputElement>("[data-theme-sidebar-font-family]")?.value || "";
-      const sidebarTextColor = panel.querySelector<HTMLInputElement>("[data-theme-sidebar-text-color]")?.value || "";
-      const sidebarIconColor = panel.querySelector<HTMLInputElement>("[data-theme-sidebar-icon-color]")?.value || "";
+      const sidebarFontFamilyValue = panel.querySelector<HTMLInputElement | HTMLSelectElement>("[data-theme-sidebar-font-family]")?.value || "";
+      const sidebarFontFamilyCustom = panel.querySelector<HTMLInputElement>("[data-theme-sidebar-font-family-custom]")?.value || "";
+      const sidebarFontFamily = sidebarFontFamilyCustom.trim() || sidebarFontFamilyValue;
+      const sidebarTextColor = panel.querySelector<HTMLInputElement>("[data-theme-color-field='sidebarTextColor']")?.value ||
+        panel.querySelector<HTMLInputElement>("[data-theme-sidebar-text-color]")?.value || "";
+      const sidebarIconColor = panel.querySelector<HTMLInputElement>("[data-theme-color-field='sidebarIconColor']")?.value ||
+        panel.querySelector<HTMLInputElement>("[data-theme-sidebar-icon-color]")?.value || "";
       const sidebarFontSize = panel.querySelector<HTMLSelectElement>("[data-theme-sidebar-font-size]")?.value || "default";
       const sidebarFontWeight = panel.querySelector<HTMLSelectElement>("[data-theme-sidebar-font-weight]")?.value || "default";
+      const sidebarTextBrightness = clampNumber(panel.querySelector<HTMLInputElement>("[data-theme-sidebar-text-brightness]")?.value || 100, 60, 140, 100);
       const composerWidth = panel.querySelector<HTMLSelectElement>("[data-theme-composer-width]")?.value || "default";
       const composerHeight = panel.querySelector<HTMLSelectElement>("[data-theme-composer-height]")?.value || "default";
       const composerFontSize = panel.querySelector<HTMLSelectElement>("[data-theme-composer-font-size]")?.value || "default";
@@ -825,7 +901,7 @@ type DreamThemeManagerState = {
           defaultImage,
           addedImages,
           display: { fit, position, repeat, rotation: { enabled: rotationEnabled, intervalSeconds } },
-          sidebar: { background: sidebarBackground, fontFamily: sidebarFontFamily, textColor: sidebarTextColor, iconColor: sidebarIconColor, fontSize: sidebarFontSize, fontWeight: sidebarFontWeight },
+          sidebar: { background: sidebarBackground, fontFamily: sidebarFontFamily, textColor: sidebarTextColor, iconColor: sidebarIconColor, fontSize: sidebarFontSize, fontWeight: sidebarFontWeight, textBrightness: sidebarTextBrightness },
           composer: { width: composerWidth, height: composerHeight, fontSize: composerFontSize },
         });
         imageSettingsTheme = null;
@@ -889,6 +965,11 @@ type DreamThemeManagerState = {
       setLocalColorValue((input as HTMLInputElement).dataset.localColorPicker || "", input.value);
       localDraftError = "";
       render();
+    }
+    else if (input.matches("[data-theme-color-picker]")) {
+      const key = (input as HTMLInputElement).dataset.themeColorPicker || "";
+      const field = document.querySelector<HTMLInputElement>(`#${PANEL_ID} [data-theme-color-field="${key}"]`);
+      if (field) field.value = input.value;
     }
     else if (input.matches("[data-local-theme-accent]")) localAccent = input.value;
     else if (input.matches("[data-local-theme-detail]")) localDetail = input.value;
@@ -985,11 +1066,24 @@ type DreamThemeManagerState = {
       render();
     }
   };
+  const onPanelInput = (event: Event) => {
+    const input = event.target as HTMLInputElement | null;
+    if (!input) return;
+    if (input.matches("[data-theme-sidebar-text-brightness]")) {
+      const value = clampNumber(input.value, 60, 140, 100);
+      const output = document.querySelector<HTMLElement>(`#${PANEL_ID} [data-theme-sidebar-text-brightness-value]`);
+      if (output) output.textContent = `${value}%`;
+    } else if (input.matches("[data-theme-color-picker]")) {
+      const key = input.dataset.themeColorPicker || "";
+      const field = document.querySelector<HTMLInputElement>(`#${PANEL_ID} [data-theme-color-field="${key}"]`);
+      if (field) field.value = input.value;
+    }
+  };
   const show = async (button, nav) => {
     const token = ++showSequence;
     showing = true; message = ""; getStyle(); setSelected(button);
     let panel = document.getElementById(PANEL_ID);
-    if (!panel) { panel = document.createElement("section"); panel.id = PANEL_ID; panel.setAttribute("aria-label", "主题"); panel.addEventListener("click", onPanelClick, true); panel.addEventListener("pointermove", onPanelPointerMove, true); panel.addEventListener("pointerleave", onPanelPointerLeave, true); panel.addEventListener("keydown", onPanelKeydown); panel.addEventListener("change", onPanelChange); document.body.appendChild(panel); }
+    if (!panel) { panel = document.createElement("section"); panel.id = PANEL_ID; panel.setAttribute("aria-label", "主题"); panel.addEventListener("click", onPanelClick, true); panel.addEventListener("pointermove", onPanelPointerMove, true); panel.addEventListener("pointerleave", onPanelPointerLeave, true); panel.addEventListener("keydown", onPanelKeydown); panel.addEventListener("change", onPanelChange); panel.addEventListener("input", onPanelInput); document.body.appendChild(panel); }
     positionPanel(panel, nav); panel.hidden = false; panel.innerHTML = '<div class="dtm-wrap"><div class="dtm-loading-card"><div class="dtm-loading-copy"><span class="dtm-loading-spinner" aria-hidden="true"></span><span>正在读取主题…</span></div><button class="dtm-close-hit" type="button" data-manager-close aria-label="关闭"></button></div></div>';
     try {
       const nextState = await call("getState");

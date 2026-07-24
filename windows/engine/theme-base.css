@@ -120,6 +120,13 @@ html.codex-dream-skin aside.app-shell-left-panel [class*="text-token"] {
   color: var(--dream-sidebar-icon, currentColor);
 }
 
+html.codex-dream-skin aside.app-shell-left-panel button,
+html.codex-dream-skin aside.app-shell-left-panel a,
+html.codex-dream-skin aside.app-shell-left-panel [role="button"],
+html.codex-dream-skin aside.app-shell-left-panel [class*="text-token"] {
+  filter: brightness(var(--dream-sidebar-text-brightness, 100%));
+}
+
 html.codex-dream-skin main.main-surface {
   position: relative;
   isolation: isolate;

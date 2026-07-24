@@ -55,6 +55,13 @@ function normalizedChoice(value, name, choices, fallback) {
   return value;
 }
 
+function normalizedPercent(value, name, fallback, min = 60, max = 140) {
+  if (value === null || value === undefined || value === "") return fallback;
+  const number = Number(value);
+  if (!Number.isFinite(number)) throw new Error(`${name} must be a finite number`);
+  return Math.min(max, Math.max(min, Math.round(number)));
+}
+
 function normalizeImageDisplay(rawDisplay) {
   const display = rawDisplay && typeof rawDisplay === "object" && !Array.isArray(rawDisplay) ? rawDisplay : {};
   const rotation = display.rotation && typeof display.rotation === "object" && !Array.isArray(display.rotation)
@@ -86,6 +93,7 @@ function normalizeSidebarSettings(rawSidebar) {
     iconColor,
     fontSize: normalizedChoice(sidebar.fontSize, "sidebar.fontSize", THEME_CHOICES.sidebarFontSize, "default"),
     fontWeight: normalizedChoice(sidebar.fontWeight, "sidebar.fontWeight", THEME_CHOICES.sidebarFontWeight, "default"),
+    textBrightness: normalizedPercent(sidebar.textBrightness ?? sidebar.brightness, "sidebar.textBrightness", 100),
   };
 }
 
