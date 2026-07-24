@@ -582,6 +582,17 @@
             return "主题预览图";
         return normalized;
     };
+    const imageChoiceLabel = (image, theme) => {
+        const label = String(image?.label || "").trim();
+        if (label && !/^\?{2,}$/.test(label))
+            return label;
+        const id = String(image?.id || "").trim();
+        if (id === "scroll-water-realm")
+            return "金穗潮音";
+        if (id === "default")
+            return "默认图";
+        return theme?.name ? `${theme.name} 主图` : (id || "主题主图");
+    };
     const cardHtml = (theme) => {
         const active = state && !state.paused && state.active?.id === theme.id;
         const meta = [theme.author, theme.version].filter(Boolean).map(escapeHtml).join(" · ");
@@ -651,7 +662,7 @@
             }]).map((image) => {
             const active = (imageSettingsTheme?.defaultImage || "default") === image.id;
             const preview = safePreview(image.preview) || (active ? themePreviewUrl(imageSettingsTheme) : "") || safePreview(imageSettingsTheme?.preview || "");
-            const label = image.label || (active ? "默认图" : image.id);
+            const label = imageChoiceLabel(image, imageSettingsTheme);
             return `<label class="dtm-image-choice" aria-checked="${active}"><span class="dtm-image-thumb">${imageThumbHtml(preview)}</span><span class="dtm-row"><input type="radio" name="dtm-default-image" value="${escapeHtml(image.id)}" ${active ? "checked" : ""}><span><span class="dtm-title">${escapeHtml(label)}</span><p>文件：${escapeHtml(imageFileLabel(image.path))}</p></span></span></label>`;
         }).join("");
         const option = (value, label, current) => `<option value="${escapeHtml(value)}" ${current === value ? "selected" : ""}>${escapeHtml(label)}</option>`;
