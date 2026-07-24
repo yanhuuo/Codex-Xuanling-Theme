@@ -1056,6 +1056,49 @@ async function previewDataUrl(loaded) {
   return imageDataUrl(loaded.previewImageBytes ?? loaded.imageBytes, loaded.previewImagePath ?? loaded.imagePath, 4 * 1024 * 1024);
 }
 
+function themeImageSummaries(loaded, includePreview = false) {
+  const fallback = {
+    id: loaded.theme.defaultImage || "default",
+    label: "默认图",
+    path: loaded.theme.image,
+    previewPath: loaded.theme.previewImage,
+    filePath: loaded.imagePath,
+    bytes: loaded.imageBytes,
+    previewFilePath: loaded.previewImagePath,
+    previewBytes: loaded.previewImageBytes,
+  };
+  const entries = loaded.images?.length ? loaded.images : [fallback];
+  return entries.map((entry) => ({
+    id: entry.id,
+    label: entry.label,
+    path: entry.path,
+    previewPath: entry.previewPath,
+    ...(includePreview ? {
+      preview: imageDataUrl(entry.previewBytes ?? entry.bytes, entry.previewFilePath ?? entry.filePath, 4 * 1024 * 1024),
+    } : {}),
+  }));
+}
+
+async function themeManagerSummary(loaded, key, extra = {}) {
+  return {
+    key,
+    id: loaded.theme.id,
+    name: loaded.theme.name,
+    description: loaded.theme.description,
+    author: loaded.theme.author,
+    version: loaded.theme.version,
+    brandIcon: loaded.theme.brandIcon,
+    icons: loaded.icons,
+    defaultImage: loaded.theme.defaultImage,
+    images: themeImageSummaries(loaded),
+    display: loaded.theme.display,
+    files: loaded.theme.files,
+    ...themePetSummary(loaded),
+    accent: loaded.theme.palette?.accent ?? "#6edaf2",
+    ...extra,
+  };
+}
+
 function imageDataUrl(bytes, filePath, maxBytes) {
   if (!bytes || bytes.length > maxBytes) return null;
   const extension = path.extname(filePath).toLowerCase();
@@ -1087,6 +1130,20 @@ export async function installedThemePreviewDataUrl(options, key) {
   const directory = path.resolve(savedRoot, normalizedKey);
   if (!isPathInside(directory, path.resolve(savedRoot))) throw new Error("主题路径越界");
   return previewDataUrl(await loadTheme(directory));
+}
+
+export async function installedThemeImagePreviewDataUrls(options, key) {
+  const savedRoot = path.join(stateRootFor(options), "themes");
+  const normalizedKey = safeThemeId(key, "");
+  if (!normalizedKey || normalizedKey !== String(key)) throw new Error("无效的主题标识");
+  const directory = path.resolve(savedRoot, normalizedKey);
+  if (!isPathInside(directory, path.resolve(savedRoot))) throw new Error("主题路径越界");
+  const loaded = await loadTheme(directory);
+  return {
+    key,
+    defaultImage: loaded.theme.defaultImage,
+    images: themeImageSummaries(loaded, true),
+  };
 }
 
 export async function bundledThemePreviewDataUrl(key) {
@@ -1137,25 +1194,11 @@ export async function listInstalledThemes(options) {
     const directory = path.join(savedRoot, entry.name);
     try {
       const loaded = await loadTheme(directory);
-      items.push({
-        key: entry.name,
-        id: loaded.theme.id,
-        name: loaded.theme.name,
-        description: loaded.theme.description,
-        author: loaded.theme.author,
-        version: loaded.theme.version,
+      items.push(await themeManagerSummary(loaded, entry.name, {
         localOnly: loaded.theme.localOnly === true,
         localPath: loaded.theme.localOnly === true ? directory : null,
         appearance: loaded.theme.appearance,
-        brandIcon: loaded.theme.brandIcon,
-        icons: loaded.icons,
-        defaultImage: loaded.theme.defaultImage,
-        images: loaded.theme.images,
-        display: loaded.theme.display,
-        files: loaded.theme.files,
-        ...themePetSummary(loaded),
-        accent: loaded.theme.palette?.accent ?? "#6edaf2",
-      });
+      }));
     } catch {
       // Invalid folders are ignored instead of becoming renderer-controlled paths.
     }
@@ -1170,22 +1213,7 @@ export async function listBundledThemes() {
     if (!entry.isDirectory()) continue;
     try {
       const loaded = await loadTheme(path.join(bundledRoot, entry.name));
-      items.push({
-        key: entry.name,
-        id: loaded.theme.id,
-        name: loaded.theme.name,
-        description: loaded.theme.description,
-        author: loaded.theme.author,
-        version: loaded.theme.version,
-        brandIcon: loaded.theme.brandIcon,
-        icons: loaded.icons,
-        defaultImage: loaded.theme.defaultImage,
-        images: loaded.theme.images,
-        display: loaded.theme.display,
-        files: loaded.theme.files,
-        ...themePetSummary(loaded),
-        accent: loaded.theme.palette?.accent ?? "#6edaf2",
-      });
+      items.push(await themeManagerSummary(loaded, entry.name));
     } catch {
       // Invalid bundled folders are omitted from the install catalog.
     }

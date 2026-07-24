@@ -452,8 +452,15 @@ type DreamThemeManagerState = {
     panel.style.top = `${Math.max(36, Math.round(bounds?.top ?? 36))}px`;
     panel.style.right = "0"; panel.style.bottom = "0";
   };
+  const themePreviewUrl = (theme) => {
+    const direct = safePreview(theme.preview);
+    if (direct) return direct;
+    const images = Array.isArray(theme.images) ? theme.images : [];
+    const active = images.find((image) => image.id === theme.defaultImage) || images[0];
+    return safePreview(active?.preview);
+  };
   const themePreviewHtml = (theme, scope) => {
-    const preview = safePreview(theme.preview);
+    const preview = themePreviewUrl(theme);
     if (preview) return `<img src="${escapeHtml(preview)}" alt="">`;
     return `<img data-dtm-theme-preview-scope="${escapeHtml(scope)}" data-dtm-theme-preview-key="${escapeHtml(theme.key)}" alt="" hidden>${bird}`;
   };
@@ -519,7 +526,7 @@ type DreamThemeManagerState = {
       path: "image",
     }]).map((image) => {
       const active = (imageSettingsTheme?.defaultImage || "default") === image.id;
-      const preview = safePreview(image.preview || imageSettingsTheme?.preview || "");
+      const preview = safePreview(image.preview) || (active ? themePreviewUrl(imageSettingsTheme) : "") || safePreview(imageSettingsTheme?.preview || "");
       const thumb = preview ? ` style="--dtm-image-thumb:url('${escapeHtml(preview)}')"` : "";
       return `<label class="dtm-image-choice" aria-checked="${active}"><span class="dtm-image-thumb"${thumb}></span><span class="dtm-row"><input type="radio" name="dtm-default-image" value="${escapeHtml(image.id)}" ${active ? "checked" : ""}><span><span class="dtm-title">${escapeHtml(image.label || image.id)}</span><p>${escapeHtml(image.path)}</p></span></span></label>`;
     }).join("");
@@ -609,6 +616,18 @@ type DreamThemeManagerState = {
       localModalOpen = false;
       petPickerTheme = null;
       render();
+      if (imageSettingsTheme?.key) {
+        const key = imageSettingsTheme.key;
+        call<{ key: string; defaultImage?: string; images?: DreamThemeSummary["images"] }>("getThemeImages", { key }).then((result) => {
+          if (!result?.images?.length || imageSettingsTheme?.key !== key) return;
+          imageSettingsTheme = {
+            ...imageSettingsTheme,
+            defaultImage: result.defaultImage || imageSettingsTheme.defaultImage,
+            images: result.images,
+          };
+          render();
+        }).catch(() => {});
+      }
     }
     else if (target.dataset.themePetEdit) {
       petPickerTheme = state?.themes?.find((theme) => theme.key === target.dataset.themePetEdit) || null;

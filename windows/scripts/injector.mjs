@@ -15,6 +15,7 @@ import {
   fetchRemoteTheme,
   installAndSelectBundledPet,
   installedPetPreviewDataUrl,
+  installedThemeImagePreviewDataUrls,
   installedThemePreviewDataUrl,
   isPathInside,
   listInstalledThemes,
@@ -327,6 +328,10 @@ async function handleThemeControl(options, request) {
       ? await bundledThemePreviewDataUrl(key)
       : await installedThemePreviewDataUrl(options, key);
     return { key, scope, preview };
+  }
+  if (request.command === "getThemeImages") {
+    const key = String(payload.key || "").trim();
+    return installedThemeImagePreviewDataUrls(options, key);
   }
   if (request.command === "setPaused") {
     await fs.mkdir(stateRoot, { recursive: true });

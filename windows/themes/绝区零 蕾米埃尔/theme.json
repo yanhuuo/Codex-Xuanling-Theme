@@ -67,10 +67,69 @@
     "files": [
       "theme.json",
       "theme.css",
-      "background.jpg"
+      "background.jpg",
+      "preview.jpg",
+      "icons/seraph.svg",
+      "icons/chevron.svg",
+      "icons/search.svg",
+      "icons/compose.svg",
+      "icons/quick.svg",
+      "icons/branch.svg",
+      "icons/sites.svg",
+      "icons/clock.svg",
+      "icons/plugins.svg",
+      "icons/folder.svg",
+      "icons/more.svg",
+      "icons/add.svg",
+      "icons/pin.svg",
+      "icons/archive.svg",
+      "icons/help.svg",
+      "icons/shield.svg",
+      "icons/permissionAsk.svg",
+      "icons/permissionAgent.svg",
+      "icons/permissionFull.svg",
+      "icons/mic.svg",
+      "icons/send.svg"
     ],
     "pets": [
       "remiel-switch"
     ]
-  }
+  },
+  "previewImage": "preview.jpg",
+  "defaultImage": "default",
+  "images": [
+    {
+      "id": "default",
+      "label": "????",
+      "path": "background.jpg",
+      "previewPath": "preview.jpg"
+    }
+  ],
+  "files": [
+    "theme.json",
+    "theme.css",
+    "background.jpg",
+    "preview.jpg",
+    "icons/seraph.svg",
+    "icons/chevron.svg",
+    "icons/search.svg",
+    "icons/compose.svg",
+    "icons/quick.svg",
+    "icons/branch.svg",
+    "icons/sites.svg",
+    "icons/clock.svg",
+    "icons/plugins.svg",
+    "icons/folder.svg",
+    "icons/more.svg",
+    "icons/add.svg",
+    "icons/pin.svg",
+    "icons/archive.svg",
+    "icons/help.svg",
+    "icons/shield.svg",
+    "icons/permissionAsk.svg",
+    "icons/permissionAgent.svg",
+    "icons/permissionFull.svg",
+    "icons/mic.svg",
+    "icons/send.svg"
+  ]
 }
