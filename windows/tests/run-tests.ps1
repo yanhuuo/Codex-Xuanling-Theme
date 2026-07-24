@@ -654,7 +654,8 @@ try {
     'permissionIconFor', 'permissionFull', 'permissionMenuChanged', 'permissionMenuListener', 'permissionButtons',
     'windowDragStart', 'windowDragEnd', 'dream-window-dragging',
     'installThemeIcon(nativeIcons[nativeIcons.length - 1], brandIcon)', 'sendIcon', 'processingIcon', 'spinnerIcon',
-    'dream-theme-icon-processing'
+    'dream-theme-icon-processing', 'installComposerActionIcon', 'data-dream-composer-action-icon',
+    'dreamComposerActionIcon', 'Stop generating', 'Cancel'
   )) {
     if (-not $rendererSource.Contains($requiredPerformanceBehavior)) {
       throw "Renderer route-performance behavior is missing: $requiredPerformanceBehavior"

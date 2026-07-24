@@ -607,6 +607,34 @@
         replacement.dataset.dreamIcon = iconSignature;
       }
     };
+    const installComposerActionIcon = (button, iconName, semanticClass = "") => {
+      if (!button || !iconName || !THEME_ICON_SVGS[iconName]) return;
+      for (const source of button.querySelectorAll?.("svg:not(.dream-theme-svg)") || []) {
+        source.classList.add("dream-native-icon-source");
+      }
+      let replacement = button.querySelector?.(":scope > .dream-theme-icon[data-dream-composer-action-icon='true']");
+      if (!replacement) {
+        replacement = document.createElement("span");
+        replacement.setAttribute("aria-hidden", "true");
+        replacement.dataset.dreamComposerActionIcon = "true";
+        button.insertBefore?.(replacement, button.firstChild || null);
+      }
+      for (const extra of button.querySelectorAll?.(":scope > .dream-theme-icon[data-dream-composer-action-icon='true']") || []) {
+        if (extra !== replacement) extra.remove();
+      }
+      const classTokens = ["dream-theme-icon", `dream-theme-icon-${iconName}`];
+      if (iconName === brandIcon) classTokens.push("dream-theme-icon-brand");
+      if (semanticClass && semanticClass !== `dream-theme-icon-${iconName}`) classTokens.push(semanticClass);
+      const expectedClass = classTokens.join(" ");
+      const iconSignature = `${THEME_ICON_VERSION}:${iconName}:composer-action:${semanticClass}`;
+      if (replacement.className !== expectedClass) replacement.className = expectedClass;
+      if (replacement.dataset.dreamIcon !== iconSignature) {
+        replacement.innerHTML = THEME_ICON_SVGS[iconName];
+        replacement.querySelector("svg")?.classList.add("dream-theme-svg");
+        replacement.dataset.dreamIcon = iconSignature;
+      }
+      button.dataset.dreamComposerActionIcon = iconSignature;
+    };
 
     const now = Date.now();
     if (sidebarDirty && now >= sidebarReadyAt) {
@@ -679,7 +707,7 @@
       const label = (button.getAttribute("aria-label") || button.textContent || "").trim();
       const navigation = button.getAttribute("data-composer-navigation-target") || "";
       const isComposerAction = !navigation && button.matches("button.size-token-button-composer");
-      const isProcessing = isComposerAction && ["停止", "Stop"].includes(label);
+      const isProcessing = isComposerAction && /^(?:停止|停止生成|取消|Stop|Stop generating|Cancel)$/i.test(label);
       let iconName = "";
       if (navigation === "add-context" || ["添加文件等内容", "Add files and more"].includes(label)) iconName = "add";
       else if (navigation === "permissions") {
@@ -695,7 +723,8 @@
       else if (isComposerAction) iconName = isProcessing ? processingIcon : sendIcon;
       button.classList.toggle("dream-composer-send", isComposerAction && !isProcessing);
       button.classList.toggle("dream-composer-processing", isProcessing);
-      if (iconName) installThemeIcon(button.querySelector("svg:not(.dream-theme-svg)"), iconName, isProcessing ? "dream-theme-icon-processing" : isComposerAction ? "dream-theme-icon-send" : "");
+      if (iconName && isComposerAction) installComposerActionIcon(button, iconName, isProcessing ? "dream-theme-icon-processing" : "dream-theme-icon-send");
+      else if (iconName) installThemeIcon(button.querySelector("svg:not(.dream-theme-svg)"), iconName, "");
     }
     }
 
