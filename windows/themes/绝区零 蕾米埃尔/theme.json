@@ -4,7 +4,7 @@
   "name": "蕾米埃尔｜星芒圣翼",
   "description": "绝区零蕾米埃尔风格的粉紫机械圣翼主题，包含独立星芒按钮图标与轻量环绕加载动画。",
   "author": "mizunagare",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "framework": {
     "id": "dream-skin",
     "version": 1
@@ -25,8 +25,8 @@
   "quote": "A WISH, DELIVERED IN LIGHT",
   "appearance": "auto",
   "art": {
-    "focusX": 0.76,
-    "focusY": 0.44,
+    "focusX": 0.5,
+    "focusY": 0.5,
     "safeArea": "left",
     "taskMode": "ambient"
   },
@@ -61,28 +61,7 @@
     "files": [
       "theme.json",
       "theme.css",
-      "background.jpg",
-      "icons/add.svg",
-      "icons/archive.svg",
-      "icons/branch.svg",
-      "icons/chevron.svg",
-      "icons/clock.svg",
-      "icons/compose.svg",
-      "icons/folder.svg",
-      "icons/help.svg",
-      "icons/mic.svg",
-      "icons/more.svg",
-      "icons/permissionAgent.svg",
-      "icons/permissionAsk.svg",
-      "icons/permissionFull.svg",
-      "icons/pin.svg",
-      "icons/plugins.svg",
-      "icons/quick.svg",
-      "icons/search.svg",
-      "icons/send.svg",
-      "icons/seraph.svg",
-      "icons/shield.svg",
-      "icons/sites.svg"
+      "background.jpg"
     ],
     "pets": [
       "remiel-switch"

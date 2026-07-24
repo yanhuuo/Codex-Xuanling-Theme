@@ -1,6 +1,9 @@
 /* Theme-only palette configuration. Shared layout and behavior live in
    windows/engine/theme-base.css and theme-runtime.js. */
 :root.codex-dream-skin {
+  /* Preserve the complete 2560x1440 composition instead of cropping it to
+     the app viewport. The canvas color fills any aspect-ratio gutter. */
+  --dream-art-fit: contain;
   --dream-brand-suffix: " · 蕾米埃尔";
   --dream-detail: #c7a9ff;
   --dream-send-base: #3a233f;

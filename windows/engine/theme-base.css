@@ -3,6 +3,7 @@
   color-scheme: light;
   --dream-accent: oklch(0.66 0.15 18);
   --dream-accent-ink: oklch(0.98 0.006 20);
+  --dream-art-fit: cover;
   --dream-art-position: 72% 45%;
   --dream-brand-suffix: "";
   --dream-detail: #d9b85f;
@@ -144,7 +145,7 @@ html.codex-dream-skin body:has(nav[aria-label="设置"], nav[aria-label="Setting
   background-image: var(--dream-art) !important;
   background-position: var(--dream-art-position) !important;
   background-repeat: no-repeat !important;
-  background-size: cover !important;
+  background-size: var(--dream-art-fit) !important;
 }
 
 html.codex-dream-skin body:has(nav[aria-label="设置"], nav[aria-label="Settings"])
@@ -208,7 +209,7 @@ html.codex-dream-skin .dream-task::before {
   background-image: var(--dream-art);
   background-repeat: no-repeat;
   background-position: var(--dream-art-position);
-  background-size: cover;
+  background-size: var(--dream-art-fit);
   contain: strict;
 }
 
@@ -219,7 +220,7 @@ html.codex-dream-skin.dream-art-wide .dream-task::before {
 
 html.codex-dream-skin.dream-art-wide:not(.dream-task-banner) .dream-task::before {
   background-position: var(--dream-art-position);
-  background-size: cover;
+  background-size: var(--dream-art-fit);
 }
 
 html.codex-dream-skin.dream-task-banner .dream-task::before {
@@ -448,7 +449,7 @@ html.codex-dream-skin.dream-art-wide.dream-route-task:is(.dream-task-ambient, .d
   background-color: var(--dream-canvas) !important;
   background-image: var(--dream-art) !important;
   background-position: var(--dream-art-position) !important;
-  background-size: cover !important;
+  background-size: var(--dream-art-fit) !important;
   background-repeat: no-repeat !important;
   background-attachment: scroll !important;
 }
@@ -1513,5 +1514,3 @@ html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-pane
     transition-duration: .01ms !important;
   }
 }
-
-
