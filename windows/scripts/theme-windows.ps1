@@ -517,6 +517,14 @@ function Update-DreamSkinMaterializedThemeFramework {
   if (-not $theme.schemaVersion -or [int]$theme.schemaVersion -lt 4) {
     $theme | Add-Member -NotePropertyName schemaVersion -NotePropertyValue 4 -Force
   }
+  foreach ($propertyName in @('icons', 'brandIcon', 'sendIcon', 'processingIcon', 'spinnerIcon')) {
+    $sourceProperty = $source.Theme.PSObject.Properties[$propertyName]
+    if ($sourceProperty) {
+      $theme | Add-Member -NotePropertyName $propertyName -NotePropertyValue $sourceProperty.Value -Force
+    } else {
+      $theme.PSObject.Properties.Remove($propertyName)
+    }
+  }
   Write-DreamSkinTheme -ThemeDirectory $ThemeDirectory -Theme $theme
   Write-DreamSkinThemeInstallManifest -ThemeDirectory $ThemeDirectory
   return $true

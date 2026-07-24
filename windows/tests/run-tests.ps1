@@ -415,6 +415,19 @@ try {
     @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot).Count -ne 1) {
     throw 'Theme-store initialization overwrote the active custom theme or duplicated its bundled preset.'
   }
+  $officialUpgradeStateRoot = Join-Path $temporaryRoot 'official-upgrade-state'
+  $officialUpgradePaths = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $officialUpgradeStateRoot
+  $officialThemePath = Join-Path $officialUpgradePaths.Active 'theme.json'
+  $staleOfficialTheme = (Read-DreamSkinUtf8File -Path $officialThemePath) | ConvertFrom-Json -ErrorAction Stop
+  $staleOfficialTheme.PSObject.Properties.Remove('icons')
+  $staleOfficialTheme | Add-Member -NotePropertyName brandIcon -NotePropertyValue '' -Force
+  Write-DreamSkinTheme -ThemeDirectory $officialUpgradePaths.Active -Theme $staleOfficialTheme
+  $null = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $officialUpgradeStateRoot
+  $upgradedOfficialTheme = Read-DreamSkinTheme -ThemeDirectory $officialUpgradePaths.Active
+  if ($upgradedOfficialTheme.Theme.brandIcon -cne 'bird' -or
+    @($upgradedOfficialTheme.Theme.icons.PSObject.Properties).Count -lt 1) {
+    throw 'Bundled theme framework upgrade did not restore official icon metadata.'
+  }
   $savedTheme = Save-DreamSkinCurrentTheme -Name '已保存主题' -StateRoot $themeStateRoot
   if ($savedTheme.Theme.name -cne '已保存主题' -or @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot).Count -ne 2) {
     throw 'Saved theme creation or discovery failed.'
