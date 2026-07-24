@@ -2,7 +2,7 @@
   "schemaVersion": 4,
   "id": "wuthering-waves-suisui-golden-ripple",
   "name": "鸣潮 穗穗｜金穗潮音",
-  "description": "基于《鸣潮》穗穗官方视觉特征生成的 Codex 主题背景：单人穗穗主视觉、金穗、水纹、音律仪式感与左侧暗色 UI 留白；图标为同主题金穗/水纹 SVG 套件。",
+  "description": "????????????????? Codex ????????????????????????????/?????????? UI ???????????/??/?? SVG ???",
   "author": "yanhuuo",
   "version": "1.0.0",
   "framework": {
@@ -28,9 +28,10 @@
     "taskMode": "ambient"
   },
   "palette": {
-    "accent": "#e6bf67",
-    "glow": "#62d7e5",
-    "danger": "#b84032"
+    "accent": "#f0c86b",
+    "glow": "#ffe2a0",
+    "danger": "#b84032",
+    "secondary": "#62d7e5"
   },
   "icons": {
     "bird": "<svg class=\"dream-suisui-svg\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 15.2 5.489999999999999 9.739999999999998c3.4-2.52 9-2.8350000000000004 13.020000000000001 0L12 15.2Z\" fill=\"#173f4b\" stroke=\"#e6bf67\" stroke-width=\".75\" stroke-linejoin=\"round\"/><path d=\"M12 15.2 8.325 8.689999999999998M12 15.2 12 8.059999999999999M12 15.2 15.675 8.689999999999998\" stroke=\"#fff5d6\" stroke-width=\".55\" stroke-linecap=\"round\"/><path d=\"M7.1 8.8c2.4-2.1 4.3-4.2 5.3-6.4 1.5 2.4 3.2 4.5 5.4 6.4-3.7-.9-7.3-.9-10.7 0Z\" fill=\"#fff5d6\" stroke=\"#e6bf67\" stroke-width=\".75\" stroke-linejoin=\"round\"/><path d=\"M11.1 7.5c0.4-1.2 1.4-1.2 1.8 0-.4 1.2-1.4 1.5-1.8 0Z\" fill=\"#e6bf67\" stroke=\"#fff5d6\" stroke-width=\".35\"/><path d=\"M8.2 18.2c2.2.8 5.4.8 7.6 0\" stroke=\"#62d7e5\" stroke-width=\"1\" stroke-linecap=\"round\"/></svg>",
@@ -93,8 +94,8 @@
     "type": "generated-feature-adaptation",
     "title": "Suisui theme wallpaper generated from official character features",
     "referencePage": "https://wutheringwaves.kurogames.com/zh-cn/main/news/detail/5110",
-    "process": "generated with concrete Suisui reference traits: short platinum bob, gold eyes/red eyeliner, blue-gold feather ornament, folded fan/resonance instrument, black-gold collar, cream dress, aqua sleeve ribbons, dark Codex UI-safe left negative space",
-    "generatedAsset": "generated_images/call_vp0u4ZOUq1B0Rt1cJ1gWsZgg.png"
+    "process": "gold-dominant Suisui feature adaptation: short platinum bob, gold eyes/red eyeliner, blue-gold feather ornament, folded fan/resonance instrument, black-gold collar, cream dress, warm Mingting gold atmosphere, dark Codex UI-safe left negative space; aqua only as secondary accent",
+    "generatedAsset": "generated_images/call_tRAJM43drFrv4qtylKcF4LLW.png"
   },
   "sendIcon": "send",
   "processingIcon": "processing",
