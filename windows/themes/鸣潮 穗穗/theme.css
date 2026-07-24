@@ -1,0 +1,28 @@
+/* Theme-only palette configuration. Shared layout and behavior live in
+   windows/engine/theme-base.css and theme-runtime.js. */
+:root.codex-dream-skin {
+  --dream-brand-suffix: " · 穗穗";
+  --dream-detail: #d8b46a;
+  --dream-send-base: #24443f;
+  --dream-processing-base: #223b36;
+  --dream-accent: #d8b46a;
+  --dream-accent-ink: #fff9e9;
+  --dream-canvas: color-mix(in oklab, #f8f0dc 94%, var(--dream-accent));
+  --dream-surface: color-mix(in oklab, #fff7e9 94%, var(--dream-accent));
+  --dream-surface-raised: color-mix(in oklab, #fffaf1 96%, var(--dream-accent));
+  --dream-sidebar: color-mix(in oklab, #f2e6cc 88%, var(--dream-accent));
+  --dream-text: #302716;
+  --dream-text-muted: #6f6045;
+  --dream-line: color-mix(in oklab, #b99b58 72%, transparent);
+}
+
+:root.codex-dream-skin.dream-theme-dark {
+  --dream-canvas: color-mix(in oklab, #071c21 92%, var(--dream-accent));
+  --dream-surface: color-mix(in oklab, #10292d 91%, var(--dream-accent));
+  --dream-surface-raised: color-mix(in oklab, #173437 90%, var(--dream-accent));
+  --dream-sidebar: color-mix(in oklab, #06171b 90%, var(--dream-accent));
+  --dream-text: #fff6dc;
+  --dream-text-muted: #d3c29a;
+  --dream-line: color-mix(in oklab, #d8b46a 32%, #143b42);
+  --dream-shadow: 0 18px 48px color-mix(in oklab, #02090b 76%, transparent);
+}
