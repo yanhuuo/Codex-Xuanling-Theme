@@ -91,8 +91,17 @@ function createFixture({
     },
   };
   const routeClasses = new Set();
+  const homeContentClasses = new Set();
   const utilityClasses = new Set();
   const utilityNode = { classList: makeClassList(utilityClasses) };
+  const homeContent = {
+    classList: makeClassList(homeContentClasses),
+    parentElement: null,
+  };
+  const homeIcon = {
+    parentElement: homeContent,
+    closest: () => routeMain,
+  };
   const routeMain = {
     classList: makeClassList(routeClasses),
     querySelectorAll(selector) {
@@ -100,6 +109,7 @@ function createFixture({
       return [];
     },
   };
+  homeContent.parentElement = routeMain;
   const staleHome = { classList: makeClassList(new Set(["dream-home"])) };
   const staleShell = { classList: makeClassList(new Set(["dream-home-shell"])) };
 
@@ -146,7 +156,7 @@ function createFixture({
     querySelector(selector) {
       if (selector === "main.main-surface") return hasShell ? shellMain : null;
       if (selector === "aside.app-shell-left-panel") return hasShell ? {} : null;
-      if (selector === '[data-testid="home-icon"]') return hasShell && homePresent ? { closest: () => routeMain } : null;
+      if (selector === '[data-testid="home-icon"]') return hasShell && homePresent ? homeIcon : null;
       return null;
     },
     querySelectorAll(selector) {
@@ -154,6 +164,9 @@ function createFixture({
       if (selector === ".dream-task") return routeClasses.has("dream-task") ? [routeMain] : [];
       if (selector === ".dream-home-utility") {
         return utilityClasses.has("dream-home-utility") ? [utilityNode] : [];
+      }
+      if (selector === ".dream-home-content") {
+        return homeContentClasses.has("dream-home-content") ? [homeContent] : [];
       }
       if (!staleSkin) return [];
       if (selector === ".dream-home") return [staleHome];
@@ -217,6 +230,7 @@ function createFixture({
     rootStyles,
     revokedUrls,
     routeClasses,
+    homeContentClasses,
     utilityClasses,
     setShellPresent(value) { hasShell = value; },
   };
@@ -287,8 +301,10 @@ assert.equal(configured.rootStyles.get("--dream-art-position"), "15% 80%");
 assert.equal(configured.rootStyles.get("--dream-accent"), "#d45a70");
 assert.equal(configured.routeClasses.has("dream-home"), true);
 assert.equal(configured.routeClasses.has("dream-task"), false);
+assert.equal(configured.homeContentClasses.has("dream-home-content"), true);
 assert.equal(configured.utilityClasses.has("dream-home-utility"), true);
 assert.equal(configured.context.window.__CODEX_DREAM_SKIN_STATE__.cleanup(), true);
+assert.equal(configured.homeContentClasses.has("dream-home-content"), false);
 assert.equal(configured.utilityClasses.has("dream-home-utility"), false);
 
 const analysisPixels = new Uint8ClampedArray(48 * 12 * 4);
