@@ -6,6 +6,9 @@
 my-theme/
 ├─ theme.json
 ├─ theme.css
+├─ icons/
+│  ├─ bird.svg
+│  └─ send.svg
 └─ background.jpg
 
 项目根目录 pets/
@@ -60,7 +63,9 @@ my-theme/
 
 `install` 是主题自己的声明式安装信息。公共安装器只复制 `install.files` 里列出的受控文件，不执行主题目录中的 PowerShell。内置主题集合用 `install.default: true` 选择默认主题。
 
-`icons` 是由图标名到完整 SVG 字符串的对象。SVG 会做基础安全校验：不允许脚本、事件属性或 `javascript:` URL。
+`icons` 是由图标名到完整 SVG 字符串的对象，也是运行时唯一读取的图标来源。SVG 会做基础安全校验：不允许脚本、事件属性或 `javascript:` URL。
+
+为了方便维护，主题包还必须把每个图标的 SVG 原文件放在自己的 `icons/` 文件夹下，例如 `icons/bird.svg`。安装、切换或保存主题时，工具会从 `theme.json.icons` 自动物化这些源文件；不要使用独立的 `icons.json`。
 
 常用语义图标：
 
@@ -83,7 +88,7 @@ my-theme/
 }
 ```
 
-加载器会把公共 CSS、公共渲染器与主题配置合并。安装到本机主题库时会物化为带 `theme.css`、`theme.js`、背景图和单个 `theme.json` 的独立运行包；图标和安装信息仍保存在 `theme.json` 内。旧式 v3 主题仍兼容读取 `entrypoints.icons`、`icons.json` 和 `install.json`，但新建和保存的主题都会写成 v4。
+加载器会把公共 CSS、公共渲染器与主题配置合并。安装到本机主题库时会物化为带 `theme.css`、`theme.js`、背景图、`icons/*.svg` 源文件和单个 `theme.json` 的独立运行包；图标和安装信息仍保存在 `theme.json` 内。旧式 v3 主题仍兼容读取 `entrypoints.icons`、`icons.json` 和 `install.json`，但新建和保存的主题都会写成 v4。
 
 ## 主题宠物
 

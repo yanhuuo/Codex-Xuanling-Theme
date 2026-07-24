@@ -25,7 +25,7 @@
 | 恢复官方外观 | `windows/scripts/restore-dream-skin.ps1` |
 | 验证安装是否正常 | `npm test`；运行中验证可用 `windows/scripts/verify-dream-skin.ps1` |
 | 制作新主题 | 复制 `windows/themes/鸣潮 秧秧·玄翎` 或 `windows/themes/绝区零 蕾米埃尔`，按 `windows/THEME_FORMAT.md` 改 `theme.json/theme.css/background.jpg` |
-| 添加/修改图标 | 修改 `theme.json.icons`，不要再新建独立 `icons.json` |
+| 添加/修改图标 | 修改主题目录下 `icons/*.svg` 源文件，并同步到 `theme.json.icons`；不要再新建独立 `icons.json` |
 | 自定义发送/执行中/加载动图 | 设置 `theme.json.icons.send`、`theme.json.icons.processing`、`theme.json.icons.spinner`，或显式指定 `sendIcon/processingIcon/spinnerIcon` |
 | 设置默认内置主题 | 在对应主题 `theme.json.install.default` 设为 `true`，确保只有一个内置主题为 `true` |
 | 添加宠物 | 放到项目根目录 `pets/<pet-id>/pet.json` 和 `spritesheet.webp`，主题中只写 `theme.json.pet.id` |
@@ -77,6 +77,9 @@ npm test
 windows/themes/<theme-name>/
 ├─ theme.json
 ├─ theme.css
+├─ icons/
+│  ├─ bird.svg
+│  └─ send.svg
 └─ background.jpg
 
 pets/<pet-id>/
@@ -86,7 +89,8 @@ pets/<pet-id>/
 
 不要再为新主题创建独立 `icons.json` 或 `install.json`：
 
-- 图标写入 `theme.json.icons`
+- 运行时图标写入 `theme.json.icons`
+- 图标 SVG 原文件保存在主题自己的 `icons/` 文件夹下
 - 安装信息写入 `theme.json.install`
 - 宠物只在 `theme.json.pet.id` 中绑定 ID
 
@@ -122,7 +126,7 @@ pets/<pet-id>/
    - `version`
    - `image`
   - `palette.accent`
-  - `icons`
+  - `icons`，并同步维护 `icons/*.svg` 源文件
   - `sendIcon` / `processingIcon` / `spinnerIcon`（可选）
   - `pet.id`
    - `install.files`

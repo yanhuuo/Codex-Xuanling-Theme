@@ -299,15 +299,48 @@ function Write-DreamSkinTheme {
   Write-DreamSkinUtf8FileAtomically -Path $themePath -Content ($json + "`r`n")
 }
 
+function Write-DreamSkinThemeIconSources {
+  param(
+    [Parameter(Mandatory = $true)][string]$ThemeDirectory,
+    [Parameter(Mandatory = $true)][object]$Theme
+  )
+  $iconsDirectory = Join-Path $ThemeDirectory 'icons'
+  Assert-DreamSkinNoReparseComponents -Path $ThemeDirectory
+  Assert-DreamSkinNoReparseComponents -Path $iconsDirectory
+  if (Test-Path -LiteralPath $iconsDirectory) {
+    Remove-Item -LiteralPath $iconsDirectory -Recurse -Force
+  }
+  $iconProperties = @()
+  if ($Theme.icons) { $iconProperties = @($Theme.icons.PSObject.Properties | Sort-Object Name) }
+  if ($iconProperties.Count -lt 1) { return @() }
+  New-Item -ItemType Directory -Force -Path $iconsDirectory | Out-Null
+  $files = @()
+  foreach ($property in $iconProperties) {
+    $name = "$($property.Name)"
+    if ($name -notmatch '^[A-Za-z][A-Za-z0-9_-]{0,39}$') { throw "Theme icon name is invalid: $name" }
+    $relative = "icons/$name.svg"
+    $destination = Join-Path $ThemeDirectory $relative
+    $fullDestination = [System.IO.Path]::GetFullPath($destination)
+    $fullIconsDirectory = [System.IO.Path]::GetFullPath($iconsDirectory).TrimEnd('\')
+    if (-not $fullDestination.StartsWith($fullIconsDirectory + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+      throw "Theme icon source escaped its folder: $name"
+    }
+    Write-DreamSkinUtf8FileAtomically -Path $destination -Content ("$($property.Value)".Trim() + "`r`n")
+    $files += $relative
+  }
+  return @($files)
+}
+
 function Write-DreamSkinThemeInstallManifest {
   param([Parameter(Mandatory = $true)][string]$ThemeDirectory)
   $loaded = Read-DreamSkinTheme -ThemeDirectory $ThemeDirectory -SkipImageMetadata
   $files = @(
     'theme.json',
-    "$($loaded.Theme.entrypoints.css)",
-    "$($loaded.Theme.entrypoints.renderer)"
+    "$($loaded.Theme.entrypoints.css)"
   )
+  if ($loaded.Theme.entrypoints.renderer) { $files += "$($loaded.Theme.entrypoints.renderer)" }
   $files += "$($loaded.Theme.image)"
+  $files += Write-DreamSkinThemeIconSources -ThemeDirectory $ThemeDirectory -Theme $loaded.Theme
   $loaded.Theme | Add-Member -NotePropertyName install -NotePropertyValue ([pscustomobject]([ordered]@{
     default = $false
     files = @($files | Select-Object -Unique)

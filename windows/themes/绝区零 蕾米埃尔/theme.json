@@ -61,7 +61,28 @@
     "files": [
       "theme.json",
       "theme.css",
-      "background.jpg"
+      "background.jpg",
+      "icons/add.svg",
+      "icons/archive.svg",
+      "icons/branch.svg",
+      "icons/chevron.svg",
+      "icons/clock.svg",
+      "icons/compose.svg",
+      "icons/folder.svg",
+      "icons/help.svg",
+      "icons/mic.svg",
+      "icons/more.svg",
+      "icons/permissionAgent.svg",
+      "icons/permissionAsk.svg",
+      "icons/permissionFull.svg",
+      "icons/pin.svg",
+      "icons/plugins.svg",
+      "icons/quick.svg",
+      "icons/search.svg",
+      "icons/send.svg",
+      "icons/seraph.svg",
+      "icons/shield.svg",
+      "icons/sites.svg"
     ],
     "pets": [
       "remiel-switch"

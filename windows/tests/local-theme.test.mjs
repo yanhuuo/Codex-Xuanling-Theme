@@ -38,6 +38,12 @@ try {
   assert.ok(manifest.icons.search, "Partial local icon overrides must retain the base theme icons.");
   assert.equal(manifest.install.default, false);
   assert.equal(manifest.install.files.includes("icons.json"), false);
+  assert.ok(manifest.install.files.includes("icons/bird.svg"));
+  assert.equal(
+    await fs.readFile(path.join(created.directory, "icons", "bird.svg"), "utf8"),
+    `${customBird}\n`,
+    "Local theme icon SVG sources must be materialized under icons/.",
+  );
   assert.equal(await fs.stat(path.join(created.directory, "icons.json")).then(() => true, () => false), false);
   assert.equal(await fs.stat(path.join(created.directory, "install.json")).then(() => true, () => false), false);
   assert.equal(await fs.stat(path.join(created.directory, manifest.image)).then((item) => item.isFile()), true);
@@ -72,6 +78,11 @@ try {
   assert.equal(uploadedManifest.image, "art.gif");
   assert.equal(uploadedManifest.icons.bird, customBird);
   assert.equal(uploadedManifest.icons.search, customSearch, "Individual SVG selection must override imported JSON and base icons.");
+  assert.equal(
+    await fs.readFile(path.join(uploaded.directory, "icons", "search.svg"), "utf8"),
+    `${customSearch}\n`,
+    "Uploaded SVG overrides must be exported as theme-local source files.",
+  );
 
   await assert.rejects(
     createLocalThemePackage({

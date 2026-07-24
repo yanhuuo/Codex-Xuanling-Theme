@@ -382,6 +382,8 @@ try {
     @($initialTheme.Theme.icons.PSObject.Properties).Count -lt 1 -or
     (Test-Path -LiteralPath (Join-Path $themePaths.Active 'install.json')) -or
     (Test-Path -LiteralPath (Join-Path $themePaths.Active 'icons.json')) -or
+    -not (Test-Path -LiteralPath (Join-Path $themePaths.Active 'icons\bird.svg') -PathType Leaf) -or
+    -not (@($initialTheme.Theme.install.files) -contains 'icons/bird.svg') -or
     $initialTheme.Theme.appearance -cne 'dark' -or
     $initialTheme.Theme.art.safeArea -cne 'left' -or
     $initialTheme.Theme.art.taskMode -cne 'ambient' -or
@@ -425,7 +427,8 @@ try {
   $null = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $officialUpgradeStateRoot
   $upgradedOfficialTheme = Read-DreamSkinTheme -ThemeDirectory $officialUpgradePaths.Active
   if ($upgradedOfficialTheme.Theme.brandIcon -cne 'bird' -or
-    @($upgradedOfficialTheme.Theme.icons.PSObject.Properties).Count -lt 1) {
+    @($upgradedOfficialTheme.Theme.icons.PSObject.Properties).Count -lt 1 -or
+    -not (Test-Path -LiteralPath (Join-Path $officialUpgradePaths.Active 'icons\bird.svg') -PathType Leaf)) {
     throw 'Bundled theme framework upgrade did not restore official icon metadata.'
   }
   $savedTheme = Save-DreamSkinCurrentTheme -Name '已保存主题' -StateRoot $themeStateRoot
@@ -515,10 +518,20 @@ try {
     }
     $manifest = (Read-DreamSkinUtf8File -Path $themePath) | ConvertFrom-Json
     if ($manifest.install.default) { $defaultPackageCount += 1 }
+    $manifestIconProperties = @($manifest.icons.PSObject.Properties)
+    $missingIconSource = $false
+    foreach ($iconProperty in $manifestIconProperties) {
+      $iconSource = Join-Path $themeDirectory.FullName ("icons\$($iconProperty.Name).svg")
+      if (-not (Test-Path -LiteralPath $iconSource -PathType Leaf) -or
+        -not (@($manifest.install.files) -contains "icons/$($iconProperty.Name).svg")) {
+        $missingIconSource = $true
+        break
+      }
+    }
     if ([int]$manifest.schemaVersion -ne 4 -or $manifest.entrypoints.icons -or
       "$($manifest.framework.id)" -cne 'dream-skin' -or [int]$manifest.framework.version -ne 1 -or
       $manifest.entrypoints.renderer -or @($manifest.install.files) -contains 'theme.js' -or
-      @($manifest.icons.PSObject.Properties).Count -lt 1 -or
+      $manifestIconProperties.Count -lt 1 -or $missingIconSource -or
       -not $themeRenderer.Contains('__DREAM_ICONS_JSON__') -or
       $themeRenderer -match ':\s*(?:xuanSvg|remielSvg)\s*\(') {
       throw "Bundled theme did not use the shared framework and inline icon configuration: $($themeDirectory.Name)"
