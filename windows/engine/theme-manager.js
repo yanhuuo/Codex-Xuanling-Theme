@@ -1,7 +1,7 @@
 "use strict";
 (() => {
     const KEY = "__CODEX_DREAM_THEME_MANAGER__";
-    const VERSION = "1.9.6";
+    const VERSION = "1.9.7";
     const BINDING = "__codexDreamThemeControl";
     const RESPONSE = "__codexDreamThemeResponse";
     const STYLE_ID = "codex-dream-theme-manager-style";
@@ -100,9 +100,9 @@
     #${PANEL_ID} .dtm-dialog-head>div:first-child{min-width:0;flex:1;pointer-events:auto}
     #${PANEL_ID} .dtm-dialog-head h2{margin:0 0 6px}
     #${PANEL_ID} .dtm-dialog-close{width:32px;height:32px;padding:0;font-size:19px;line-height:1}
-    #${PANEL_ID} .dtm-close-hit{appearance:none;position:relative;display:grid;place-items:center;flex:0 0 52px;width:52px;height:52px;min-width:52px;min-height:52px;margin:-5px;padding:0;border:1px solid var(--dtm-line);border-radius:16px;background:color-mix(in oklab,var(--dtm-raised) 90%,transparent);color:var(--dtm-text);cursor:pointer;user-select:none;touch-action:manipulation;z-index:1000;pointer-events:auto!important}
-    #${PANEL_ID} .dtm-close-icon{display:block;width:24px;height:24px;pointer-events:none}
-    #${PANEL_ID} .dtm-close-hit:empty::before{content:"";display:block;width:24px;height:24px;background:linear-gradient(45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px)),linear-gradient(-45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px));pointer-events:none}
+    #${PANEL_ID} .dtm-close-hit{appearance:none;position:relative;display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;min-width:40px;min-height:40px;margin:0;padding:0;border:1px solid var(--dtm-line);border-radius:12px;background:color-mix(in oklab,var(--dtm-raised) 90%,transparent);color:var(--dtm-text);cursor:pointer;user-select:none;touch-action:manipulation;z-index:1000;pointer-events:auto!important}
+    #${PANEL_ID} .dtm-close-icon{display:block;width:18px;height:18px;pointer-events:none}
+    #${PANEL_ID} .dtm-close-hit:empty::before{content:"";display:block;width:18px;height:18px;background:linear-gradient(45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px)),linear-gradient(-45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px));pointer-events:none}
     #${PANEL_ID} .dtm-close-hit:hover{border-color:var(--dream-manager-accent,#6edaf2);background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 16%,var(--dtm-raised));box-shadow:0 0 0 3px color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 12%,transparent),0 10px 24px #0005}
     #${PANEL_ID} .dtm-close-hit:active{transform:translateY(1px);background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 24%,var(--dtm-raised))}
     #${PANEL_ID} .dtm-close-hit:focus-visible{outline:2px solid var(--dream-manager-accent,#6edaf2);outline-offset:2px}
@@ -1179,7 +1179,7 @@
             document.body.appendChild(panel);
         }
         panel.hidden = false;
-        panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-loading-card"><div class="dtm-loading-copy"><span class="dtm-loading-spinner" aria-hidden="true"></span><span>正在读取主题…</span></div>${closeButton("manager")}</div></div>`;
+        panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1><p>主题管理工具已加载；主题和宠物列表会在后台读取完成后自动填充。</p></div><div class="dtm-row"><div class="dtm-status"><span class="dtm-dot"></span>正在读取主题状态 · 异步加载</div>${closeButton("manager")}</div></div><div class="dtm-row"><button class="dtm-button" type="button" disabled>正在读取</button><button class="dtm-button" type="button" disabled>立即刷新</button><p>基础页面先显示，列表读取完成后会自动更新；关闭按钮仍可立即使用。</p></div><div class="dtm-tabs" role="tablist" aria-label="主题内容"><button class="dtm-tab" role="tab" aria-selected="${activeTab === "themes"}" data-manager-tab="themes">主题</button><button class="dtm-tab" role="tab" aria-selected="${activeTab === "pets"}" data-manager-tab="pets">宠物</button></div><section class="dtm-section"><h2>${activeTab === "pets" ? "主题宠物" : "主题"}</h2><div class="dtm-loading-card"><div class="dtm-loading-copy"><span class="dtm-loading-spinner" aria-hidden="true"></span><span>正在读取${activeTab === "pets" ? "宠物" : "主题"}列表…</span></div></div></section></div>`;
         try {
             const nextState = await call("getState");
             if (!showing || token !== showSequence)
