@@ -35,6 +35,9 @@ const THEME_CHOICES = {
   sidebarBackground: new Set(["auto", "transparent", "tint", "solid"]),
   sidebarFontSize: new Set(["default", "small", "normal", "large"]),
   sidebarFontWeight: new Set(["default", "normal", "medium", "semibold", "bold"]),
+  composerWidth: new Set(["default", "compact", "comfortable", "wide", "full"]),
+  composerHeight: new Set(["default", "compact", "comfortable", "large"]),
+  composerFontSize: new Set(["default", "small", "normal", "large"]),
 };
 
 function normalizedUnit(value, name) {
@@ -77,6 +80,15 @@ function normalizeSidebarSettings(rawSidebar) {
     fontFamily,
     fontSize: normalizedChoice(sidebar.fontSize, "sidebar.fontSize", THEME_CHOICES.sidebarFontSize, "default"),
     fontWeight: normalizedChoice(sidebar.fontWeight, "sidebar.fontWeight", THEME_CHOICES.sidebarFontWeight, "default"),
+  };
+}
+
+function normalizeComposerSettings(rawComposer) {
+  const composer = rawComposer && typeof rawComposer === "object" && !Array.isArray(rawComposer) ? rawComposer : {};
+  return {
+    width: normalizedChoice(composer.width, "composer.width", THEME_CHOICES.composerWidth, "default"),
+    height: normalizedChoice(composer.height, "composer.height", THEME_CHOICES.composerHeight, "default"),
+    fontSize: normalizedChoice(composer.fontSize, "composer.fontSize", THEME_CHOICES.composerFontSize, "default"),
   };
 }
 
@@ -419,6 +431,7 @@ export async function loadTheme(themeDir) {
     : imageEntries[0]?.id ?? "default";
   const display = normalizeImageDisplay(raw.display);
   const sidebar = normalizeSidebarSettings(raw.sidebar);
+  const composer = normalizeComposerSettings(raw.composer);
   const entrypoints = raw.entrypoints && typeof raw.entrypoints === "object" && !Array.isArray(raw.entrypoints)
     ? raw.entrypoints : {};
   const framework = raw.framework && typeof raw.framework === "object" && !Array.isArray(raw.framework)
@@ -527,6 +540,7 @@ export async function loadTheme(themeDir) {
     images: imageEntries,
     display,
     sidebar,
+    composer,
     appearance: normalizedChoice(raw.appearance, "appearance", THEME_CHOICES.appearance, "auto"),
     art: {
       focusX: normalizedUnit(art.focusX, "art.focusX"),
@@ -1042,6 +1056,7 @@ export async function updateThemeImageSettings(themeDirectory, settings = {}) {
   }
   const display = normalizeImageDisplay(settings.display ?? theme.display);
   const sidebar = normalizeSidebarSettings(settings.sidebar ?? theme.sidebar);
+  const composer = normalizeComposerSettings(settings.composer ?? theme.composer);
   const requestedDefault = normalizedText(settings.defaultImage, "defaultImage", theme.defaultImage || images[0]?.id || "default", 80);
   const defaultEntry = images.find((entry) => entry.id === requestedDefault) ?? images[0];
   if (!defaultEntry) throw new Error("主题至少需要一张图片");
@@ -1051,6 +1066,7 @@ export async function updateThemeImageSettings(themeDirectory, settings = {}) {
   theme.images = images;
   theme.display = display;
   theme.sidebar = sidebar;
+  theme.composer = composer;
   const files = new Set(["theme.json"]);
   for (const file of loaded.install?.files ?? []) files.add(file);
   files.add(theme.image);
@@ -1113,6 +1129,7 @@ async function themeManagerSummary(loaded, key, extra = {}) {
     images: themeImageSummaries(loaded),
     display: loaded.theme.display,
     sidebar: loaded.theme.sidebar,
+    composer: loaded.theme.composer,
     files: loaded.theme.files,
     ...themePetSummary(loaded),
     accent: loaded.theme.palette?.accent ?? "#6edaf2",
@@ -1483,6 +1500,9 @@ export async function fetchRemoteTheme(themeUrl) {
     image: `art${extension}`,
     ...(remotePreview ? { previewImage: `preview${remotePreview.extension}` } : {}),
     appearance: normalizedChoice(rawTheme.appearance, "appearance", THEME_CHOICES.appearance, "auto"),
+    display: normalizeImageDisplay(rawTheme.display),
+    sidebar: normalizeSidebarSettings(rawTheme.sidebar),
+    composer: normalizeComposerSettings(rawTheme.composer),
     art: {
       focusX: normalizedUnit(art.focusX, "art.focusX"),
       focusY: normalizedUnit(art.focusY, "art.focusY"),

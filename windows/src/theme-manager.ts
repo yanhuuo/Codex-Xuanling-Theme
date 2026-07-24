@@ -17,6 +17,7 @@ type DreamThemeSummary = {
   images?: Array<{ id: string; label?: string; path: string; previewPath?: string; preview?: string | null }>;
   display?: { fit?: string; position?: string; repeat?: string; rotation?: { enabled?: boolean; intervalSeconds?: number } };
   sidebar?: { background?: string; fontFamily?: string; fontSize?: string; fontWeight?: string };
+  composer?: { width?: string; height?: string; fontSize?: string };
   files?: string[];
 };
 
@@ -533,6 +534,25 @@ type DreamThemeManagerState = {
     semibold: "半粗",
     bold: "粗体",
   }[value] || value);
+  const composerWidthLabel = (value) => ({
+    default: "跟随 Codex",
+    compact: "紧凑",
+    comfortable: "舒适",
+    wide: "加宽",
+    full: "接近全宽",
+  }[value] || value);
+  const composerHeightLabel = (value) => ({
+    default: "标准",
+    compact: "紧凑",
+    comfortable: "舒适",
+    large: "更高",
+  }[value] || value);
+  const composerFontSizeLabel = (value) => ({
+    default: "跟随 Codex",
+    small: "小",
+    normal: "标准",
+    large: "大",
+  }[value] || value);
   const imageFileLabel = (value) => {
     const normalized = String(value || "").trim();
     if (!normalized || normalized === "image") return "主题主图";
@@ -598,6 +618,7 @@ type DreamThemeManagerState = {
     const rotation = display.rotation || {};
     const position = splitImagePosition(display.position || "auto");
     const sidebar = imageSettingsTheme.sidebar || {};
+    const composer = imageSettingsTheme.composer || {};
     const images = (imageSettingsTheme.images?.length ? imageSettingsTheme.images : [{
       id: imageSettingsTheme.defaultImage || "default",
       label: "默认图",
@@ -609,7 +630,7 @@ type DreamThemeManagerState = {
       return `<label class="dtm-image-choice" aria-checked="${active}"><span class="dtm-image-thumb">${imageThumbHtml(preview)}</span><span class="dtm-row"><input type="radio" name="dtm-default-image" value="${escapeHtml(image.id)}" ${active ? "checked" : ""}><span><span class="dtm-title">${escapeHtml(label)}</span><p>文件：${escapeHtml(imageFileLabel(image.path))}</p></span></span></label>`;
     }).join("");
     const option = (value, label, current) => `<option value="${escapeHtml(value)}" ${current === value ? "selected" : ""}>${escapeHtml(label)}</option>`;
-    return `<div class="dtm-modal-layer" role="presentation"><button class="dtm-modal-backdrop" type="button" data-theme-images-close aria-label="关闭弹窗"></button><section class="dtm-dialog" role="dialog" aria-modal="true" aria-labelledby="dtm-images-title"><div class="dtm-dialog-head"><div><h2 id="dtm-images-title">图片与显示设置</h2><p>${escapeHtml(imageSettingsTheme.name)} 的主题内部图片、显示方式、侧边栏和轮换配置会写入这个已安装主题。</p></div><button class="dtm-close-hit" type="button" data-theme-images-close aria-label="关闭"></button></div><div class="dtm-dialog-body"><div class="dtm-local-form">${imageSettingsError ? `<div class="dtm-form-error">${escapeHtml(imageSettingsError)}</div>` : ""}<section class="dtm-form-section"><div class="dtm-form-section-head"><div><h3>主题内部图片</h3><p>这里展示主题包里的图片；选择一张作为当前背景。追加图片后可开启多图定时轮换。</p></div></div><div class="dtm-image-list">${images}</div><span class="dtm-file-box"><span class="dtm-file-name">${imageSettingsFiles.length ? imageSettingsFiles.map((file) => escapeHtml(file.name)).join("、") : "追加 PNG、JPG、WebP、GIF，可多选"}</span><span class="dtm-file-actions"><label class="dtm-button">追加图片<input hidden multiple type="file" accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif" data-theme-images-file></label></span></span></section><section class="dtm-form-section"><div class="dtm-form-section-head"><div><h3>背景显示方式</h3><p>适配方式决定图片缩放；横向和纵向对齐用于控制主体在窗口中的位置。</p></div></div><div class="dtm-form-grid"><label class="dtm-field"><span>图像拉伸</span><select data-theme-image-fit>${option("cover", imageFitLabel("cover"), display.fit || "cover")}${option("contain", imageFitLabel("contain"), display.fit || "cover")}${option("stretch", imageFitLabel("stretch"), display.fit || "cover")}${option("auto", imageFitLabel("auto"), display.fit || "cover")}</select></label><label class="dtm-field"><span>平铺模式</span><select data-theme-image-repeat>${option("no-repeat", "不平铺", display.repeat || "no-repeat")}${option("repeat", "横纵平铺", display.repeat || "no-repeat")}${option("repeat-x", "横向平铺", display.repeat || "no-repeat")}${option("repeat-y", "纵向平铺", display.repeat || "no-repeat")}</select></label><label class="dtm-field"><span>横向对齐方式</span><select data-theme-image-position-x>${["auto","left","center","right"].map((value) => option(value, imagePositionXLabel(value), position.x)).join("")}</select></label><label class="dtm-field"><span>纵向对齐方式</span><select data-theme-image-position-y>${["auto","top","center","bottom"].map((value) => option(value, imagePositionYLabel(value), position.y)).join("")}</select></label><label class="dtm-field"><span>轮换间隔（秒）</span><input data-theme-image-interval type="number" min="5" max="3600" value="${escapeHtml(String(rotation.intervalSeconds || 45))}"></label><label class="dtm-field dtm-wide"><span class="dtm-row"><input data-theme-image-rotation type="checkbox" ${rotation.enabled ? "checked" : ""}> 开启多图定时轮换</span></label></div></section><section class="dtm-form-section"><div class="dtm-form-section-head"><div><h3>侧边栏</h3><p>控制侧边栏是否显示背景色，以及侧边栏文字字体；这些设置写入当前主题。</p></div></div><div class="dtm-form-grid"><label class="dtm-field"><span>侧边背景</span><select data-theme-sidebar-background>${["auto","transparent","tint","solid"].map((value) => option(value, sidebarBackgroundLabel(value), sidebar.background || "auto")).join("")}</select></label><label class="dtm-field"><span>侧边字体</span><input data-theme-sidebar-font-family value="${escapeHtml(sidebar.fontFamily || "")}" placeholder="例如：Microsoft YaHei UI"></label><label class="dtm-field"><span>侧边字号</span><select data-theme-sidebar-font-size>${["default","small","normal","large"].map((value) => option(value, sidebarFontSizeLabel(value), sidebar.fontSize || "default")).join("")}</select></label><label class="dtm-field"><span>侧边字重</span><select data-theme-sidebar-font-weight>${["default","normal","medium","semibold","bold"].map((value) => option(value, sidebarFontWeightLabel(value), sidebar.fontWeight || "default")).join("")}</select></label></div></section></div></div><div class="dtm-dialog-actions"><button class="dtm-button" type="button" data-theme-images-close>取消</button><button class="dtm-button dtm-button-primary" type="button" data-theme-images-save="${escapeHtml(imageSettingsTheme.key)}">保存图片与显示设置</button></div></section></div>`;
+    return `<div class="dtm-modal-layer" role="presentation"><button class="dtm-modal-backdrop" type="button" data-theme-images-close aria-label="关闭弹窗"></button><section class="dtm-dialog" role="dialog" aria-modal="true" aria-labelledby="dtm-images-title"><div class="dtm-dialog-head"><div><h2 id="dtm-images-title">图片与显示设置</h2><p>${escapeHtml(imageSettingsTheme.name)} 的主题内部图片、输入框、侧边栏和轮换配置会写入这个已安装主题。</p></div><button class="dtm-close-hit" type="button" data-theme-images-close aria-label="关闭"></button></div><div class="dtm-dialog-body"><div class="dtm-local-form">${imageSettingsError ? `<div class="dtm-form-error">${escapeHtml(imageSettingsError)}</div>` : ""}<section class="dtm-form-section"><div class="dtm-form-section-head"><div><h3>主题内部图片</h3><p>这里展示主题包里的图片；选择一张作为当前背景。追加图片后可开启多图定时轮换。</p></div></div><div class="dtm-image-list">${images}</div><span class="dtm-file-box"><span class="dtm-file-name">${imageSettingsFiles.length ? imageSettingsFiles.map((file) => escapeHtml(file.name)).join("、") : "追加 PNG、JPG、WebP、GIF，可多选"}</span><span class="dtm-file-actions"><label class="dtm-button">追加图片<input hidden multiple type="file" accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif" data-theme-images-file></label></span></span></section><section class="dtm-form-section"><div class="dtm-form-section-head"><div><h3>背景显示方式</h3><p>适配方式决定图片缩放；横向和纵向对齐用于控制主体在窗口中的位置。</p></div></div><div class="dtm-form-grid"><label class="dtm-field"><span>图像拉伸</span><select data-theme-image-fit>${option("cover", imageFitLabel("cover"), display.fit || "cover")}${option("contain", imageFitLabel("contain"), display.fit || "cover")}${option("stretch", imageFitLabel("stretch"), display.fit || "cover")}${option("auto", imageFitLabel("auto"), display.fit || "cover")}</select></label><label class="dtm-field"><span>平铺模式</span><select data-theme-image-repeat>${option("no-repeat", "不平铺", display.repeat || "no-repeat")}${option("repeat", "横纵平铺", display.repeat || "no-repeat")}${option("repeat-x", "横向平铺", display.repeat || "no-repeat")}${option("repeat-y", "纵向平铺", display.repeat || "no-repeat")}</select></label><label class="dtm-field"><span>横向对齐方式</span><select data-theme-image-position-x>${["auto","left","center","right"].map((value) => option(value, imagePositionXLabel(value), position.x)).join("")}</select></label><label class="dtm-field"><span>纵向对齐方式</span><select data-theme-image-position-y>${["auto","top","center","bottom"].map((value) => option(value, imagePositionYLabel(value), position.y)).join("")}</select></label><label class="dtm-field"><span>轮换间隔（秒）</span><input data-theme-image-interval type="number" min="5" max="3600" value="${escapeHtml(String(rotation.intervalSeconds || 45))}"></label><label class="dtm-field dtm-wide"><span class="dtm-row"><input data-theme-image-rotation type="checkbox" ${rotation.enabled ? "checked" : ""}> 开启多图定时轮换</span></label></div></section><section class="dtm-form-section"><div class="dtm-form-section-head"><div><h3>输入框</h3><p>控制任务输入框的宽度、高度和文字大小。旧主题可点初始化补齐默认字段。</p></div><button class="dtm-button" type="button" data-theme-settings-init="${escapeHtml(imageSettingsTheme.key)}">一键初始化旧设置</button></div><div class="dtm-form-grid"><label class="dtm-field"><span>输入框宽度</span><select data-theme-composer-width>${["default","compact","comfortable","wide","full"].map((value) => option(value, composerWidthLabel(value), composer.width || "default")).join("")}</select></label><label class="dtm-field"><span>输入框高度</span><select data-theme-composer-height>${["default","compact","comfortable","large"].map((value) => option(value, composerHeightLabel(value), composer.height || "default")).join("")}</select></label><label class="dtm-field"><span>输入文字大小</span><select data-theme-composer-font-size>${["default","small","normal","large"].map((value) => option(value, composerFontSizeLabel(value), composer.fontSize || "default")).join("")}</select></label></div></section><section class="dtm-form-section"><div class="dtm-form-section-head"><div><h3>侧边栏</h3><p>控制侧边栏是否显示背景色，以及侧边栏文字字体；这些设置写入当前主题。</p></div></div><div class="dtm-form-grid"><label class="dtm-field"><span>侧边背景</span><select data-theme-sidebar-background>${["auto","transparent","tint","solid"].map((value) => option(value, sidebarBackgroundLabel(value), sidebar.background || "auto")).join("")}</select></label><label class="dtm-field"><span>侧边字体</span><input data-theme-sidebar-font-family value="${escapeHtml(sidebar.fontFamily || "")}" placeholder="例如：Microsoft YaHei UI"></label><label class="dtm-field"><span>侧边字号</span><select data-theme-sidebar-font-size>${["default","small","normal","large"].map((value) => option(value, sidebarFontSizeLabel(value), sidebar.fontSize || "default")).join("")}</select></label><label class="dtm-field"><span>侧边字重</span><select data-theme-sidebar-font-weight>${["default","normal","medium","semibold","bold"].map((value) => option(value, sidebarFontWeightLabel(value), sidebar.fontWeight || "default")).join("")}</select></label></div></section></div></div><div class="dtm-dialog-actions"><button class="dtm-button" type="button" data-theme-images-close>取消</button><button class="dtm-button dtm-button-primary" type="button" data-theme-images-save="${escapeHtml(imageSettingsTheme.key)}">保存图片与显示设置</button></div></section></div>`;
   };
   const petHtml = (pet) => {
     const active = state?.selectedPet === pet.id;
@@ -754,6 +775,18 @@ type DreamThemeManagerState = {
     else if (target.hasAttribute("data-refresh")) act(() => call("getState"), "主题状态已刷新");
     else if (target.dataset.themeUse) act(() => call("useTheme", { key: target.dataset.themeUse }), "主题已启用");
     else if (target.dataset.bundledInstall) act(() => call("installBundledTheme", { key: target.dataset.bundledInstall }), "主题安装完成，可在主题列表中启用");
+    else if (target.dataset.themeSettingsInit) {
+      const key = target.dataset.themeSettingsInit;
+      const theme = imageSettingsTheme;
+      act(async () => call("updateThemeImages", {
+        key,
+        defaultImage: theme?.defaultImage || "",
+        display: theme?.display || { fit: "cover", position: "auto", repeat: "no-repeat", rotation: { enabled: false, intervalSeconds: 45 } },
+        sidebar: theme?.sidebar || { background: "auto", fontFamily: "", fontSize: "default", fontWeight: "default" },
+        composer: theme?.composer || { width: "default", height: "default", fontSize: "default" },
+        addedImages: [],
+      }), "旧主题设置已初始化");
+    }
     else if (target.dataset.themeImagesSave) {
       const panel = document.getElementById(PANEL_ID);
       const defaultImage = panel.querySelector<HTMLInputElement>("input[name='dtm-default-image']:checked")?.value || imageSettingsTheme?.defaultImage || "";
@@ -768,6 +801,9 @@ type DreamThemeManagerState = {
       const sidebarFontFamily = panel.querySelector<HTMLInputElement>("[data-theme-sidebar-font-family]")?.value || "";
       const sidebarFontSize = panel.querySelector<HTMLSelectElement>("[data-theme-sidebar-font-size]")?.value || "default";
       const sidebarFontWeight = panel.querySelector<HTMLSelectElement>("[data-theme-sidebar-font-weight]")?.value || "default";
+      const composerWidth = panel.querySelector<HTMLSelectElement>("[data-theme-composer-width]")?.value || "default";
+      const composerHeight = panel.querySelector<HTMLSelectElement>("[data-theme-composer-height]")?.value || "default";
+      const composerFontSize = panel.querySelector<HTMLSelectElement>("[data-theme-composer-font-size]")?.value || "default";
       act(async () => {
         const addedImages = await Promise.all(imageSettingsFiles.map(async (file) => ({
           name: file.name,
@@ -780,6 +816,7 @@ type DreamThemeManagerState = {
           addedImages,
           display: { fit, position, repeat, rotation: { enabled: rotationEnabled, intervalSeconds } },
           sidebar: { background: sidebarBackground, fontFamily: sidebarFontFamily, fontSize: sidebarFontSize, fontWeight: sidebarFontWeight },
+          composer: { width: composerWidth, height: composerHeight, fontSize: composerFontSize },
         });
         imageSettingsTheme = null;
         imageSettingsFiles = [];

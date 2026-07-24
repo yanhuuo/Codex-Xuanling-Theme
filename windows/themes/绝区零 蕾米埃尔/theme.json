@@ -35,6 +35,11 @@
     "fontSize": "normal",
     "fontWeight": "medium"
   },
+  "composer": {
+    "width": "comfortable",
+    "height": "comfortable",
+    "fontSize": "normal"
+  },
   "art": {
     "focusX": 0.5,
     "focusY": 0.5,

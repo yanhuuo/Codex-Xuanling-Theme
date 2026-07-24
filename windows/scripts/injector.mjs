@@ -463,6 +463,7 @@ async function handleThemeControl(options, request) {
       defaultImage: payload.defaultImage,
       display: payload.display,
       sidebar: payload.sidebar,
+      composer: payload.composer,
       addedImages: payload.addedImages,
     });
     const active = await loadTheme(options.themeDir);

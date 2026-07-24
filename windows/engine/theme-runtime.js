@@ -21,8 +21,14 @@
     "dream-task-off",
     "dream-route-home",
     "dream-route-task",
+    "dream-route-settings",
     "dream-home-utility-present",
     "dream-window-dragging",
+    "dream-composer-default",
+    "dream-composer-compact",
+    "dream-composer-comfortable",
+    "dream-composer-wide",
+    "dream-composer-full",
   ];
   const ROOT_PROPERTIES = [
     "--dream-art",
@@ -35,6 +41,12 @@
     "--dream-accent",
     "--dream-accent-ink",
     "--dream-image-luma",
+    "--dream-composer-max-width",
+    "--dream-composer-min-height",
+    "--dream-composer-font-size",
+    "--dream-sidebar-font-family",
+    "--dream-sidebar-font-size",
+    "--dream-sidebar-font-weight",
   ];
   const HOME_UTILITY_CLASS = "dream-home-utility";
   const SPINNER_SELECTOR = ".animate-spin, [class~='animate-spin'], [role='progressbar'], [data-loading='true']";
@@ -47,6 +59,8 @@
   let samplingNativeShell = false;
   let observer = null;
   let sidebarDirty = true;
+  let composerDirty = true;
+  let routeDirty = true;
   let spinnerDirty = true;
   let lastSpinnerAt = 0;
   let sidebarReadyAt = 0;
@@ -110,6 +124,7 @@
     const display = config.display && typeof config.display === "object" ? config.display : {};
     const rotation = display.rotation && typeof display.rotation === "object" ? display.rotation : {};
     const sidebar = config.sidebar && typeof config.sidebar === "object" ? config.sidebar : {};
+    const composer = config.composer && typeof config.composer === "object" ? config.composer : {};
     const intervalSeconds = Number(rotation.intervalSeconds || 45);
     const cleanFont = (candidate) =>
       typeof candidate === "string" && candidate.length <= 120 && !/[\u0000-\u001f;{}]/.test(candidate)
@@ -141,6 +156,9 @@
       sidebarFontFamily: cleanFont(sidebar.fontFamily),
       sidebarFontSize: ["default", "small", "normal", "large"].includes(sidebar.fontSize) ? sidebar.fontSize : "default",
       sidebarFontWeight: ["default", "normal", "medium", "semibold", "bold"].includes(sidebar.fontWeight) ? sidebar.fontWeight : "default",
+      composerWidth: ["default", "compact", "comfortable", "wide", "full"].includes(composer.width) ? composer.width : "default",
+      composerHeight: ["default", "compact", "comfortable", "large"].includes(composer.height) ? composer.height : "default",
+      composerFontSize: ["default", "small", "normal", "large"].includes(composer.fontSize) ? composer.fontSize : "default",
     };
   };
 
@@ -396,7 +414,9 @@
       : config.imagePosition;
     const imageSize = config.imageFit === "stretch" ? "100% 100%" : config.imageFit === "auto" ? "auto" : config.imageFit;
     const signature = [appearance, focus, safeArea, taskMode, accent, accentInk, focusX, focusY,
-      profile.aspect, profile.luma, artUrl, imagePosition, imageSize, config.imageRepeat].join("|");
+      profile.aspect, profile.luma, artUrl, imagePosition, imageSize, config.imageRepeat,
+      config.sidebarBackground, config.sidebarFontFamily, config.sidebarFontSize, config.sidebarFontWeight,
+      config.composerWidth, config.composerHeight, config.composerFontSize].join("|");
     if (signature === appliedProfileSignature) return;
     appliedProfileSignature = signature;
     root.classList.toggle("dream-theme-light", appearance === "light");
@@ -414,6 +434,9 @@
     }
     for (const value of ["auto", "transparent", "tint", "solid"]) {
       root.classList.toggle(`dream-sidebar-${value}`, config.sidebarBackground === value);
+    }
+    for (const value of ["default", "compact", "comfortable", "wide", "full"]) {
+      root.classList.toggle(`dream-composer-${value}`, config.composerWidth === value);
     }
     root.style.setProperty("--dream-art", `url("${artUrl}")`);
     root.style.setProperty("--dream-art-position", imagePosition);
@@ -435,6 +458,19 @@
       config.sidebarFontWeight === "medium" ? "500" :
       config.sidebarFontWeight === "semibold" ? "600" :
       config.sidebarFontWeight === "bold" ? "700" : "inherit");
+    root.style.setProperty("--dream-composer-max-width",
+      config.composerWidth === "compact" ? "680px" :
+      config.composerWidth === "comfortable" ? "820px" :
+      config.composerWidth === "wide" ? "960px" :
+      config.composerWidth === "full" ? "min(1180px, calc(100vw - 88px))" : "");
+    root.style.setProperty("--dream-composer-min-height",
+      config.composerHeight === "compact" ? "2.5rem" :
+      config.composerHeight === "comfortable" ? "3.25rem" :
+      config.composerHeight === "large" ? "4rem" : "2.75rem");
+    root.style.setProperty("--dream-composer-font-size",
+      config.composerFontSize === "small" ? "13px" :
+      config.composerFontSize === "normal" ? "14px" :
+      config.composerFontSize === "large" ? "15px" : "inherit");
   };
 
   const ensure = () => {
@@ -470,38 +506,44 @@
       style.dataset.dreamVersion = "3";
     }
 
-    const homeIcon = document.querySelector('[data-testid="home-icon"]');
-    const roleHome = homeIcon?.closest('[role="main"]') || null;
-    const home = roleHome || (homeIcon ? shellMain : null);
-    let homeContent = homeIcon;
-    while (homeContent && homeContent.parentElement !== home) homeContent = homeContent.parentElement;
-    if (homeContent?.parentElement !== home) homeContent = null;
-    for (const candidate of document.querySelectorAll(".dream-home-content")) {
-      if (candidate !== homeContent) candidate.classList.remove("dream-home-content");
-    }
-    const decorateHome = config.homeMode === "themed";
-    homeContent?.classList.toggle("dream-home-content", decorateHome);
-    const routeMains = [...document.querySelectorAll('[role="main"]')];
-    if (routeMains.length === 0) routeMains.push(shellMain);
-    const activeRouteMains = new Set(routeMains);
-    for (const className of ["dream-home", "dream-task"]) {
-      for (const candidate of document.querySelectorAll(`.${className}`)) {
-        if (!activeRouteMains.has(candidate)) candidate.classList.remove(className);
+    let home = document.querySelector(".dream-home");
+    if (routeDirty || !home?.isConnected) {
+      routeDirty = false;
+      const settingsRoute = Boolean(document.querySelector('nav[aria-label="设置"], nav[aria-label="Settings"]'));
+      const homeIcon = document.querySelector('[data-testid="home-icon"]');
+      const roleHome = homeIcon?.closest('[role="main"]') || null;
+      home = roleHome || (homeIcon ? shellMain : null);
+      let homeContent = homeIcon;
+      while (homeContent && homeContent.parentElement !== home) homeContent = homeContent.parentElement;
+      if (homeContent?.parentElement !== home) homeContent = null;
+      for (const candidate of document.querySelectorAll(".dream-home-content")) {
+        if (candidate !== homeContent) candidate.classList.remove("dream-home-content");
       }
+      const decorateHome = config.homeMode === "themed";
+      homeContent?.classList.toggle("dream-home-content", decorateHome);
+      const routeMains = [...document.querySelectorAll('[role="main"]')];
+      if (routeMains.length === 0) routeMains.push(shellMain);
+      const activeRouteMains = new Set(routeMains);
+      for (const className of ["dream-home", "dream-task"]) {
+        for (const candidate of document.querySelectorAll(`.${className}`)) {
+          if (!activeRouteMains.has(candidate)) candidate.classList.remove(className);
+        }
+      }
+      for (const candidate of routeMains) {
+        candidate.classList.toggle("dream-home", decorateHome && candidate === home);
+        candidate.classList.toggle("dream-task", candidate !== home);
+      }
+      const utilityBars = new Set(home ? home.querySelectorAll('[class*="_homeUtilityBar_"]') : []);
+      for (const candidate of document.querySelectorAll(`.${HOME_UTILITY_CLASS}`)) {
+        if (!utilityBars.has(candidate)) candidate.classList.remove(HOME_UTILITY_CLASS);
+      }
+      for (const candidate of utilityBars) candidate.classList.add(HOME_UTILITY_CLASS);
+      shellMain.classList.toggle("dream-home-shell", Boolean(home));
+      root.classList.toggle("dream-route-home", Boolean(home));
+      root.classList.toggle("dream-route-task", !home);
+      root.classList.toggle("dream-route-settings", settingsRoute);
+      root.classList.toggle("dream-home-utility-present", utilityBars.size > 0);
     }
-    for (const candidate of routeMains) {
-      candidate.classList.toggle("dream-home", decorateHome && candidate === home);
-      candidate.classList.toggle("dream-task", candidate !== home);
-    }
-    const utilityBars = new Set(home ? home.querySelectorAll('[class*="_homeUtilityBar_"]') : []);
-    for (const candidate of document.querySelectorAll(`.${HOME_UTILITY_CLASS}`)) {
-      if (!utilityBars.has(candidate)) candidate.classList.remove(HOME_UTILITY_CLASS);
-    }
-    for (const candidate of utilityBars) candidate.classList.add(HOME_UTILITY_CLASS);
-    shellMain.classList.toggle("dream-home-shell", Boolean(home));
-    root.classList.toggle("dream-route-home", Boolean(home));
-    root.classList.toggle("dream-route-task", !home);
-    root.classList.toggle("dream-home-utility-present", utilityBars.size > 0);
 
     let chrome = document.getElementById(CHROME_ID);
     if (!chrome || chrome.parentElement !== document.body) {
@@ -614,6 +656,12 @@
     }
     }
 
+    if (composerDirty) {
+    composerDirty = false;
+    for (const composer of document.querySelectorAll(".composer-surface-chrome")) {
+      composer.closest?.(":is([class*='sticky'], [class*='fixed'], [class*='absolute'], [class*='px-toolbar'], [class*='px-'])")
+        ?.classList.add("dream-composer-shell");
+    }
     for (const button of document.querySelectorAll(".composer-surface-chrome button")) {
       const label = (button.getAttribute("aria-label") || button.textContent || "").trim();
       const navigation = button.getAttribute("data-composer-navigation-target") || "";
@@ -635,6 +683,7 @@
       button.classList.toggle("dream-composer-send", isComposerAction && !isProcessing);
       button.classList.toggle("dream-composer-processing", isProcessing);
       if (iconName) installThemeIcon(button.querySelector("svg:not(.dream-theme-svg)"), iconName, isProcessing ? "dream-theme-icon-processing" : isComposerAction ? "dream-theme-icon-send" : "");
+    }
     }
 
     const permissionIconFor = (label) => {
@@ -775,6 +824,8 @@
         sidebarReadyAt = Date.now() + 220;
         scheduleSidebarEnsure();
       }
+      if (composerChanged || actionStateChanged) composerDirty = true;
+      if (mainRootChanged || elements.some((node) => node.matches?.("main.main-surface, [role='main'], [class*='_homeUtilityBar_']"))) routeDirty = true;
       if (spinnerChanged) spinnerDirty = true;
       return composerChanged || permissionMenuChanged || actionStateChanged || mainRootChanged || spinnerChanged ||
         target === document.body || target === document.documentElement ||

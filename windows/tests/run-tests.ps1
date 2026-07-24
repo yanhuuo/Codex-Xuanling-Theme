@@ -544,7 +544,7 @@ try {
     '.dream-home-utility-present .dream-home .composer-surface-chrome',
     '.dream-route-task:is(.dream-task-ambient, .dream-task-banner)',
     '.composer-surface-chrome .dream-theme-icon',
-    'body:has(nav[aria-label="设置"], nav[aria-label="Settings"])',
+    'html.codex-dream-skin.dream-route-settings body',
     'div.main-surface',
     'position: fixed !important',
     '.dream-permission-menu .dream-permission-item .dream-theme-icon-brand',
@@ -563,6 +563,9 @@ try {
   }
   if ($css.Contains(':has(main.main-surface')) {
     throw 'Window-wide route styling still uses a costly relational selector instead of renderer route classes.'
+  }
+  if ($css.Contains('body:has(')) {
+    throw 'Settings route styling should use renderer route classes instead of body:has().'
   }
   $traySource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'scripts\tray-dream-skin.ps1')
   foreach ($requiredTrayAction in @('System.Windows.Forms.NotifyIcon', '暂停皮肤', '更换背景图', '已保存主题', '完全恢复 Codex')) {

@@ -37,6 +37,11 @@
     "fontSize": "normal",
     "fontWeight": "medium"
   },
+  "composer": {
+    "width": "wide",
+    "height": "comfortable",
+    "fontSize": "normal"
+  },
   "palette": {
     "accent": "#6edaf2"
   },

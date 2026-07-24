@@ -137,7 +137,7 @@ html.codex-dream-skin main.main-surface > header.app-header-tint {
 
 /* Settings use a div.main-surface instead of the app's normal main element.
    Carry the active theme through the whole settings shell and its controls. */
-html.codex-dream-skin body:has(nav[aria-label="设置"], nav[aria-label="Settings"]) {
+html.codex-dream-skin.dream-route-settings body {
   --color-token-main-surface-primary: color-mix(in oklab, var(--dream-surface) 86%, transparent);
   --color-token-foreground: var(--dream-text);
   --color-token-icon-foreground: var(--dream-text);
@@ -156,7 +156,7 @@ html.codex-dream-skin body:has(nav[aria-label="设置"], nav[aria-label="Setting
   background-size: var(--dream-art-fit) !important;
 }
 
-html.codex-dream-skin body:has(nav[aria-label="设置"], nav[aria-label="Settings"])
+html.codex-dream-skin.dream-route-settings body
   aside.app-shell-left-panel {
   background: linear-gradient(90deg,
     var(--dream-task-immersive-sidebar),
@@ -164,7 +164,7 @@ html.codex-dream-skin body:has(nav[aria-label="设置"], nav[aria-label="Setting
   border-color: var(--dream-line-soft) !important;
 }
 
-html.codex-dream-skin body:has(nav[aria-label="设置"], nav[aria-label="Settings"])
+html.codex-dream-skin.dream-route-settings body
   div.main-surface {
   color: var(--dream-text) !important;
   background: color-mix(in oklab, var(--dream-surface) 86%, transparent) !important;
@@ -176,13 +176,13 @@ html.codex-dream-skin body:has(nav[aria-label="设置"], nav[aria-label="Setting
   backdrop-filter: blur(18px) saturate(112%) !important;
 }
 
-html.codex-dream-skin body:has(nav[aria-label="设置"], nav[aria-label="Settings"])
+html.codex-dream-skin.dream-route-settings body
   div.main-surface :is(.rounded-2xl, .rounded-xl).border-token-border {
   background-color: color-mix(in oklab, var(--dream-surface-raised) 90%, transparent) !important;
   border-color: var(--dream-line-soft) !important;
 }
 
-html.codex-dream-skin body:has(nav[aria-label="设置"], nav[aria-label="Settings"])
+html.codex-dream-skin.dream-route-settings body
   div.main-surface :is(input, textarea, select, [role="combobox"]) {
   color: var(--dream-text) !important;
   border-color: var(--dream-line) !important;
@@ -431,6 +431,16 @@ html.codex-dream-skin .composer-surface-chrome {
   background: color-mix(in oklab, var(--dream-surface-raised) 95%, transparent) !important;
   box-shadow: 0 12px 34px color-mix(in oklab, var(--dream-accent) 8%, transparent) !important;
   backdrop-filter: none !important;
+}
+
+html.codex-dream-skin .dream-composer-shell {
+  max-width: var(--dream-composer-max-width, inherit) !important;
+}
+
+html.codex-dream-skin.dream-route-task .dream-composer-shell {
+  width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 html.codex-dream-skin .ProseMirror {
@@ -1011,14 +1021,6 @@ html.codex-dream-skin :is(
   box-shadow: var(--dream-floating-shadow) !important;
 }
 
-html.codex-dream-skin :is([class*="shadow-"], [class*="drop-shadow"]):has(> :is(.text-green-500, .text-red-500, .text-emerald-500, .text-destructive)) {
-  color: var(--dream-text) !important;
-  border: 1px solid var(--dream-floating-line) !important;
-  background: var(--dream-floating-surface) !important;
-  box-shadow: var(--dream-floating-shadow) !important;
-  backdrop-filter: blur(18px) !important;
-}
-
 html.codex-dream-skin :is(
   .bg-token-dropdown-background,
   [class*="bg-token-dropdown-background"],
@@ -1209,9 +1211,10 @@ html.codex-dream-skin.dream-home-utility-present body main.main-surface.dream-ho
 /* Keep the new-task editor legible over high-detail artwork. Codex uses
    ProseMirror's empty paragraph pseudo-element for the placeholder. */
 html.codex-dream-skin .composer-surface-chrome .ProseMirror {
-  min-height: 2.75rem !important;
+  min-height: var(--dream-composer-min-height, 2.75rem) !important;
   line-height: 1.45 !important;
   color: var(--dream-text) !important;
+  font-size: var(--dream-composer-font-size, inherit) !important;
 }
 
 html.codex-dream-skin .composer-surface-chrome .ProseMirror p.is-editor-empty:first-child::before,
@@ -1223,23 +1226,8 @@ html.codex-dream-skin .composer-surface-chrome .ProseMirror:empty::before {
 /* Plugins, scheduled tasks and search routes ship opaque sticky wrappers.
    Clear only full-window or sticky route chrome, leaving functional cards and
    their hover states intact. */
-html.codex-dream-skin.dream-art-wide:is(.dream-task-ambient, .dream-task-banner)
-  main.main-surface:not(.dream-home-shell) div.sticky:has(input[type="text"]),
-html.codex-dream-skin.dream-art-wide:is(.dream-task-ambient, .dream-task-banner)
-  main.main-surface:not(.dream-home-shell) div.sticky:has(input[type="text"])::after {
-  background: transparent !important;
-}
-
-html.codex-dream-skin.dream-art-wide:is(.dream-task-ambient, .dream-task-banner)
-  main.main-surface:not(.dream-home-shell) div.no-drag:has(> input[type="text"]) {
-  background: var(--dream-immersive-composer) !important;
-  border: 0 !important;
-  box-shadow: inset 0 0 0 1px var(--dream-immersive-line) !important;
-  backdrop-filter: none !important;
-}
-
 html.codex-dream-skin.dream-route-task:is(.dream-task-ambient, .dream-task-banner)
-  main.main-surface:not(.dream-home-shell) :is([class*="px-toolbar"], [class*="px-"]):has(.composer-surface-chrome) {
+  main.main-surface:not(.dream-home-shell) .dream-composer-shell {
   background: transparent !important;
   background-color: transparent !important;
   background-image: none !important;
@@ -1405,11 +1393,15 @@ html.codex-dream-skin.dream-art-wide main.main-surface
     [class*="from-token-main-surface-secondary"],
     [class*="to-token-main-surface-primary"],
     [class*="to-token-main-surface-secondary"]
-  ),
-html.codex-dream-skin.dream-art-wide main.main-surface
-  :is([class*="sticky"], [class*="fixed"], [class*="absolute"]):has(.composer-surface-chrome)::before,
-html.codex-dream-skin.dream-art-wide main.main-surface
-  :is([class*="sticky"], [class*="fixed"], [class*="absolute"]):has(.composer-surface-chrome)::after {
+  ) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+html.codex-dream-skin.dream-art-wide main.main-surface .dream-composer-shell::before,
+html.codex-dream-skin.dream-art-wide main.main-surface .dream-composer-shell::after {
   background: transparent !important;
   background-color: transparent !important;
   background-image: none !important;
@@ -1596,4 +1588,5 @@ html.codex-dream-skin.dream-art-wide aside[data-app-shell-focus-area="right-pane
     transition-duration: .01ms !important;
   }
 }
+
 
