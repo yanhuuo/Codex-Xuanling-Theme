@@ -1,7 +1,7 @@
 "use strict";
 (() => {
     const KEY = "__CODEX_DREAM_THEME_MANAGER__";
-    const VERSION = "1.9.2";
+    const VERSION = "1.9.3";
     const BINDING = "__codexDreamThemeControl";
     const RESPONSE = "__codexDreamThemeResponse";
     const STYLE_ID = "codex-dream-theme-manager-style";
@@ -16,6 +16,7 @@
     const bird = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M11.7 10.8C8.5 9.8 5.1 6.6 2.3 1.8c.1 4.8 2.4 8.8 7.2 11.2" fill="#55c6eb" stroke="#d9b85f" stroke-width=".9"/><path d="M12.1 9.9c1.2-4 3.6-7 7.1-8.7.1 4.3-1.6 7.8-5.2 10.4" fill="#276ba9" stroke="#d9b85f" stroke-width=".9"/><path d="M9.2 12.3c2.1-2.4 4.5-3.3 7.1-2.6l2.7-1.2 2.7 1.1-2.9 1.1c-1.2 2.7-3.8 4-7.5 3.7-1.6-.1-2.3-1.1-2.1-2.1Z" fill="#f5fdff" stroke="#2c78ae" stroke-width=".85"/><circle cx="18.2" cy="9.7" r=".55" fill="#143d72"/><path d="M11.8 14.1C9.6 16 7.6 18.8 5.9 22.4M13.1 14.2c1.6 2.8 4 5.2 7.1 7.2" fill="none" stroke="#d9b85f" stroke-width="1.05" stroke-linecap="round"/></svg>`;
     const palette = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5A9.5 9.5 0 0 0 2.5 12c0 5.2 4.1 9.5 9.2 9.5 1.7 0 2.6-1 2.6-2.1 0-.8-.4-1.3-.4-2 0-1.1.9-2 2-2h1.5c2.5 0 4.1-1.8 4.1-4.1C21.5 6.4 17.2 2.5 12 2.5Z" fill="#143552" stroke="#d9b85f"/><circle cx="8" cy="8" r="1.4" fill="#6edaf2"/><circle cx="12.6" cy="6.5" r="1.4" fill="#f5fdff"/><circle cx="16.7" cy="9.1" r="1.4" fill="#5e86d8"/><circle cx="7" cy="13" r="1.4" fill="#d9b85f"/></svg>`;
     const gear = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M9.6 3.2h4.8l.5 2.2c.7.2 1.3.5 1.9.8l2-1.2 3.4 3.4-1.2 2c.3.6.6 1.2.8 1.9l2.2.5v4.8l-2.2.5c-.2.7-.5 1.3-.8 1.9l1.2 2-3.4 3.4-2-1.2c-.6.3-1.2.6-1.9.8l-.5 2.2H9.6l-.5-2.2c-.7-.2-1.3-.5-1.9-.8l-2 1.2-3.4-3.4 1.2-2c-.3-.6-.6-1.2-.8-1.9L0 17.6v-4.8l2.2-.5c.2-.7.5-1.3.8-1.9l-1.2-2 3.4-3.4 2 1.2c.6-.3 1.2-.6 1.9-.8l.5-2.2Z" fill="currentColor" opacity=".22"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 1.7v3.1M12 19.2v3.1M1.7 12h3.1M19.2 12h3.1M4.7 4.7l2.2 2.2M17.1 17.1l2.2 2.2M19.3 4.7l-2.2 2.2M6.9 17.1l-2.2 2.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+    const closeSvg = `<svg class="dtm-close-icon" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M6.2 6.2 12 12m5.8 5.8L12 12m0 0 5.8-5.8M12 12l-5.8 5.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>`;
     const css = `
     #${PANEL_ID}{--dream-manager-accent:var(--dream-accent,#6edaf2);--dtm-surface:var(--dream-surface,var(--main-surface-primary,#0d151f));--dtm-raised:var(--dream-surface-raised,var(--main-surface-secondary,#13212c));--dtm-text:var(--dream-text,var(--text-primary,#edf7fb));--dtm-muted:var(--dream-text-muted,var(--text-secondary,#9bb0bc));--dtm-line:var(--dream-line,var(--border-light,#263642));position:fixed;z-index:29;overflow:auto;background:color-mix(in oklab,var(--dtm-surface) 94%,transparent);color:var(--dtm-text);padding:28px 34px 48px;box-sizing:border-box;font-family:inherit;backdrop-filter:blur(18px)}
     #${PANEL_ID} *{box-sizing:border-box} #${PANEL_ID} .dtm-wrap{max-width:1040px;margin:0 auto}
@@ -94,10 +95,10 @@
     #${PANEL_ID} .dtm-dialog-head>div:first-child{min-width:0;flex:1;pointer-events:auto}
     #${PANEL_ID} .dtm-dialog-head h2{margin:0 0 6px}
     #${PANEL_ID} .dtm-dialog-close{width:32px;height:32px;padding:0;font-size:19px;line-height:1}
-    #${PANEL_ID} .dtm-close-hit{appearance:none;position:relative;display:block;flex:0 0 48px;width:48px;height:48px;min-width:48px;min-height:48px;margin:0;padding:0;border:1px solid var(--dtm-line);border-radius:15px;background:color-mix(in oklab,var(--dtm-raised) 90%,transparent);color:var(--dtm-text);font-size:0;line-height:0;cursor:pointer;user-select:none;touch-action:manipulation;z-index:20;isolation:isolate;overflow:hidden;pointer-events:auto!important}
-    #${PANEL_ID} .dtm-close-hit::before{content:"";position:absolute;inset:0;border-radius:inherit;background:transparent;pointer-events:none;z-index:0}
-    #${PANEL_ID} .dtm-close-hit::after{content:"";position:absolute;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%);background:linear-gradient(45deg,transparent calc(50% - 1.2px),currentColor calc(50% - 1.2px),currentColor calc(50% + 1.2px),transparent calc(50% + 1.2px)),linear-gradient(-45deg,transparent calc(50% - 1.2px),currentColor calc(50% - 1.2px),currentColor calc(50% + 1.2px),transparent calc(50% + 1.2px));pointer-events:none;z-index:1}
-    #${PANEL_ID} .dtm-close-hit:hover,#${PANEL_ID} .dtm-close-hit.dtm-close-hover{border-color:var(--dream-manager-accent,#6edaf2);background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 16%,var(--dtm-raised));box-shadow:0 0 0 3px color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 12%,transparent),0 10px 24px #0005}
+    #${PANEL_ID} .dtm-close-hit{appearance:none;position:relative;display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;min-width:42px;min-height:42px;margin:0;padding:0;border:1px solid var(--dtm-line);border-radius:14px;background:color-mix(in oklab,var(--dtm-raised) 90%,transparent);color:var(--dtm-text);cursor:pointer;user-select:none;touch-action:manipulation;z-index:20;pointer-events:auto!important}
+    #${PANEL_ID} .dtm-close-icon{display:block;width:22px;height:22px}
+    #${PANEL_ID} .dtm-close-hit:empty::before{content:"";display:block;width:22px;height:22px;background:linear-gradient(45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px)),linear-gradient(-45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px))}
+    #${PANEL_ID} .dtm-close-hit:hover{border-color:var(--dream-manager-accent,#6edaf2);background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 16%,var(--dtm-raised));box-shadow:0 0 0 3px color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 12%,transparent),0 10px 24px #0005}
     #${PANEL_ID} .dtm-close-hit:active{transform:translateY(1px);background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 24%,var(--dtm-raised))}
     #${PANEL_ID} .dtm-close-hit:focus-visible{outline:2px solid var(--dream-manager-accent,#6edaf2);outline-offset:2px}
     #${PANEL_ID} .dtm-dialog-body{min-height:0;overflow:auto;padding:18px 24px}
@@ -141,6 +142,7 @@
     @media(max-width:780px){#${PANEL_ID}{padding:20px}#${PANEL_ID} .dtm-head{display:block}#${PANEL_ID} .dtm-status{margin-top:12px;width:max-content}#${PANEL_ID} .dtm-source,#${PANEL_ID} .dtm-form-grid,#${PANEL_ID} .dtm-color-grid,#${PANEL_ID} .dtm-icon-form,#${PANEL_ID} .dtm-manual-icon-add{grid-template-columns:1fr}#${PANEL_ID} .dtm-form-grid .dtm-wide{grid-column:auto}#${PANEL_ID} .dtm-modal-layer{padding:10px}#${PANEL_ID} .dtm-dialog{width:calc(100vw - 20px);max-height:calc(100vh - 20px)}#${PANEL_ID} .dtm-dialog-head,#${PANEL_ID} .dtm-dialog-body,#${PANEL_ID} .dtm-dialog-actions{padding-left:16px;padding-right:16px} }
   `;
     const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    const closeButton = (kind, label = "关闭") => `<button class="dtm-close-hit" type="button" data-dtm-close="${escapeHtml(kind)}" aria-label="${escapeHtml(label)}">${closeSvg}</button>`;
     const safePreview = (value) => typeof value === "string" && (/^data:image\/(?:png|jpeg|webp|gif);base64,/i.test(value) || /^https:\/\//i.test(value)) ? value : "";
     const hasPetPreview = (value) => Boolean(safePreview(value));
     const cssUrl = (value) => `url("${String(value).replace(/["\\\n\r\f]/g, "")}")`;
@@ -791,34 +793,24 @@
             render();
         }
     };
-    const closeButtonFromPoint = (event) => {
-        const panel = document.getElementById(PANEL_ID);
-        if (!panel)
-            return null;
-        for (const button of Array.from(panel.querySelectorAll(".dtm-close-hit[data-manager-close],.dtm-close-hit[data-local-theme-close],.dtm-close-hit[data-theme-pet-close],.dtm-close-hit[data-theme-images-close]"))) {
-            const rect = button.getBoundingClientRect();
-            if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom)
-                return button;
-        }
-        return null;
-    };
     const runCloseAction = (closeTarget) => {
-        if (closeTarget.hasAttribute("data-manager-close")) {
+        const closeKind = closeTarget.dataset.dtmClose || "";
+        if (closeKind === "manager" || closeTarget.hasAttribute("data-manager-close")) {
             hide();
             return true;
         }
-        if (closeTarget.hasAttribute("data-local-theme-close")) {
+        if (closeKind === "localTheme" || closeTarget.hasAttribute("data-local-theme-close")) {
             localModalOpen = false;
             resetLocalDraft();
             render();
             return true;
         }
-        if (closeTarget.hasAttribute("data-theme-pet-close")) {
+        if (closeKind === "themePet" || closeTarget.hasAttribute("data-theme-pet-close")) {
             petPickerTheme = null;
             render();
             return true;
         }
-        if (closeTarget.hasAttribute("data-theme-images-close")) {
+        if (closeKind === "themeImages" || closeTarget.hasAttribute("data-theme-images-close")) {
             imageSettingsTheme = null;
             imageSettingsError = "";
             imageSettingsFiles = [];
@@ -827,28 +819,9 @@
         }
         return false;
     };
-    const onPanelPointerMove = (event) => {
-        const panel = document.getElementById(PANEL_ID);
-        if (!panel)
-            return;
-        const hovered = closeButtonFromPoint(event);
-        panel.querySelectorAll(".dtm-close-hit").forEach((button) => {
-            button.classList.toggle("dtm-close-hover", button === hovered);
-        });
-    };
-    const onPanelPointerLeave = () => {
-        document.querySelectorAll(`#${PANEL_ID} .dtm-close-hit.dtm-close-hover`).forEach((button) => button.classList.remove("dtm-close-hover"));
-    };
     const onPanelClick = (event) => {
-        const pointCloseTarget = closeButtonFromPoint(event);
-        if (pointCloseTarget) {
-            event.preventDefault();
-            event.stopPropagation();
-            if (runCloseAction(pointCloseTarget))
-                return;
-        }
         const element = event.target;
-        const closeTarget = element?.closest("[data-manager-close],[data-local-theme-close],[data-theme-pet-close],[data-theme-images-close]");
+        const closeTarget = element?.closest("[data-dtm-close],[data-manager-close],[data-local-theme-close],[data-theme-pet-close],[data-theme-images-close]");
         if (closeTarget && runCloseAction(closeTarget))
             return;
         const target = element?.closest("button");
@@ -1031,7 +1004,7 @@
     const onPanelKeydown = (event) => {
         if (event.key !== "Enter" && event.key !== " ")
             return;
-        const closeTarget = event.target?.closest(".dtm-close-hit[data-manager-close],.dtm-close-hit[data-local-theme-close],.dtm-close-hit[data-theme-pet-close],.dtm-close-hit[data-theme-images-close]");
+        const closeTarget = event.target?.closest(".dtm-close-hit[data-dtm-close],.dtm-close-hit[data-manager-close],.dtm-close-hit[data-local-theme-close],.dtm-close-hit[data-theme-pet-close],.dtm-close-hit[data-theme-images-close]");
         if (!closeTarget)
             return;
         event.preventDefault();
@@ -1204,8 +1177,6 @@
             panel.id = PANEL_ID;
             panel.setAttribute("aria-label", "主题");
             panel.addEventListener("click", onPanelClick, true);
-            panel.addEventListener("pointermove", onPanelPointerMove, true);
-            panel.addEventListener("pointerleave", onPanelPointerLeave, true);
             panel.addEventListener("keydown", onPanelKeydown);
             panel.addEventListener("change", onPanelChange);
             panel.addEventListener("input", onPanelInput);
@@ -1213,7 +1184,7 @@
         }
         positionPanel(panel, nav);
         panel.hidden = false;
-        panel.innerHTML = '<div class="dtm-wrap"><div class="dtm-loading-card"><div class="dtm-loading-copy"><span class="dtm-loading-spinner" aria-hidden="true"></span><span>正在读取主题…</span></div><button class="dtm-close-hit" type="button" data-manager-close aria-label="关闭"></button></div></div>';
+        panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-loading-card"><div class="dtm-loading-copy"><span class="dtm-loading-spinner" aria-hidden="true"></span><span>正在读取主题…</span></div>${closeButton("manager")}</div></div>`;
         try {
             const nextState = await call("getState");
             if (!showing || token !== showSequence)
@@ -1224,7 +1195,7 @@
         catch (error) {
             if (!showing || token !== showSequence)
                 return;
-            panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1></div><button class="dtm-close-hit" type="button" data-manager-close aria-label="关闭"></button></div><div class="dtm-empty">${escapeHtml(error.message || error)}</div></div>`;
+            panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1></div>${closeButton("manager")}</div><div class="dtm-empty">${escapeHtml(error.message || error)}</div></div>`;
         }
     };
     const hide = () => { showSequence += 1; showing = false; localModalOpen = false; resetLocalDraft(); const panel = document.getElementById(PANEL_ID); if (panel)

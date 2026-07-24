@@ -680,7 +680,7 @@ try {
     'getThemePreview', 'themePreviewCache', 'applyThemePreviewImages',
     'getPetPreview', 'petPreviewCache', 'data-dtm-pet-preview-pet',
     'dtm-loading-card', 'showSequence', 'dtm-file-actions', 'dtm-close-hit', 'onPanelKeydown',
-    'closeButtonFromPoint', 'onPanelPointerMove',
+    'closeButton', 'data-dtm-close',
     '执行中动图', '加载转圈',
     'data-theme-pet-edit', 'data-theme-pet-pick', 'updateThemePet'
   )) {
@@ -690,6 +690,11 @@ try {
   }
   if ($managerSource.Contains('宠物：')) {
     throw 'Theme cards must show the bound pet image directly instead of a pet-name text chip.'
+  }
+  foreach ($removedCloseWorkaround in @('closeButtonFromPoint', 'onPanelPointerMove', 'onPanelPointerLeave', 'dtm-close-hover')) {
+    if ($managerSource.Contains($removedCloseWorkaround)) {
+      throw "Theme manager restored fragile close-button pointer workaround: $removedCloseWorkaround"
+    }
   }
   foreach ($removedManagerBehavior in @('addLibrary', 'addRepository', 'getCatalog', 'installLibraryTheme', 'data-library-add', 'data-repository-add', 'GitHub 仓库安装')) {
     if ($managerSource.Contains($removedManagerBehavior)) {
