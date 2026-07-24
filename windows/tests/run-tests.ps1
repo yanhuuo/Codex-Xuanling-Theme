@@ -540,7 +540,10 @@ try {
     'background-size: var(--dream-art-fit)',
     'background-position: var(--dream-art-position)',
     '.dream-home > .dream-home-content',
+    '--dream-home-copy-shadow',
+    '.group\/home-suggestion-list-item',
     '.dream-home-utility',
+    '.dream-home-utility button:enabled:hover',
     '.dream-home-utility-present .dream-home .composer-surface-chrome',
     '.dream-route-task:is(.dream-task-ambient, .dream-task-banner)',
     '.composer-surface-chrome .dream-theme-icon',
@@ -552,6 +555,10 @@ try {
     'animation-play-state: paused !important'
   )) {
     if (-not $css.Contains($requiredCss)) { throw "Windows immersive CSS is missing: $requiredCss" }
+  }
+  if ($css -notmatch '(?s)\.dream-home-utility\s*\{[^}]*box-shadow:\s*none\s*!important' -or
+    $css -notmatch '(?s)\.dream-home-utility-present[^}]*composer-surface-chrome\s*\{[^}]*border-radius:\s*18px\s*!important') {
+    throw 'The shared home utility still creates an opaque shadow seam or removes the composer top corners.'
   }
 
   $remielCss = Read-DreamSkinUtf8File -Path (Join-Path $Root 'themes\绝区零 蕾米埃尔\theme.css')

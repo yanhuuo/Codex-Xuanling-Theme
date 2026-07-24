@@ -40,6 +40,9 @@
   --dream-floating-shadow: 0 18px 48px color-mix(in oklab, var(--dream-accent) 14%, transparent), 0 6px 20px #0003;
   --dream-composer-shadow: 0 14px 34px color-mix(in oklab, var(--dream-canvas) 22%, transparent),
     0 0 0 1px color-mix(in oklab, var(--dream-accent) 10%, transparent);
+  --dream-home-copy: color-mix(in oklab, var(--dream-text) 92%, #000);
+  --dream-home-copy-shadow: 0 1px 3px color-mix(in oklab, white 90%, transparent),
+    0 0 14px color-mix(in oklab, white 62%, transparent);
 }
 
 :root.codex-dream-skin.dream-theme-dark {
@@ -73,6 +76,9 @@
   --dream-floating-shadow: 0 18px 52px color-mix(in oklab, #000 58%, transparent), 0 0 0 1px color-mix(in oklab, var(--dream-accent) 9%, transparent);
   --dream-composer-shadow: 0 14px 34px color-mix(in oklab, #000 28%, transparent),
     0 0 0 1px color-mix(in oklab, var(--dream-accent) 10%, transparent);
+  --dream-home-copy: color-mix(in oklab, white 92%, var(--dream-accent));
+  --dream-home-copy-shadow: 0 2px 5px color-mix(in oklab, #000 76%, transparent),
+    0 0 18px color-mix(in oklab, #000 46%, transparent);
 }
 
 html.codex-dream-skin body {
@@ -399,6 +405,17 @@ html.codex-dream-skin.dream-safe-center .dream-home > .dream-home-content > div:
 
 .dream-home .group\/home-suggestions {
   overflow: visible !important;
+}
+
+.dream-home .heading-xl.text-token-foreground {
+  color: var(--dream-home-copy) !important;
+  font-weight: 650 !important;
+  text-shadow: var(--dream-home-copy-shadow) !important;
+}
+
+.dream-home .group\/home-suggestion-list-item {
+  color: var(--dream-home-copy) !important;
+  text-shadow: var(--dream-home-copy-shadow) !important;
 }
 
 .dream-home .group\/home-suggestions button {
@@ -880,19 +897,33 @@ html.codex-dream-skin.dream-art-wide .composer-surface-chrome::after {
   box-shadow: none !important;
 }
 
-/* Current Codex builds render the home project picker in a hashed utility bar.
-   Merge it with the composer so the bottom control reads as one surface. */
+/* Current Codex builds overlap the home project picker with the composer.
+   Keep the controls available, but avoid a second opaque panel and its dark
+   shadow seam above the editor. */
 html.codex-dream-skin .dream-home-utility {
   box-sizing: border-box !important;
   width: 100% !important;
   max-width: none !important;
   transform: translateX(-13px) !important;
-  border: 1px solid var(--dream-line) !important;
-  border-bottom: 0 !important;
-  border-radius: 18px 18px 0 0 !important;
-  background: var(--dream-immersive-composer) !important;
-  box-shadow: 0 -8px 24px color-mix(in oklab, var(--dream-canvas) 24%, transparent) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
   backdrop-filter: none !important;
+}
+
+html.codex-dream-skin .dream-home-utility button {
+  color: var(--dream-home-copy) !important;
+  border: 1px solid color-mix(in oklab, var(--dream-accent) 24%, transparent) !important;
+  border-radius: 999px !important;
+  background: color-mix(in oklab, var(--dream-surface-raised) 68%, transparent) !important;
+  text-shadow: var(--dream-home-copy-shadow) !important;
+}
+
+html.codex-dream-skin .dream-home-utility button:enabled:hover {
+  border-color: color-mix(in oklab, var(--dream-accent) 54%, transparent) !important;
+  background: color-mix(in oklab, var(--dream-accent) 22%, var(--dream-surface-raised)) !important;
 }
 
 /* Keep Windows DWM drag composition stable without reducing the normal theme.
@@ -1224,17 +1255,17 @@ html.codex-dream-skin .composer-surface-chrome button.dream-composer-processing 
 
 html.codex-dream-skin.dream-home-utility-present .dream-home .composer-surface-chrome {
   border: 1px solid var(--dream-line) !important;
-  border-top: 0 !important;
-  border-radius: 0 0 18px 18px !important;
-  box-shadow: 0 16px 42px color-mix(in oklab, var(--dream-canvas) 42%, transparent) !important;
+  border-radius: 18px !important;
+  box-shadow: var(--dream-composer-shadow) !important;
 }
 
 html.codex-dream-skin.dream-home-utility-present body main.main-surface.dream-home-shell
   .dream-home .composer-surface-chrome {
-  border-top-width: 0 !important;
+  border-top-width: 1px !important;
   border-right-width: 1px !important;
   border-bottom-width: 1px !important;
   border-left-width: 1px !important;
+  border-style: solid !important;
 }
 
 /* Keep the new-task editor legible over high-detail artwork. Codex uses
