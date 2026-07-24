@@ -434,11 +434,13 @@ html.codex-dream-skin .composer-surface-chrome {
 }
 
 html.codex-dream-skin .dream-composer-shell {
-  max-width: var(--dream-composer-max-width, inherit) !important;
+  max-width: none !important;
 }
 
-html.codex-dream-skin.dream-route-task .dream-composer-shell {
-  width: 100% !important;
+html.codex-dream-skin:is(.dream-composer-compact, .dream-composer-comfortable, .dream-composer-wide, .dream-composer-full)
+  .dream-composer-shell {
+  width: min(100%, var(--dream-composer-max-width)) !important;
+  max-width: var(--dream-composer-max-width) !important;
   margin-left: auto !important;
   margin-right: auto !important;
 }
@@ -693,6 +695,14 @@ html.codex-dream-skin aside.app-shell-left-panel .dream-theme-brand-mark {
 
 html.codex-dream-skin .dream-theme-spinner {
   position: relative !important;
+  contain: none !important;
+  clip-path: none !important;
+  overflow: visible !important;
+}
+
+html.codex-dream-skin .dream-spinner-safe {
+  contain: none !important;
+  clip-path: none !important;
   overflow: visible !important;
 }
 
@@ -709,9 +719,10 @@ html.codex-dream-skin .dream-theme-spinner-mark {
   z-index: 2;
   left: 50%;
   top: 50%;
-  width: 28px;
-  height: 28px;
-  margin: -14px 0 0 -14px;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  border-radius: 999px;
   overflow: visible !important;
   pointer-events: none;
   animation: dream-theme-orbit 1080ms linear infinite;

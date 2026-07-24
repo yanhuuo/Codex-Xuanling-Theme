@@ -393,6 +393,7 @@
       node.parentElement?.classList.remove("dream-theme-spinner");
     });
     document.querySelectorAll(".dream-theme-spinner").forEach((node) => node.classList.remove("dream-theme-spinner"));
+    document.querySelectorAll(".dream-spinner-safe").forEach((node) => node.classList.remove("dream-spinner-safe"));
     document.getElementById(STYLE_ID)?.remove();
     document.getElementById(CHROME_ID)?.remove();
   };
@@ -722,6 +723,8 @@
       source.classList.remove("dream-theme-spinner-source");
       const host = source.tagName?.toLowerCase() === "svg" ? source.parentElement : source;
       host?.classList.remove("dream-theme-spinner");
+      host?.parentElement?.classList.remove("dream-spinner-safe");
+      host?.parentElement?.parentElement?.classList.remove("dream-spinner-safe");
       host?.querySelector?.(":scope > .dream-theme-spinner-mark")?.remove();
     }
     const spinnerCandidates = new Set([
@@ -742,6 +745,8 @@
       if (!host.classList.contains("dream-theme-spinner")) {
         host.classList.add("dream-theme-spinner");
       }
+      host.parentElement?.classList.add("dream-spinner-safe");
+      host.parentElement?.parentElement?.classList.add("dream-spinner-safe");
       let spinnerMark = host.querySelector?.(":scope > .dream-theme-spinner-mark");
       if (!spinnerMark) {
         spinnerMark = document.createElement("span");
