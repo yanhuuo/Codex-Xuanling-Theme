@@ -1,7 +1,7 @@
 "use strict";
 (() => {
     const KEY = "__CODEX_DREAM_THEME_MANAGER__";
-    const VERSION = "1.9.8";
+    const VERSION = "1.9.9";
     const BINDING = "__codexDreamThemeControl";
     const RESPONSE = "__codexDreamThemeResponse";
     const STYLE_ID = "codex-dream-theme-manager-style";
@@ -24,7 +24,7 @@
     #${TRIGGER_ID} svg{display:block;width:17px;height:17px}
     #${PANEL_ID}{--dream-manager-accent:var(--dream-accent,#6edaf2);--dtm-surface:var(--dream-surface,var(--main-surface-primary,#0d151f));--dtm-raised:var(--dream-surface-raised,var(--main-surface-secondary,#13212c));--dtm-text:var(--dream-text,var(--text-primary,#edf7fb));--dtm-muted:var(--dream-text-muted,var(--text-secondary,#9bb0bc));--dtm-line:var(--dream-line,var(--border-light,#263642));position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow:auto;background:#02070d99;color:var(--dtm-text);padding:58px 24px 28px;box-sizing:border-box;font-family:inherit;backdrop-filter:blur(10px)}
     #${PANEL_ID}[hidden]{display:none!important}
-    #${PANEL_ID} *{box-sizing:border-box} #${PANEL_ID} .dtm-wrap{width:min(1080px,calc(100vw - 48px));max-height:calc(100vh - 86px);overflow:auto;margin:0 auto;padding:28px 34px 42px;border:1px solid var(--dtm-line);border-radius:20px;background:color-mix(in oklab,var(--dtm-surface) 96%,transparent);box-shadow:0 24px 90px #000c;backdrop-filter:blur(18px)}
+    #${PANEL_ID} *{box-sizing:border-box;-webkit-app-region:no-drag} #${PANEL_ID} .dtm-wrap{width:min(1080px,calc(100vw - 48px));max-height:calc(100vh - 86px);overflow:auto;margin:0 auto;padding:28px 34px 42px;border:1px solid var(--dtm-line);border-radius:20px;background:color-mix(in oklab,var(--dtm-surface) 96%,transparent);box-shadow:0 24px 90px #000c;backdrop-filter:blur(18px)}
     #${PANEL_ID} .dtm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}
     #${PANEL_ID} h1{font-size:26px;line-height:1.2;margin:0 0 8px;font-weight:650} #${PANEL_ID} h2{font-size:17px;margin:0 0 12px}
     #${PANEL_ID} p{margin:0;color:var(--dtm-muted);font-size:13px;line-height:1.55}
@@ -1257,6 +1257,17 @@
         if (settingsButton && settingsButton.dataset.settingsPanelSlug !== NAV_SLUG)
             hide();
     };
+    const onDocumentPointerDown = (event) => {
+        const element = event.target;
+        const closeTarget = element?.closest?.("[data-dtm-close],[data-manager-close],[data-local-theme-close],[data-theme-pet-close],[data-theme-images-close]");
+        const panel = document.getElementById(PANEL_ID);
+        if (!closeTarget || !panel?.contains(closeTarget))
+            return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        runCloseAction(closeTarget);
+    };
+    document.addEventListener("pointerdown", onDocumentPointerDown, true);
     document.addEventListener("click", onDocumentClick, true);
     let scheduled = null;
     const observer = new MutationObserver((records) => {
@@ -1271,7 +1282,7 @@
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
     const timer = setInterval(ensure, 4000);
-    const cleanup = () => { observer.disconnect(); clearInterval(timer); clearTimeout(scheduled); window.removeEventListener(RESPONSE, onResponse); document.removeEventListener("click", onDocumentClick, true); document.getElementById(PANEL_ID)?.remove(); document.getElementById(TRIGGER_ID)?.remove(); document.getElementById(STYLE_ID)?.remove(); delete window[KEY]; };
+    const cleanup = () => { observer.disconnect(); clearInterval(timer); clearTimeout(scheduled); window.removeEventListener(RESPONSE, onResponse); document.removeEventListener("pointerdown", onDocumentPointerDown, true); document.removeEventListener("click", onDocumentClick, true); document.getElementById(PANEL_ID)?.remove(); document.getElementById(TRIGGER_ID)?.remove(); document.getElementById(STYLE_ID)?.remove(); delete window[KEY]; };
     window[KEY] = { ensure, cleanup, observer, timer, version: VERSION };
     ensure();
     return true;
