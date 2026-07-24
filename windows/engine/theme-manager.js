@@ -462,6 +462,9 @@
         panel.style.bottom = "0";
     };
     const themePreviewUrl = (theme) => {
+        const cardPreview = safePreview(theme.cardPreview);
+        if (cardPreview)
+            return cardPreview;
         const direct = safePreview(theme.preview);
         if (direct)
             return direct;

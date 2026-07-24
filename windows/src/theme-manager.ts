@@ -5,6 +5,7 @@ type DreamThemeSummary = {
   description?: string;
   author?: string;
   version?: string;
+  cardPreview?: string | null;
   preview?: string | null;
   localOnly?: boolean;
   brandIcon?: string;
@@ -453,6 +454,8 @@ type DreamThemeManagerState = {
     panel.style.right = "0"; panel.style.bottom = "0";
   };
   const themePreviewUrl = (theme) => {
+    const cardPreview = safePreview(theme.cardPreview);
+    if (cardPreview) return cardPreview;
     const direct = safePreview(theme.preview);
     if (direct) return direct;
     const images = Array.isArray(theme.images) ? theme.images : [];

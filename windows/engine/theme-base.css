@@ -790,8 +790,13 @@ html.codex-dream-skin.dream-art-wide body main.main-surface .composer-surface-ch
   border-color: var(--dream-line) !important;
 }
 
-html.codex-dream-skin.dream-art-wide .composer-surface-chrome::before {
+html.codex-dream-skin.dream-art-wide .composer-surface-chrome::before,
+html.codex-dream-skin.dream-art-wide .composer-surface-chrome::after {
   content: none !important;
+  display: none !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
 }
 
 /* Current Codex builds render the home project picker in a hashed utility bar.
@@ -1337,6 +1342,23 @@ html.codex-dream-skin.dream-art-wide main.main-surface .app-shell-main-content-t
 html.codex-dream-skin.dream-art-wide main.main-surface
   .thread-scroll-container .bg-gradient-to-t.from-token-main-surface-primary {
   background: transparent !important;
+}
+
+html.codex-dream-skin.dream-art-wide main.main-surface
+  .thread-scroll-container :is([class*="bg-gradient-to-t"], [class*="bg-gradient-to-b"]):is(
+    [class*="from-token-main-surface-primary"],
+    [class*="from-token-main-surface-secondary"],
+    [class*="to-token-main-surface-primary"],
+    [class*="to-token-main-surface-secondary"]
+  ),
+html.codex-dream-skin.dream-art-wide main.main-surface
+  :is([class*="sticky"], [class*="fixed"], [class*="absolute"]):has(.composer-surface-chrome)::before,
+html.codex-dream-skin.dream-art-wide main.main-surface
+  :is([class*="sticky"], [class*="fixed"], [class*="absolute"]):has(.composer-surface-chrome)::after {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
 }
 
 /* Final right-panel pass. These selectors intentionally live after the generic

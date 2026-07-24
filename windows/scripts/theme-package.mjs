@@ -1087,6 +1087,7 @@ async function themeManagerSummary(loaded, key, extra = {}) {
     description: loaded.theme.description,
     author: loaded.theme.author,
     version: loaded.theme.version,
+    cardPreview: await previewDataUrl(loaded),
     brandIcon: loaded.theme.brandIcon,
     icons: loaded.icons,
     defaultImage: loaded.theme.defaultImage,
