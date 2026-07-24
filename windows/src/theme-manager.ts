@@ -1,4 +1,4 @@
-type DreamThemeSummary = {
+﻿type DreamThemeSummary = {
   key: string;
   id: string;
   name: string;
@@ -79,7 +79,7 @@ type DreamThemeManagerState = {
     #${PANEL_ID} .dtm-pet-sprite{position:absolute;left:50%;top:50%;width:76px;height:94px;transform:translate(-50%,-50%);background-image:var(--dtm-pet-image);background-repeat:no-repeat;background-position:center;background-size:contain;filter:drop-shadow(0 10px 18px #0008)}
     #${PANEL_ID} .dtm-bound-pet{position:absolute;right:14px;bottom:9px;width:52px;height:64px;padding:0;border:0;border-radius:0;background-color:transparent;background-image:var(--dtm-pet-image);background-repeat:no-repeat;background-position:center;background-size:contain;filter:drop-shadow(0 8px 12px #000b) drop-shadow(0 0 8px color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 28%,transparent))}
     #${PANEL_ID} .dtm-bound-pet::after{content:"";position:absolute;left:18%;right:18%;bottom:5px;height:9px;border-radius:50%;background:#0008;filter:blur(5px);z-index:-1}
-    #${PANEL_ID} .dtm-pet-thumb-ready{background-position:center;background-size:contain}
+    #${PANEL_ID} .dtm-pet-thumb-ready{background-position:left top;background-size:var(--dtm-pet-bg-size,800% auto)}
     #${PANEL_ID} button.dtm-bound-pet:hover{transform:translateY(-2px) scale(1.04);filter:drop-shadow(0 12px 16px #000c) drop-shadow(0 0 14px var(--dream-manager-accent,#6edaf2))}
     #${PANEL_ID} .dtm-card-body{padding:13px} #${PANEL_ID} .dtm-card-line{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
     #${PANEL_ID} .dtm-card-main{min-width:0;flex:1} #${PANEL_ID} .dtm-title{font-size:14px;font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -212,96 +212,30 @@ type DreamThemeManagerState = {
     if (!petThumbCache.has(preview)) {
       petThumbCache.set(preview, new Promise((resolve, reject) => {
         const image = new Image();
-        const timer = setTimeout(() => reject(new Error("宠物预览生成超时")), 6000);
+        const timer = setTimeout(() => reject(new Error("宠物预览加载超时")), 6000);
         image.onload = () => {
-          try {
-            clearTimeout(timer);
-            const codexPetAtlas = image.naturalWidth === 1536 && (image.naturalHeight === 1872 || image.naturalHeight === 2288);
-            const columns = codexPetAtlas ? 8 : 12;
-            const rows = codexPetAtlas ? Math.round(image.naturalHeight / 208) : 16;
-            const sourceWidth = Math.max(1, Math.floor(image.naturalWidth / columns));
-            const sourceHeight = Math.max(1, Math.floor(image.naturalHeight / rows));
-            const sourceCanvas = document.createElement("canvas");
-            sourceCanvas.width = image.naturalWidth;
-            sourceCanvas.height = image.naturalHeight;
-            const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
-            if (!sourceContext) throw new Error("无法读取宠物图集");
-            sourceContext.drawImage(image, 0, 0);
-            let best = { score: 0, x: 0, y: 0, width: sourceWidth, height: sourceHeight };
-            const readFrameBounds = (frameX: number, frameY: number) => {
-              const data = sourceContext.getImageData(frameX, frameY, sourceWidth, sourceHeight).data;
-              let minX = sourceWidth, minY = sourceHeight, maxX = -1, maxY = -1;
-              for (let pixel = 0; pixel < data.length; pixel += 4) {
-                if (data[pixel + 3] < 8) continue;
-                const index = pixel / 4;
-                const px = index % sourceWidth;
-                const py = Math.floor(index / sourceWidth);
-                if (px < minX) minX = px;
-                if (py < minY) minY = py;
-                if (px > maxX) maxX = px;
-                if (py > maxY) maxY = py;
-              }
-              if (maxX < minX || maxY < minY) return null;
-              const pad = codexPetAtlas ? 4 : 2;
-              minX = Math.max(0, minX - pad);
-              minY = Math.max(0, minY - pad);
-              maxX = Math.min(sourceWidth - 1, maxX + pad);
-              maxY = Math.min(sourceHeight - 1, maxY + pad);
-              return {
-                x: frameX + minX,
-                y: frameY + minY,
-                width: maxX - minX + 1,
-                height: maxY - minY + 1,
-              };
-            };
-            if (codexPetAtlas) {
-              const firstFrame = readFrameBounds(0, 0);
-              if (firstFrame) best = { ...firstFrame, score: firstFrame.width * firstFrame.height };
-            }
-            for (let row = 0; row < rows; row += 1) {
-              for (let column = 0; column < columns; column += 1) {
-                if (codexPetAtlas && best.score > 0) continue;
-                const x = column * sourceWidth;
-                const y = row * sourceHeight;
-                const bounds = readFrameBounds(x, y);
-                if (!bounds) continue;
-                const { width, height } = bounds;
-                const area = width * height;
-                const centerPenalty = row * 70 + column * 12;
-                const score = area - centerPenalty;
-                if (score > best.score) best = { score, ...bounds };
-              }
-            }
-            const canvas = document.createElement("canvas");
-            canvas.width = 92;
-            canvas.height = 112;
-            const context = canvas.getContext("2d");
-            if (!context) throw new Error("无法创建宠物预览画布");
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            const padding = 6;
-            const scale = Math.min((canvas.width - padding * 2) / best.width, (canvas.height - padding * 2) / best.height);
-            const width = Math.max(1, Math.round(best.width * scale));
-            const height = Math.max(1, Math.round(best.height * scale));
-            const dx = Math.round((canvas.width - width) / 2);
-            const dy = Math.round(canvas.height - height - padding);
-            context.drawImage(image, best.x, best.y, best.width, best.height, dx, dy, width, height);
-            resolve(canvas.toDataURL("image/png"));
-          } catch (error) { reject(error); }
+          clearTimeout(timer);
+          const codexPetAtlas = image.naturalWidth === 1536 && (image.naturalHeight === 1872 || image.naturalHeight === 2288);
+          const columns = codexPetAtlas ? 8 : 12;
+          resolve(`${preview}#dtm-columns=${columns}`);
         };
         image.onerror = () => { clearTimeout(timer); reject(new Error("宠物预览图片无法加载")); };
         image.src = preview;
       }));
     }
     return petThumbCache.get(preview);
-  };
-  const applyPetPreviewStyles = (panel: HTMLElement) => {
+  };  const applyPetPreviewStyles = (panel: HTMLElement) => {
     if (!state) return;
     panel.querySelectorAll<HTMLElement>("[data-dtm-pet-preview-pet]").forEach((element) => {
       const petId = element.dataset.dtmPetPreviewPet || "";
       petPreviewDataUrl(petId).then((preview) => preview ? petThumbDataUrl(preview) : "").then((thumb) => {
         if (!thumb) return;
         if (!element.isConnected) return;
-        element.style.setProperty("--dtm-pet-image", cssUrl(thumb));
+        const [imageUrl, meta = ""] = String(thumb).split("#dtm-columns=");
+        const columns = Math.max(1, Math.min(16, Number(meta) || 8));
+        element.style.setProperty("--dtm-pet-image", cssUrl(imageUrl));
+        element.style.setProperty("--dtm-pet-columns", String(columns));
+        element.style.setProperty("--dtm-pet-bg-size", `${columns * 100}% auto`);
         element.classList.add("dtm-pet-thumb-ready");
       }).catch(() => {});
     });
