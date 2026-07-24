@@ -47,6 +47,8 @@
     "--dream-sidebar-font-family",
     "--dream-sidebar-font-size",
     "--dream-sidebar-font-weight",
+    "--dream-sidebar-text",
+    "--dream-sidebar-icon",
   ];
   const HOME_UTILITY_CLASS = "dream-home-utility";
   const SPINNER_SELECTOR = ".animate-spin, [class~='animate-spin'], [role='progressbar'], [data-loading='true']";
@@ -154,6 +156,8 @@
       rotationIntervalMs: Number.isFinite(intervalSeconds) ? Math.max(5000, Math.min(3600000, Math.round(intervalSeconds) * 1000)) : 45000,
       sidebarBackground: ["auto", "transparent", "tint", "solid"].includes(sidebar.background) ? sidebar.background : "auto",
       sidebarFontFamily: cleanFont(sidebar.fontFamily),
+      sidebarTextColor: cleanText(sidebar.textColor, 120),
+      sidebarIconColor: cleanText(sidebar.iconColor, 120),
       sidebarFontSize: ["default", "small", "normal", "large"].includes(sidebar.fontSize) ? sidebar.fontSize : "default",
       sidebarFontWeight: ["default", "normal", "medium", "semibold", "bold"].includes(sidebar.fontWeight) ? sidebar.fontWeight : "default",
       composerWidth: ["default", "compact", "comfortable", "wide", "full"].includes(composer.width) ? composer.width : "default",
@@ -416,7 +420,8 @@
     const imageSize = config.imageFit === "stretch" ? "100% 100%" : config.imageFit === "auto" ? "auto" : config.imageFit;
     const signature = [appearance, focus, safeArea, taskMode, accent, accentInk, focusX, focusY,
       profile.aspect, profile.luma, artUrl, imagePosition, imageSize, config.imageRepeat,
-      config.sidebarBackground, config.sidebarFontFamily, config.sidebarFontSize, config.sidebarFontWeight,
+      config.sidebarBackground, config.sidebarFontFamily, config.sidebarTextColor, config.sidebarIconColor,
+      config.sidebarFontSize, config.sidebarFontWeight,
       config.composerWidth, config.composerHeight, config.composerFontSize].join("|");
     if (signature === appliedProfileSignature) return;
     appliedProfileSignature = signature;
@@ -450,6 +455,8 @@
     root.style.setProperty("--dream-accent-ink", accentInk);
     root.style.setProperty("--dream-image-luma", profile.luma.toFixed(3));
     root.style.setProperty("--dream-sidebar-font-family", config.sidebarFontFamily || "inherit");
+    root.style.setProperty("--dream-sidebar-text", config.sidebarTextColor || "var(--dream-text)");
+    root.style.setProperty("--dream-sidebar-icon", config.sidebarIconColor || "currentColor");
     root.style.setProperty("--dream-sidebar-font-size",
       config.sidebarFontSize === "small" ? "12px" :
       config.sidebarFontSize === "normal" ? "13px" :

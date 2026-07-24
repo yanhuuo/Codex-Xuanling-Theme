@@ -38,6 +38,8 @@
   "sidebar": {
     "background": "transparent",
     "fontFamily": "Microsoft YaHei UI, Segoe UI, sans-serif",
+    "textColor": "#fff4cf",
+    "iconColor": "#f0c86b",
     "fontSize": "normal",
     "fontWeight": "medium"
   },

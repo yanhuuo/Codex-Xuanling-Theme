@@ -78,7 +78,7 @@ html.codex-dream-skin body {
 }
 
 html.codex-dream-skin aside.app-shell-left-panel {
-  color: var(--dream-text) !important;
+  color: var(--dream-sidebar-text, var(--dream-text)) !important;
   background: var(--dream-sidebar) !important;
   font-family: var(--dream-sidebar-font-family, inherit) !important;
   font-size: var(--dream-sidebar-font-size, inherit) !important;
@@ -93,7 +93,7 @@ html.codex-dream-skin aside.app-shell-left-panel nav {
 }
 
 html.codex-dream-skin aside.app-shell-left-panel button {
-  color: var(--dream-text) !important;
+  color: var(--dream-sidebar-text, var(--dream-text)) !important;
   font-family: var(--dream-sidebar-font-family, inherit) !important;
   font-size: var(--dream-sidebar-font-size, inherit) !important;
   font-weight: var(--dream-sidebar-font-weight, inherit) !important;
@@ -106,14 +106,14 @@ html.codex-dream-skin aside.app-shell-left-panel button:hover {
 
 html.codex-dream-skin aside.app-shell-left-panel [class~="bg-token-list-hover-background"],
 html.codex-dream-skin aside.app-shell-left-panel [aria-current="page"] {
-  color: var(--dream-text) !important;
+  color: var(--dream-sidebar-text, var(--dream-text)) !important;
   background: var(--dream-accent-hover) !important;
   box-shadow: inset 0 0 0 1px var(--dream-line-soft) !important;
 }
 
 html.codex-dream-skin aside.app-shell-left-panel svg,
 html.codex-dream-skin aside.app-shell-left-panel [class*="text-token"] {
-  color: currentColor;
+  color: var(--dream-sidebar-icon, currentColor);
 }
 
 html.codex-dream-skin main.main-surface {
@@ -607,13 +607,8 @@ html.codex-dream-skin.dream-art-wide .composer-surface-chrome {
 }
 
 .dream-home .group\/home-suggestions button::after {
-  content: "鉁?;
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  color: var(--dream-accent);
-  font-size: 11px;
-  opacity: .72;
+  content: none !important;
+  display: none !important;
 }
 
 html.codex-dream-skin aside.app-shell-left-panel .dream-brand-button {
@@ -639,7 +634,7 @@ html.codex-dream-skin aside.app-shell-left-panel .dream-nav-primary:hover {
 }
 
 html.codex-dream-skin aside.app-shell-left-panel .dream-section-heading {
-  color: var(--dream-text-muted) !important;
+  color: color-mix(in oklab, var(--dream-sidebar-text, var(--dream-text-muted)) 72%, transparent) !important;
   font-size: 12px !important;
   letter-spacing: .14em;
 }

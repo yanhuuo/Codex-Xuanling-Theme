@@ -74,10 +74,16 @@ function normalizeImageDisplay(rawDisplay) {
 function normalizeSidebarSettings(rawSidebar) {
   const sidebar = rawSidebar && typeof rawSidebar === "object" && !Array.isArray(rawSidebar) ? rawSidebar : {};
   const fontFamily = normalizedText(sidebar.fontFamily, "sidebar.fontFamily", "", 120);
+  const textColor = normalizedText(sidebar.textColor, "sidebar.textColor", "", 120);
+  const iconColor = normalizedText(sidebar.iconColor, "sidebar.iconColor", "", 120);
   if (fontFamily && /[;{}]/.test(fontFamily)) throw new Error("sidebar.fontFamily contains unsupported characters");
+  if (textColor && !isSupportedCssColor(textColor)) throw new Error("sidebar.textColor is not a supported CSS color");
+  if (iconColor && !isSupportedCssColor(iconColor)) throw new Error("sidebar.iconColor is not a supported CSS color");
   return {
     background: normalizedChoice(sidebar.background, "sidebar.background", THEME_CHOICES.sidebarBackground, "auto"),
     fontFamily,
+    textColor,
+    iconColor,
     fontSize: normalizedChoice(sidebar.fontSize, "sidebar.fontSize", THEME_CHOICES.sidebarFontSize, "default"),
     fontWeight: normalizedChoice(sidebar.fontWeight, "sidebar.fontWeight", THEME_CHOICES.sidebarFontWeight, "default"),
   };
