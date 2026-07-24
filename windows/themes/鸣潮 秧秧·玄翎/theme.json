@@ -28,7 +28,8 @@
     "focusX": 0.76,
     "focusY": 0.48,
     "safeArea": "left",
-    "taskMode": "ambient"
+    "taskMode": "ambient",
+    "homeMode": "native"
   },
   "palette": {
     "accent": "#6edaf2"
