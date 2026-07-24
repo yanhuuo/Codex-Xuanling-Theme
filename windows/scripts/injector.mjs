@@ -1,4 +1,4 @@
-import fs from "node:fs/promises";
+﻿import fs from "node:fs/promises";
 import { watch as watchFiles } from "node:fs";
 import { createHash } from "node:crypto";
 import { execFile as execFileCallback } from "node:child_process";
@@ -47,6 +47,8 @@ const THEME_CONTROL_RESPONSE = "__codexDreamThemeResponse";
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 const BROWSER_ID_PATTERN = /^[A-Za-z0-9._-]{1,200}$/;
 const execFile = promisify(execFileCallback);
+const THEME_STATE_CACHE_MS = 1500;
+const themeStateCache = new Map();
 
 class CdpIdentityMismatchError extends Error {}
 
@@ -311,12 +313,34 @@ async function connectBrowserIdentityAnchor(port, expectedBrowserId) {
   return new BrowserIdentityAnchor(validatedDebuggerUrl(version, port)).open();
 }
 
+function invalidateThemeStateCache() {
+  themeStateCache.clear();
+}
+
+async function cachedThemeControlState(options, payload = {}) {
+  const includePets = payload.includePets === true;
+  const cacheKey = includePets ? "with-pets" : "themes-only";
+  const now = Date.now();
+  const cached = themeStateCache.get(cacheKey);
+  if (cached?.value && now - cached.updatedAt <= THEME_STATE_CACHE_MS) return cached.value;
+  if (cached?.promise) return cached.promise;
+  const promise = themeControlState(options, { includePets }).then((value) => {
+    themeStateCache.set(cacheKey, { value, updatedAt: Date.now(), promise: null });
+    return value;
+  }).catch((error) => {
+    themeStateCache.delete(cacheKey);
+    throw error;
+  });
+  themeStateCache.set(cacheKey, { value: cached?.value ?? null, updatedAt: cached?.updatedAt ?? 0, promise });
+  return promise;
+}
+
 async function handleThemeControl(options, request) {
   if (!request || typeof request !== "object" || typeof request.command !== "string") throw new Error("无效的主题控制请求");
   const payload = request.payload && typeof request.payload === "object" ? request.payload : {};
   const stateRoot = stateRootFor(options);
   const savedRoot = path.join(stateRoot, "themes");
-  if (request.command === "getState") return themeControlState(options);
+  if (request.command === "getState") return cachedThemeControlState(options, payload);
   if (request.command === "getPetPreview") {
     const petId = String(payload.petId || "").trim();
     return { petId, preview: await installedPetPreviewDataUrl(petId) };
@@ -347,7 +371,8 @@ async function handleThemeControl(options, request) {
       await installAndSelectBundledPet(options, active);
       await fs.rm(options.pauseFile, { force: true });
     }
-    return themeControlState(options);
+    invalidateThemeStateCache();
+    return cachedThemeControlState(options, { includePets: true });
   }
   if (request.command === "useTheme") {
     const key = safeThemeId(payload.key, "");
@@ -359,7 +384,8 @@ async function handleThemeControl(options, request) {
     await setBaseThemeEnabled(options, true);
     await installAndSelectBundledPet(options, loaded);
     await fs.rm(options.pauseFile, { force: true });
-    return themeControlState(options);
+    invalidateThemeStateCache();
+    return cachedThemeControlState(options, { includePets: true });
   }
   if (request.command === "installBundledTheme") {
     const key = normalizedText(payload.key, "内置主题标识", "", 120);
@@ -370,7 +396,8 @@ async function handleThemeControl(options, request) {
     const loaded = await loadTheme(directory);
     await fs.mkdir(savedRoot, { recursive: true });
     await writeThemeDirectory(path.join(savedRoot, `bundled-${safeThemeId(loaded.theme.id)}`), loaded);
-    return themeControlState(options);
+    invalidateThemeStateCache();
+    return cachedThemeControlState(options, { includePets: true });
   }
   if (request.command === "createLocalTheme") {
     await createLocalThemePackage({
@@ -385,7 +412,8 @@ async function handleThemeControl(options, request) {
       iconOverrides: payload.iconOverrides,
       palette: payload.palette,
     });
-    return themeControlState(options);
+    invalidateThemeStateCache();
+    return cachedThemeControlState(options, { includePets: true });
   }
   if (request.command === "selectPet" || request.command === "associatePet") {
     const active = await loadTheme(options.themeDir);
@@ -425,7 +453,8 @@ async function handleThemeControl(options, request) {
       }
     }
     if (selectedBundle) await installAndSelectBundledPet(options, withSelection);
-    return themeControlState(options);
+    invalidateThemeStateCache();
+    return cachedThemeControlState(options, { includePets: true });
   }
   if (request.command === "updateThemePet") {
     const key = safeThemeId(payload.key, "");
@@ -452,7 +481,8 @@ async function handleThemeControl(options, request) {
       await writeThemeDirectory(options.themeDir, withSelection);
       if (selectedBundle) await installAndSelectBundledPet(options, withSelection);
     }
-    return themeControlState(options);
+    invalidateThemeStateCache();
+    return cachedThemeControlState(options, { includePets: true });
   }
   if (request.command === "updateThemeImages") {
     const key = safeThemeId(payload.key, "");
@@ -470,7 +500,8 @@ async function handleThemeControl(options, request) {
     if (active.theme.id === updated.theme.id) {
       await writeThemeDirectory(options.themeDir, updated);
     }
-    return themeControlState(options);
+    invalidateThemeStateCache();
+    return cachedThemeControlState(options, { includePets: true });
   }
   if (request.command === "addRepository") {
     const repository = await resolveGitHubRepository(payload.location);
@@ -487,7 +518,8 @@ async function handleThemeControl(options, request) {
       });
     }
     await writeLibraries(options, sources);
-    return themeControlState(options);
+    invalidateThemeStateCache();
+    return cachedThemeControlState(options, { includePets: true });
   }
   if (request.command === "addLibrary") {
     const location = String(payload.location || "").trim();
@@ -503,12 +535,14 @@ async function handleThemeControl(options, request) {
     const id = createHash("sha256").update(`${type}\0${location}`).digest("hex").slice(0, 16);
     if (!sources.some((item) => item.id === id)) sources.push({ id, type, label: String(payload.label || "").trim().slice(0, 80) || (type === "local" ? path.basename(location) : new URL(location).hostname), location });
     await writeLibraries(options, sources);
-    return themeControlState(options);
+    invalidateThemeStateCache();
+    return cachedThemeControlState(options, { includePets: true });
   }
   if (request.command === "removeLibrary") {
     const sources = (await readLibraries(options)).filter((item) => item.id !== payload.id);
     await writeLibraries(options, sources);
-    return themeControlState(options);
+    invalidateThemeStateCache();
+    return cachedThemeControlState(options, { includePets: true });
   }
   if (request.command === "getCatalog") {
     const source = (await readLibraries(options)).find((item) => item.id === payload.id);
@@ -537,7 +571,8 @@ async function handleThemeControl(options, request) {
     await fs.mkdir(savedRoot, { recursive: true });
     const directoryName = `library-${safeThemeId(loaded.theme.id)}-${createHash("sha256").update(`${source.id}\0${loaded.theme.id}`).digest("hex").slice(0, 8)}`;
     await writeThemeDirectory(path.join(savedRoot, directoryName), loaded);
-    return themeControlState(options);
+    invalidateThemeStateCache();
+    return cachedThemeControlState(options, { includePets: true });
   }
   throw new Error(`未知的主题控制命令：${request.command}`);
 }

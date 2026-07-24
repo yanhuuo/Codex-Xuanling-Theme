@@ -1130,6 +1130,8 @@ function themeImageSummaries(loaded, includePreview = false) {
 }
 
 async function themeManagerSummary(loaded, key, extra = {}) {
+  const includeCardPreview = extra.includeCardPreview !== false;
+  const { includeCardPreview: _includeCardPreview, ...summaryExtra } = extra;
   return {
     key,
     id: loaded.theme.id,
@@ -1137,7 +1139,7 @@ async function themeManagerSummary(loaded, key, extra = {}) {
     description: loaded.theme.description,
     author: loaded.theme.author,
     version: loaded.theme.version,
-    cardPreview: await previewDataUrl(loaded),
+    cardPreview: includeCardPreview ? await previewDataUrl(loaded) : null,
     brandIcon: loaded.theme.brandIcon,
     icons: loaded.icons,
     defaultImage: loaded.theme.defaultImage,
@@ -1148,7 +1150,7 @@ async function themeManagerSummary(loaded, key, extra = {}) {
     files: loaded.theme.files,
     ...themePetSummary(loaded),
     accent: loaded.theme.palette?.accent ?? "#6edaf2",
-    ...extra,
+    ...summaryExtra,
   };
 }
 
@@ -1251,6 +1253,7 @@ export async function listInstalledThemes(options) {
     try {
       const loaded = await loadTheme(directory);
       items.push(await themeManagerSummary(loaded, entry.name, {
+        includeCardPreview: false,
         localOnly: loaded.theme.localOnly === true,
         localPath: loaded.theme.localOnly === true ? directory : null,
         appearance: loaded.theme.appearance,
@@ -1269,7 +1272,7 @@ export async function listBundledThemes() {
     if (!entry.isDirectory()) continue;
     try {
       const loaded = await loadTheme(path.join(bundledRoot, entry.name));
-      items.push(await themeManagerSummary(loaded, entry.name));
+      items.push(await themeManagerSummary(loaded, entry.name, { includeCardPreview: false }));
     } catch {
       // Invalid bundled folders are omitted from the install catalog.
     }
@@ -1287,7 +1290,8 @@ async function fileExists(filePath) {
   }
 }
 
-export async function themeControlState(options) {
+export async function themeControlState(options, settings = {}) {
+  const includePets = settings.includePets !== false;
   const active = await loadTheme(options.themeDir);
   const themes = await listInstalledThemes(options);
   const canEnableActive = themes.some((theme) => theme.id === active.theme.id);
@@ -1301,7 +1305,7 @@ export async function themeControlState(options) {
     canEnableActive,
     bundledThemes: await listBundledThemes(),
     libraries: await readLibraries(options),
-    pets: await listInstalledPets(selectedPet),
+    pets: includePets ? await listInstalledPets(selectedPet) : [],
     selectedPet,
     petAssociation: selectedPet,
   };

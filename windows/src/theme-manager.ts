@@ -35,7 +35,7 @@ type DreamThemeManagerState = {
 
 (() => {
   const KEY = "__CODEX_DREAM_THEME_MANAGER__";
-  const VERSION = "1.9.9";
+  const VERSION = "1.10.0";
   const BINDING = "__codexDreamThemeControl";
   const RESPONSE = "__codexDreamThemeResponse";
   const STYLE_ID = "codex-dream-theme-manager-style";
@@ -324,6 +324,8 @@ type DreamThemeManagerState = {
   const pending = new Map();
   let sequence = 0;
   let state: DreamThemeManagerState | null = null;
+  let stateLoadPromise: Promise<DreamThemeManagerState> | null = null;
+  let stateLoadIncludesPets = false;
   let message = "";
   let showing = false;
   let showSequence = 0;
@@ -471,9 +473,9 @@ type DreamThemeManagerState = {
     return btoa(binary);
   };
 
-  const call = <T = DreamThemeManagerState>(command: string, payload: Record<string, unknown> = {}): Promise<T> => new Promise((resolve, reject) => {
+  const call = <T = DreamThemeManagerState>(command: string, payload: Record<string, unknown> = {}, timeoutMs = 15000): Promise<T> => new Promise((resolve, reject) => {
     const requestId = `theme-${Date.now()}-${++sequence}`;
-    const timer = setTimeout(() => { pending.delete(requestId); reject(new Error("主题服务响应超时")); }, 15000);
+    const timer = setTimeout(() => { pending.delete(requestId); reject(new Error("主题服务响应超时，请重试读取")); }, timeoutMs);
     pending.set(requestId, { resolve, reject, timer });
     try {
       if (typeof window[BINDING] !== "function") throw new Error("主题服务尚未连接，请稍后重试");
@@ -492,6 +494,17 @@ type DreamThemeManagerState = {
     } catch {}
   };
   window.addEventListener(RESPONSE, onResponse);
+  const loadState = (includePets = activeTab === "pets") => {
+    if (stateLoadPromise && (!includePets || stateLoadIncludesPets)) return stateLoadPromise;
+    stateLoadIncludesPets = includePets;
+    if (!stateLoadPromise || includePets) {
+      stateLoadPromise = call<DreamThemeManagerState>("getState", { includePets }, 45000).finally(() => {
+        stateLoadPromise = null;
+        stateLoadIncludesPets = false;
+      });
+    }
+    return stateLoadPromise;
+  };
 
   const getStyle = () => {
     let style = document.getElementById(STYLE_ID);
@@ -743,7 +756,7 @@ type DreamThemeManagerState = {
     applyThemePreviewImages(panel);
     applyPetPreviewStyles(panel);
   };
-  const refreshState = async () => { state = await call("getState"); if (showing) render(); };
+  const refreshState = async (includePets = activeTab === "pets") => { state = await loadState(includePets); if (showing) render(); };
   const act = async (operation, success) => {
     message = "处理中…"; render();
     try { state = await operation(); message = success; render(); }
@@ -763,7 +776,11 @@ type DreamThemeManagerState = {
     const closeTarget = element?.closest<HTMLElement>("[data-dtm-close],[data-manager-close],[data-local-theme-close],[data-theme-pet-close],[data-theme-images-close]");
     if (closeTarget && runCloseAction(closeTarget)) return;
     const target = element?.closest<HTMLButtonElement>("button"); if (!target) return;
-    if (target.dataset.managerTab) { activeTab = target.dataset.managerTab === "pets" ? "pets" : "themes"; render(); }
+    if (target.dataset.managerTab) {
+      activeTab = target.dataset.managerTab === "pets" ? "pets" : "themes";
+      render();
+      if (activeTab === "pets" && state && (!Array.isArray(state.pets) || state.pets.length === 0)) void refreshState(true);
+    }
     else if (target.hasAttribute("data-local-theme-open")) { resetLocalDraft(); petPickerTheme = null; localModalOpen = true; render(); }
     else if (target.dataset.themeImagesEdit) {
       imageSettingsTheme = state?.themes?.find((theme) => theme.key === target.dataset.themeImagesEdit) || null;
@@ -837,7 +854,8 @@ type DreamThemeManagerState = {
       render();
     }
     else if (target.hasAttribute("data-official")) act(() => call("setPaused", { paused: !state.paused }), state.paused ? "主题已重新启用" : "已恢复 Codex 官方外观");
-    else if (target.hasAttribute("data-refresh")) act(() => call("getState"), "主题状态已刷新");
+    else if (target.hasAttribute("data-refresh")) act(() => loadState(), "主题状态已刷新");
+    else if (target.hasAttribute("data-retry-state")) show();
     else if (target.dataset.themeUse) act(() => call("useTheme", { key: target.dataset.themeUse }), "主题已启用");
     else if (target.dataset.bundledInstall) act(() => call("installBundledTheme", { key: target.dataset.bundledInstall }), "主题安装完成，可在主题列表中启用");
     else if (target.dataset.themeSettingsInit) {
@@ -1074,13 +1092,13 @@ type DreamThemeManagerState = {
     panel.hidden = false;
     panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1><p>主题管理工具已加载；主题和宠物列表会在后台读取完成后自动填充。</p></div><div class="dtm-row"><div class="dtm-status"><span class="dtm-dot"></span>正在读取主题状态 · 异步加载</div>${closeButton("manager")}</div></div><div class="dtm-row"><button class="dtm-button" type="button" disabled>正在读取</button><button class="dtm-button" type="button" disabled>立即刷新</button><p>基础页面先显示，列表读取完成后会自动更新；关闭按钮仍可立即使用。</p></div><div class="dtm-tabs" role="tablist" aria-label="主题内容"><button class="dtm-tab" role="tab" aria-selected="${activeTab === "themes"}" data-manager-tab="themes">主题</button><button class="dtm-tab" role="tab" aria-selected="${activeTab === "pets"}" data-manager-tab="pets">宠物</button></div><section class="dtm-section"><h2>${activeTab === "pets" ? "主题宠物" : "主题"}</h2><div class="dtm-loading-card"><div class="dtm-loading-copy"><span class="dtm-loading-spinner" aria-hidden="true"></span><span>正在读取${activeTab === "pets" ? "宠物" : "主题"}列表…</span></div></div></section></div>`;
     try {
-      const nextState = await call("getState");
+      const nextState = await loadState();
       if (!showing || token !== showSequence) return;
       state = nextState;
       render();
     } catch (error) {
       if (!showing || token !== showSequence) return;
-      panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1></div>${closeButton("manager")}</div><div class="dtm-empty">${escapeHtml(error.message || error)}</div></div>`;
+      panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1><p>主题服务这次没有及时返回，可能是正在扫描主题图片或宠物资源。</p></div><div class="dtm-row">${closeButton("manager")}</div></div><div class="dtm-empty"><p>${escapeHtml(error.message || error)}</p><div class="dtm-row" style="margin-top:12px"><button class="dtm-button dtm-button-primary" type="button" data-retry-state>重试读取</button><button class="dtm-button" type="button" data-manager-close>关闭</button></div></div></div>`;
     }
   };
   const hide = () => { showSequence += 1; showing = false; localModalOpen = false; imageSettingsLoading = false; resetLocalDraft(); setTriggerExpanded(false); const panel = document.getElementById(PANEL_ID); if (panel) panel.hidden = true; };
