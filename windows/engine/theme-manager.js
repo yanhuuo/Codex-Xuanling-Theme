@@ -1,7 +1,7 @@
 "use strict";
 (() => {
     const KEY = "__CODEX_DREAM_THEME_MANAGER__";
-    const VERSION = "1.9.7";
+    const VERSION = "1.9.8";
     const BINDING = "__codexDreamThemeControl";
     const RESPONSE = "__codexDreamThemeResponse";
     const STYLE_ID = "codex-dream-theme-manager-style";
@@ -103,6 +103,9 @@
     #${PANEL_ID} .dtm-close-hit{appearance:none;position:relative;display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;min-width:40px;min-height:40px;margin:0;padding:0;border:1px solid var(--dtm-line);border-radius:12px;background:color-mix(in oklab,var(--dtm-raised) 90%,transparent);color:var(--dtm-text);cursor:pointer;user-select:none;touch-action:manipulation;z-index:1000;pointer-events:auto!important}
     #${PANEL_ID} .dtm-close-icon{display:block;width:18px;height:18px;pointer-events:none}
     #${PANEL_ID} .dtm-close-hit:empty::before{content:"";display:block;width:18px;height:18px;background:linear-gradient(45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px)),linear-gradient(-45deg,transparent calc(50% - 1.05px),currentColor calc(50% - 1.05px),currentColor calc(50% + 1.05px),transparent calc(50% + 1.05px));pointer-events:none}
+    #${PANEL_ID} .dtm-dialog-head .dtm-close-hit{flex-basis:34px;width:34px;height:34px;min-width:34px;min-height:34px;border-radius:10px}
+    #${PANEL_ID} .dtm-dialog-head .dtm-close-icon{width:16px;height:16px}
+    #${PANEL_ID} .dtm-dialog-head .dtm-close-hit:empty::before{width:16px;height:16px}
     #${PANEL_ID} .dtm-close-hit:hover{border-color:var(--dream-manager-accent,#6edaf2);background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 16%,var(--dtm-raised));box-shadow:0 0 0 3px color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 12%,transparent),0 10px 24px #0005}
     #${PANEL_ID} .dtm-close-hit:active{transform:translateY(1px);background:color-mix(in srgb,var(--dream-manager-accent,#6edaf2) 24%,var(--dtm-raised))}
     #${PANEL_ID} .dtm-close-hit:focus-visible{outline:2px solid var(--dream-manager-accent,#6edaf2);outline-offset:2px}
@@ -325,6 +328,7 @@
     let localIconsJsonFile = null;
     let petPickerTheme = null;
     let imageSettingsTheme = null;
+    let imageSettingsLoading = false;
     let imageSettingsError = "";
     let imageSettingsFiles = [];
     let systemFontsLoaded = false;
@@ -690,6 +694,9 @@
     const imageSettingsDialogHtml = () => {
         if (!imageSettingsTheme)
             return "";
+        if (imageSettingsLoading) {
+            return `<div class="dtm-modal-layer" role="presentation"><button class="dtm-modal-backdrop" type="button" data-theme-images-close aria-label="关闭弹窗"></button><section class="dtm-dialog" role="dialog" aria-modal="true" aria-labelledby="dtm-images-title"><div class="dtm-dialog-head"><div><h2 id="dtm-images-title">图片与显示设置</h2><p>${escapeHtml(imageSettingsTheme.name)} 的主题包配置正在读取，读取完成后再显示可编辑表单。</p></div><button class="dtm-close-hit" type="button" data-theme-images-close aria-label="关闭"></button></div><div class="dtm-dialog-body"><div class="dtm-loading-card"><div class="dtm-loading-copy"><span class="dtm-loading-spinner" aria-hidden="true"></span><span>正在读取该主题自己的 theme.json 数据…</span></div></div></div></section></div>`;
+        }
         const display = imageSettingsTheme.display || {};
         const rotation = display.rotation || {};
         const position = splitImagePosition(display.position || "auto");
@@ -804,6 +811,7 @@
         }
         if (closeKind === "themeImages" || closeTarget.hasAttribute("data-theme-images-close")) {
             imageSettingsTheme = null;
+            imageSettingsLoading = false;
             imageSettingsError = "";
             imageSettingsFiles = [];
             render();
@@ -835,6 +843,7 @@
         }
         else if (target.dataset.themeImagesEdit) {
             imageSettingsTheme = state?.themes?.find((theme) => theme.key === target.dataset.themeImagesEdit) || null;
+            imageSettingsLoading = Boolean(imageSettingsTheme);
             imageSettingsError = "";
             imageSettingsFiles = [];
             localModalOpen = false;
@@ -843,15 +852,23 @@
             if (imageSettingsTheme?.key) {
                 const key = imageSettingsTheme.key;
                 call("getThemeImages", { key }).then((result) => {
-                    if (!result?.images?.length || imageSettingsTheme?.key !== key)
+                    if (!result || imageSettingsTheme?.key !== key)
                         return;
                     imageSettingsTheme = {
                         ...imageSettingsTheme,
-                        defaultImage: result.defaultImage || imageSettingsTheme.defaultImage,
-                        images: result.images,
+                        ...result,
+                        key: result.key || key,
+                        images: result.images || imageSettingsTheme.images || [],
                     };
+                    imageSettingsLoading = false;
                     render();
-                }).catch(() => { });
+                }).catch((error) => {
+                    if (imageSettingsTheme?.key !== key)
+                        return;
+                    imageSettingsLoading = false;
+                    imageSettingsError = error?.message || String(error);
+                    render();
+                });
             }
         }
         else if (target.dataset.themePetEdit) {
@@ -956,6 +973,7 @@
                     composer: { width: composerWidth, height: composerHeight, fontSize: composerFontSize },
                 });
                 imageSettingsTheme = null;
+                imageSettingsLoading = false;
                 imageSettingsFiles = [];
                 imageSettingsError = "";
                 return result;
@@ -1193,7 +1211,7 @@
             panel.innerHTML = `<div class="dtm-wrap"><div class="dtm-head"><div><h1>主题</h1></div>${closeButton("manager")}</div><div class="dtm-empty">${escapeHtml(error.message || error)}</div></div>`;
         }
     };
-    const hide = () => { showSequence += 1; showing = false; localModalOpen = false; resetLocalDraft(); setTriggerExpanded(false); const panel = document.getElementById(PANEL_ID); if (panel)
+    const hide = () => { showSequence += 1; showing = false; localModalOpen = false; imageSettingsLoading = false; resetLocalDraft(); setTriggerExpanded(false); const panel = document.getElementById(PANEL_ID); if (panel)
         panel.hidden = true; };
     const ensure = () => {
         if (/avatar-overlay/i.test(location.href)) {

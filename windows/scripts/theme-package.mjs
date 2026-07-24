@@ -1,4 +1,4 @@
-import fs from "node:fs/promises";
+﻿import fs from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { promisify } from "node:util";
 import { execFile as execFileCallback } from "node:child_process";
@@ -1193,8 +1193,11 @@ export async function installedThemeImagePreviewDataUrls(options, key) {
   if (!isPathInside(directory, path.resolve(savedRoot))) throw new Error("主题路径越界");
   const loaded = await loadTheme(directory);
   return {
-    key,
-    defaultImage: loaded.theme.defaultImage,
+    ...(await themeManagerSummary(loaded, key, {
+      localOnly: loaded.theme.localOnly === true,
+      localPath: loaded.theme.localOnly === true ? directory : null,
+      appearance: loaded.theme.appearance,
+    })),
     images: themeImageSummaries(loaded, true),
   };
 }
