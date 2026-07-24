@@ -32,6 +32,9 @@ const THEME_CHOICES = {
   imageFit: new Set(["cover", "contain", "stretch", "auto"]),
   imageRepeat: new Set(["no-repeat", "repeat", "repeat-x", "repeat-y"]),
   imagePosition: new Set(["auto", "center", "left", "right", "top", "bottom", "left top", "left center", "left bottom", "right top", "right center", "right bottom", "center top", "center bottom"]),
+  sidebarBackground: new Set(["auto", "transparent", "tint", "solid"]),
+  sidebarFontSize: new Set(["default", "small", "normal", "large"]),
+  sidebarFontWeight: new Set(["default", "normal", "medium", "semibold", "bold"]),
 };
 
 function normalizedUnit(value, name) {
@@ -62,6 +65,18 @@ function normalizeImageDisplay(rawDisplay) {
       enabled: rotation.enabled === true,
       intervalSeconds: Number.isFinite(intervalSeconds) ? Math.min(3600, Math.max(5, Math.round(intervalSeconds))) : 45,
     },
+  };
+}
+
+function normalizeSidebarSettings(rawSidebar) {
+  const sidebar = rawSidebar && typeof rawSidebar === "object" && !Array.isArray(rawSidebar) ? rawSidebar : {};
+  const fontFamily = normalizedText(sidebar.fontFamily, "sidebar.fontFamily", "", 120);
+  if (fontFamily && /[;{}]/.test(fontFamily)) throw new Error("sidebar.fontFamily contains unsupported characters");
+  return {
+    background: normalizedChoice(sidebar.background, "sidebar.background", THEME_CHOICES.sidebarBackground, "auto"),
+    fontFamily,
+    fontSize: normalizedChoice(sidebar.fontSize, "sidebar.fontSize", THEME_CHOICES.sidebarFontSize, "default"),
+    fontWeight: normalizedChoice(sidebar.fontWeight, "sidebar.fontWeight", THEME_CHOICES.sidebarFontWeight, "default"),
   };
 }
 
@@ -403,6 +418,7 @@ export async function loadTheme(themeDir) {
     ? requestedDefaultImage
     : imageEntries[0]?.id ?? "default";
   const display = normalizeImageDisplay(raw.display);
+  const sidebar = normalizeSidebarSettings(raw.sidebar);
   const entrypoints = raw.entrypoints && typeof raw.entrypoints === "object" && !Array.isArray(raw.entrypoints)
     ? raw.entrypoints : {};
   const framework = raw.framework && typeof raw.framework === "object" && !Array.isArray(raw.framework)
@@ -510,6 +526,7 @@ export async function loadTheme(themeDir) {
     defaultImage,
     images: imageEntries,
     display,
+    sidebar,
     appearance: normalizedChoice(raw.appearance, "appearance", THEME_CHOICES.appearance, "auto"),
     art: {
       focusX: normalizedUnit(art.focusX, "art.focusX"),
@@ -1024,6 +1041,7 @@ export async function updateThemeImageSettings(themeDirectory, settings = {}) {
     images.push({ id, label, path: relativePath });
   }
   const display = normalizeImageDisplay(settings.display ?? theme.display);
+  const sidebar = normalizeSidebarSettings(settings.sidebar ?? theme.sidebar);
   const requestedDefault = normalizedText(settings.defaultImage, "defaultImage", theme.defaultImage || images[0]?.id || "default", 80);
   const defaultEntry = images.find((entry) => entry.id === requestedDefault) ?? images[0];
   if (!defaultEntry) throw new Error("主题至少需要一张图片");
@@ -1032,6 +1050,7 @@ export async function updateThemeImageSettings(themeDirectory, settings = {}) {
   if (defaultEntry.previewPath) theme.previewImage = defaultEntry.previewPath;
   theme.images = images;
   theme.display = display;
+  theme.sidebar = sidebar;
   const files = new Set(["theme.json"]);
   for (const file of loaded.install?.files ?? []) files.add(file);
   files.add(theme.image);
@@ -1093,6 +1112,7 @@ async function themeManagerSummary(loaded, key, extra = {}) {
     defaultImage: loaded.theme.defaultImage,
     images: themeImageSummaries(loaded),
     display: loaded.theme.display,
+    sidebar: loaded.theme.sidebar,
     files: loaded.theme.files,
     ...themePetSummary(loaded),
     accent: loaded.theme.palette?.accent ?? "#6edaf2",

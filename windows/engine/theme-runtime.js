@@ -109,7 +109,12 @@
     const metadataRatio = Number(config?.artMetadata?.ratio);
     const display = config.display && typeof config.display === "object" ? config.display : {};
     const rotation = display.rotation && typeof display.rotation === "object" ? display.rotation : {};
+    const sidebar = config.sidebar && typeof config.sidebar === "object" ? config.sidebar : {};
     const intervalSeconds = Number(rotation.intervalSeconds || 45);
+    const cleanFont = (candidate) =>
+      typeof candidate === "string" && candidate.length <= 120 && !/[\u0000-\u001f;{}]/.test(candidate)
+        ? candidate.trim()
+        : "";
     return {
       appearance,
       safeArea,
@@ -132,6 +137,10 @@
       imageRepeat: ["no-repeat", "repeat", "repeat-x", "repeat-y"].includes(display.repeat) ? display.repeat : "no-repeat",
       rotationEnabled: rotation.enabled === true,
       rotationIntervalMs: Number.isFinite(intervalSeconds) ? Math.max(5000, Math.min(3600000, Math.round(intervalSeconds) * 1000)) : 45000,
+      sidebarBackground: ["auto", "transparent", "tint", "solid"].includes(sidebar.background) ? sidebar.background : "auto",
+      sidebarFontFamily: cleanFont(sidebar.fontFamily),
+      sidebarFontSize: ["default", "small", "normal", "large"].includes(sidebar.fontSize) ? sidebar.fontSize : "default",
+      sidebarFontWeight: ["default", "normal", "medium", "semibold", "bold"].includes(sidebar.fontWeight) ? sidebar.fontWeight : "default",
     };
   };
 
@@ -403,6 +412,9 @@
     for (const value of ["ambient", "banner", "off"]) {
       root.classList.toggle(`dream-task-${value}`, taskMode === value);
     }
+    for (const value of ["auto", "transparent", "tint", "solid"]) {
+      root.classList.toggle(`dream-sidebar-${value}`, config.sidebarBackground === value);
+    }
     root.style.setProperty("--dream-art", `url("${artUrl}")`);
     root.style.setProperty("--dream-art-position", imagePosition);
     root.style.setProperty("--dream-art-fit", imageSize);
@@ -413,6 +425,16 @@
     root.style.setProperty("--dream-accent", accent);
     root.style.setProperty("--dream-accent-ink", accentInk);
     root.style.setProperty("--dream-image-luma", profile.luma.toFixed(3));
+    root.style.setProperty("--dream-sidebar-font-family", config.sidebarFontFamily || "inherit");
+    root.style.setProperty("--dream-sidebar-font-size",
+      config.sidebarFontSize === "small" ? "12px" :
+      config.sidebarFontSize === "normal" ? "13px" :
+      config.sidebarFontSize === "large" ? "14px" : "inherit");
+    root.style.setProperty("--dream-sidebar-font-weight",
+      config.sidebarFontWeight === "normal" ? "400" :
+      config.sidebarFontWeight === "medium" ? "500" :
+      config.sidebarFontWeight === "semibold" ? "600" :
+      config.sidebarFontWeight === "bold" ? "700" : "inherit");
   };
 
   const ensure = () => {

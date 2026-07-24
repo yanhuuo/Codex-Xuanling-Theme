@@ -77,17 +77,3 @@ html.codex-dream-skin.dream-route-home main.main-surface.dream-home-shell {
 html.codex-dream-skin.dream-route-home main.main-surface.dream-home-shell [role="main"] {
   background: transparent !important;
 }
-
-html.codex-dream-skin.dream-route-task main.main-surface:not(.dream-home-shell) {
-  background: color-mix(in oklab, var(--dream-surface) 78%, transparent) !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-html.codex-dream-skin.dream-route-task .dream-task {
-  background: transparent !important;
-}
-
-html.codex-dream-skin.dream-route-task .dream-task::before {
-  content: none !important;
-}

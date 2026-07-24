@@ -80,6 +80,9 @@ html.codex-dream-skin body {
 html.codex-dream-skin aside.app-shell-left-panel {
   color: var(--dream-text) !important;
   background: var(--dream-sidebar) !important;
+  font-family: var(--dream-sidebar-font-family, inherit) !important;
+  font-size: var(--dream-sidebar-font-size, inherit) !important;
+  font-weight: var(--dream-sidebar-font-weight, inherit) !important;
   border-color: var(--dream-line-soft) !important;
   box-shadow: inset -1px 0 var(--dream-line-soft) !important;
   backdrop-filter: none !important;
@@ -91,6 +94,9 @@ html.codex-dream-skin aside.app-shell-left-panel nav {
 
 html.codex-dream-skin aside.app-shell-left-panel button {
   color: var(--dream-text) !important;
+  font-family: var(--dream-sidebar-font-family, inherit) !important;
+  font-size: var(--dream-sidebar-font-size, inherit) !important;
+  font-weight: var(--dream-sidebar-font-weight, inherit) !important;
   transition: background-color 180ms cubic-bezier(.22, 1, .36, 1), color 180ms cubic-bezier(.22, 1, .36, 1) !important;
 }
 
@@ -476,6 +482,35 @@ html.codex-dream-skin.dream-art-wide.dream-route-task:is(.dream-task-ambient, .d
     var(--dream-task-immersive-edge)) !important;
 }
 
+html.codex-dream-skin.dream-sidebar-transparent.dream-route-task:is(.dream-task-ambient, .dream-task-banner)
+  aside.app-shell-left-panel {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html.codex-dream-skin.dream-sidebar-tint.dream-route-task:is(.dream-task-ambient, .dream-task-banner)
+  aside.app-shell-left-panel {
+  background: linear-gradient(90deg,
+    color-mix(in oklab, var(--dream-sidebar) 42%, transparent),
+    color-mix(in oklab, var(--dream-surface) 8%, transparent)) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html.codex-dream-skin.dream-sidebar-solid.dream-route-task:is(.dream-task-ambient, .dream-task-banner)
+  aside.app-shell-left-panel {
+  background: color-mix(in oklab, var(--dream-sidebar) 96%, transparent) !important;
+  border: 0 !important;
+  box-shadow: inset -1px 0 var(--dream-line-soft) !important;
+  backdrop-filter: none !important;
+}
+
 html.codex-dream-skin.dream-art-wide.dream-route-home
   aside.app-shell-left-panel::after,
 html.codex-dream-skin.dream-art-wide.dream-route-task:is(.dream-task-ambient, .dream-task-banner)
@@ -714,6 +749,13 @@ html.codex-dream-skin aside.app-shell-left-panel .bg-token-list-hover-background
   background: color-mix(in oklab, var(--dream-accent) 18%, var(--dream-sidebar)) !important;
   box-shadow: inset 2px 0 var(--dream-accent),
     0 6px 18px color-mix(in oklab, var(--dream-canvas) 22%, transparent) !important;
+}
+
+html.codex-dream-skin.dream-route-task:is(.dream-task-ambient, .dream-task-banner)
+  aside.app-shell-left-panel .bg-token-list-hover-background {
+  background: color-mix(in oklab, var(--dream-accent) 14%, transparent) !important;
+  box-shadow: inset 2px 0 var(--dream-accent),
+    0 4px 12px color-mix(in oklab, var(--dream-canvas) 10%, transparent) !important;
 }
 
 #codex-dream-skin-chrome {
@@ -1194,6 +1236,19 @@ html.codex-dream-skin.dream-art-wide:is(.dream-task-ambient, .dream-task-banner)
   border: 0 !important;
   box-shadow: inset 0 0 0 1px var(--dream-immersive-line) !important;
   backdrop-filter: none !important;
+}
+
+html.codex-dream-skin.dream-route-task:is(.dream-task-ambient, .dream-task-banner)
+  main.main-surface:not(.dream-home-shell) :is([class*="px-toolbar"], [class*="px-"]):has(.composer-surface-chrome) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+html.codex-dream-skin.dream-route-task:is(.dream-task-ambient, .dream-task-banner)
+  main.main-surface:not(.dream-home-shell) .composer-surface-chrome {
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--dream-line) 68%, transparent) !important;
 }
 
 html.codex-dream-skin.dream-art-wide:is(.dream-task-ambient, .dream-task-banner)

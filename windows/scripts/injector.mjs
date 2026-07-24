@@ -462,6 +462,7 @@ async function handleThemeControl(options, request) {
     const updated = await updateThemeImageSettings(directory, {
       defaultImage: payload.defaultImage,
       display: payload.display,
+      sidebar: payload.sidebar,
       addedImages: payload.addedImages,
     });
     const active = await loadTheme(options.themeDir);

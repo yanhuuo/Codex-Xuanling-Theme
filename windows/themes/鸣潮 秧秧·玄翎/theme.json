@@ -31,6 +31,12 @@
     "taskMode": "ambient",
     "homeMode": "native"
   },
+  "sidebar": {
+    "background": "transparent",
+    "fontFamily": "Microsoft YaHei UI, Segoe UI, sans-serif",
+    "fontSize": "normal",
+    "fontWeight": "medium"
+  },
   "palette": {
     "accent": "#6edaf2"
   },

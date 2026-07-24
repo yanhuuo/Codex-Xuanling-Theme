@@ -29,6 +29,12 @@
     "position": "center",
     "repeat": "no-repeat"
   },
+  "sidebar": {
+    "background": "transparent",
+    "fontFamily": "Microsoft YaHei UI, Segoe UI, sans-serif",
+    "fontSize": "normal",
+    "fontWeight": "medium"
+  },
   "art": {
     "focusX": 0.5,
     "focusY": 0.5,
@@ -100,7 +106,7 @@
   "images": [
     {
       "id": "default",
-      "label": "????",
+      "label": "默认图",
       "path": "background.jpg",
       "previewPath": "preview.jpg"
     }
