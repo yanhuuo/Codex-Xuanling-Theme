@@ -571,9 +571,12 @@ async function writePetBundleToStore(stateRoot, petBundle) {
 }
 
 export async function writeThemeDirectory(destination, loaded) {
-  await fs.mkdir(destination, { recursive: true });
-  const realParent = await fs.realpath(path.dirname(destination));
-  const resolvedDestination = path.resolve(destination);
+  const requestedDestination = path.resolve(destination);
+  const requestedParent = path.dirname(requestedDestination);
+  await fs.mkdir(requestedParent, { recursive: true });
+  const realParent = await fs.realpath(requestedParent);
+  await fs.mkdir(requestedDestination, { recursive: true });
+  const resolvedDestination = await fs.realpath(requestedDestination);
   if (!isPathInside(resolvedDestination, realParent)) throw new Error("Theme destination escaped its managed folder");
   const extension = path.extname(loaded.imagePath).toLowerCase();
   const imageName = `art${extension}`;

@@ -537,6 +537,7 @@ try {
     '.thread-scroll-container .bg-gradient-to-t.from-token-main-surface-primary',
     '--dream-immersive-composer',
     'background-position: var(--dream-art-position)',
+    '.dream-home > .dream-home-content',
     '.dream-home-utility',
     '.dream-home-utility-present .dream-home .composer-surface-chrome',
     '.dream-route-task:is(.dream-task-ambient, .dream-task-banner)',
@@ -549,6 +550,9 @@ try {
     'animation-play-state: paused !important'
   )) {
     if (-not $css.Contains($requiredCss)) { throw "Windows immersive CSS is missing: $requiredCss" }
+  }
+  if ($css.Contains('.dream-home > div:first-child')) {
+    throw 'Shared home layout still depends on the first child and can hide the composer after a Codex DOM upgrade.'
   }
   if ($css.Contains(':has(main.main-surface')) {
     throw 'Window-wide route styling still uses a costly relational selector instead of renderer route classes.'

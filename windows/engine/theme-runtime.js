@@ -321,6 +321,7 @@
     root?.classList.remove(...ROOT_CLASSES);
     for (const property of ROOT_PROPERTIES) root?.style.removeProperty(property);
     document.querySelectorAll(".dream-home").forEach((node) => node.classList.remove("dream-home"));
+    document.querySelectorAll(".dream-home-content").forEach((node) => node.classList.remove("dream-home-content"));
     document.querySelectorAll(".dream-task").forEach((node) => node.classList.remove("dream-task"));
     document.querySelectorAll(".dream-home-shell").forEach((node) => node.classList.remove("dream-home-shell"));
     document.querySelectorAll(`.${HOME_UTILITY_CLASS}`).forEach((node) => node.classList.remove(HOME_UTILITY_CLASS));
@@ -412,7 +413,15 @@
       style.dataset.dreamVersion = "3";
     }
 
-    const home = document.querySelector('[data-testid="home-icon"]')?.closest('[role="main"]') || null;
+    const homeIcon = document.querySelector('[data-testid="home-icon"]');
+    const home = homeIcon?.closest('[role="main"]') || null;
+    let homeContent = homeIcon;
+    while (homeContent && homeContent.parentElement !== home) homeContent = homeContent.parentElement;
+    if (homeContent?.parentElement !== home) homeContent = null;
+    for (const candidate of document.querySelectorAll(".dream-home-content")) {
+      if (candidate !== homeContent) candidate.classList.remove("dream-home-content");
+    }
+    homeContent?.classList.add("dream-home-content");
     for (const candidate of document.querySelectorAll('[role="main"]')) {
       candidate.classList.toggle("dream-home", candidate === home);
       candidate.classList.toggle("dream-task", candidate !== home);
